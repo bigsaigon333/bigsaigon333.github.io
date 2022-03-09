@@ -1,18 +1,27 @@
-import { NextPage } from "next";
+import { InferGetStaticPropsType } from "next";
 import Head from "next/head";
+import Link from "next/link";
 
+import { getSortedPostsData } from "../lib/posts";
 import {
   Container,
   EmailLink,
   Footer,
   GithubLink,
   LinkList,
-  Main,
   Profile,
   Title,
 } from "./index.style";
 
-const Home: NextPage = () => {
+export const getStaticProps = () => {
+  const allPostsData = getSortedPostsData();
+
+  return { props: { allPostsData } };
+};
+
+const Home = ({
+  allPostsData,
+}: InferGetStaticPropsType<typeof getStaticProps>) => {
   return (
     <Container>
       <Head>
@@ -21,7 +30,7 @@ const Home: NextPage = () => {
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <Main>
+      <header>
         <Title>
           <Profile
             src="/profile.jpg"
@@ -55,7 +64,19 @@ const Home: NextPage = () => {
             ></GithubLink>
           </li>
         </LinkList>
-      </Main>
+      </header>
+      <main>
+        <ul>
+          {allPostsData.map(({ id, title, date }) => (
+            <Link key={id} href={`/posts/${id}`}>
+              <a>
+                <h2>{title}</h2>
+                <time>{date}</time>
+              </a>
+            </Link>
+          ))}
+        </ul>
+      </main>
 
       <Footer>Copyright&copy; 2022 All right preserved</Footer>
     </Container>

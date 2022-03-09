@@ -5,7 +5,27 @@ import matter from "gray-matter";
 import { remark } from "remark";
 import remarkHtml from "remark-html";
 
+type MatterData = { title: string; date: string };
+
 const postsDirectory = path.join(process.cwd(), "posts");
+
+export const getSortedPostsData = () => {
+  const fileNames = readdirSync(postsDirectory);
+
+  const allPostsData = fileNames.map((fileName) => {
+    const id = fileName.replace(/\.md$/, "");
+
+    const fullPath = path.join(postsDirectory, fileName);
+    const fileContents = readFileSync(fullPath, "utf8");
+
+    const matterResult = matter(fileContents);
+    const data = matterResult.data as MatterData;
+
+    return { id, ...data };
+  });
+
+  return allPostsData.sort(({ date: a }, { date: b }) => b.localeCompare(a));
+};
 
 export const getAllPostIds = () =>
   readdirSync(postsDirectory).map((fileName) => {
@@ -19,7 +39,7 @@ export const getPostData = async (id: string) => {
   const fileContents = readFileSync(fullPath, "utf8");
 
   const matterResult = matter(fileContents);
-  const data = matterResult.data as { title: string; date: string };
+  const data = matterResult.data as MatterData;
 
   const processedContent = await remark()
     .use(remarkHtml)
