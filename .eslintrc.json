@@ -18,6 +18,10 @@
     "unicorn"
   ],
   "rules": {
+    "unicorn/prevent-abbreviations": [
+      "error",
+      { "replacements": { "props": false } }
+    ],
     "sort-imports": [
       "error",
       { "ignoreDeclarationSort": true, "ignoreMemberSort": false }

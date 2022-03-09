@@ -1,3 +1,4 @@
+import Image from "next/image";
 import styled from "styled-components";
 
 export const Container = styled.div`
@@ -14,6 +15,52 @@ export const Main = styled.main`
   align-items: center;
 `;
 
+export const Profile = styled(Image)`
+  border-radius: 35%;
+`;
+
+export const Title = styled.h1`
+  margin: 0;
+  line-height: 1.25;
+  font-size: 3.5rem;
+  text-align: center;
+  display: flex;
+  column-gap: 1rem;
+  align-items: center;
+`;
+
+export const LinkList = styled.ul`
+  margin: 2rem 0;
+  line-height: 1.5;
+  font-size: 1.5rem;
+  list-style: none;
+  display: flex;
+  column-gap: 1rem;
+  align-items: center;
+
+  li a {
+    display: block;
+
+    &:hover {
+      opacity: 0.4;
+    }
+  }
+`;
+
+export const EmailLink = styled.a`
+  background-image: url("/email.png");
+  background-size: cover;
+  width: 40px;
+  height: 40px;
+`;
+
+export const GithubLink = styled.a`
+  background-image: url("/github-sign.png");
+  background-size: cover;
+  width: 35px;
+  height: 35px;
+`;
+
 export const Footer = styled.footer`
   display: flex;
   flex: 1;
@@ -21,46 +68,6 @@ export const Footer = styled.footer`
   border-top: 1px solid #eaeaea;
   justify-content: center;
   align-items: center;
-
-  a {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex-grow: 1;
-  }
-`;
-
-export const Title = styled.h1`
-  margin: 0;
-  line-height: 1.15;
-  font-size: 4rem;
-  text-align: center;
-
-  a {
-    color: #0070f3;
-    text-decoration: none;
-  }
-
-  a:hover,
-  a:focus,
-  a:active {
-    text-decoration: underline;
-  }
-`;
-
-export const Description = styled.p`
-  margin: 4rem 0;
-  line-height: 1.5;
-  font-size: 1.5rem;
-`;
-
-export const Code = styled.code`
-  background: #fafafa;
-  border-radius: 5px;
-  padding: 0.75rem;
-  font-size: 1.1rem;
-  font-family: Menlo, Monaco, "Lucida Console", "Liberation Mono",
-    "DejaVu Sans Mono", "Bitstream Vera Sans Mono", "Courier New", monospace;
 `;
 
 export const Grid = styled.div`
@@ -74,39 +81,4 @@ export const Grid = styled.div`
     width: 100%;
     flex-direction: column;
   }
-`;
-
-export const Card = styled.a`
-  margin: 1rem;
-  padding: 1.5rem;
-  text-align: left;
-  color: inherit;
-  text-decoration: none;
-  border: 1px solid #eaeaea;
-  border-radius: 10px;
-  transition: color 0.15s ease, border-color 0.15s ease;
-  max-width: 300px;
-
-  &:hover,
-  &:focus,
-  &:active {
-    color: #0070f3;
-    border-color: #0070f3;
-  }
-
-  h2 {
-    margin: 0 0 1rem;
-    font-size: 1.5rem;
-  }
-
-  p {
-    margin: 0;
-    font-size: 1.25rem;
-    line-height: 1.5;
-  }
-`;
-
-export const Logo = styled.span`
-  height: 1em;
-  margin-left: 0.5rem;
 `;
