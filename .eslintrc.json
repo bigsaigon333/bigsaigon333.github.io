@@ -16,5 +16,43 @@
     "jsx-a11y",
     "import",
     "unicorn"
-  ]
+  ],
+  "rules": {
+    "sort-imports": [
+      "error",
+      { "ignoreDeclarationSort": true, "ignoreMemberSort": false }
+    ],
+    "import/order": [
+      "error",
+      {
+        "newlines-between": "always",
+        "alphabetize": {
+          "order": "asc",
+          "caseInsensitive": true
+        },
+        "groups": [
+          "builtin",
+          "external",
+          "internal",
+          ["parent", "index", "sibling"],
+          "object",
+          "type"
+        ],
+        "pathGroups": [
+          {
+            "pattern": "+(react|react-dom|next/**)",
+            "group": "builtin"
+          },
+          {
+            "pattern": "+(@core|@coreConfig)/**",
+            "group": "internal",
+            "position": "before"
+          },
+          { "pattern": "public/**", "group": "object" }
+        ],
+        "pathGroupsExcludedImportTypes": [],
+        "warnOnUnassignedImports": true
+      }
+    ]
+  }
 }
