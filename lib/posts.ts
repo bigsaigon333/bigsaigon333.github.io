@@ -1,4 +1,4 @@
-import { readFileSync } from "fs";
+import { readFileSync, readdirSync } from "fs";
 import path from "path";
 
 import matter from "gray-matter";
@@ -6,6 +6,13 @@ import { remark } from "remark";
 import remarkHtml from "remark-html";
 
 const postsDirectory = path.join(process.cwd(), "posts");
+
+export const getAllPostIds = () =>
+  readdirSync(postsDirectory).map((fileName) => {
+    const id = fileName.replace(/\.md$/, "");
+
+    return { params: { id } };
+  });
 
 export const getPostData = async (id: string) => {
   const fullPath = path.join(postsDirectory, `${id}.md`);

@@ -19,10 +19,7 @@
   ],
   "rules": {
     "unicorn/prefer-node-protocol": "off",
-    "unicorn/prevent-abbreviations": [
-      "error",
-      { "replacements": { "props": false } }
-    ],
+    "unicorn/prevent-abbreviations": "off",
     "sort-imports": [
       "error",
       { "ignoreDeclarationSort": true, "ignoreMemberSort": false }
