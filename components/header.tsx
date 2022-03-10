@@ -4,6 +4,7 @@ import {
   GithubLink,
   LinkList,
   Profile,
+  ProfileWrapper,
   Title,
 } from "./header.style";
 
@@ -15,7 +16,9 @@ const Header = ({ home }: HeaderProps) => {
   return (
     <Container>
       <Title>
-        <Profile src="/profile.jpg" alt="프로필" width="20%" height="20%" />
+        <ProfileWrapper>
+          <Profile src="/profile.jpg" alt="프로필" />
+        </ProfileWrapper>
         <span>
           프론트엔드 개발자
           <br />

@@ -4,11 +4,13 @@ export const Container = styled.header`
   display: flex;
   flex-direction: column;
   align-items: center;
+  width: 100%;
 `;
 
 export const Title = styled.h1`
   margin: 0;
   line-height: 1.25;
+  width: 100%;
   font-size: 3.5rem;
   text-align: center;
   display: flex;
@@ -29,20 +31,32 @@ export const Title = styled.h1`
   @media (max-width: 375px) {
     font-size: 2rem;
   }
+
   @media (max-width: 320px) {
     font-size: 1.75rem;
   }
 `;
 
-export const Profile = styled.img`
-  width: 25%;
+export const ProfileWrapper = styled.div`
+  position: relative;
+  overflow: hidden;
   border-radius: 35%;
-  object-fit: cover;
-  aspect-ratio: 1 / 1;
+  width: 25%;
+  padding-bottom: 25%;
 
   @media (max-width: 600px) {
     width: 20%;
+    padding-bottom: 20%;
   }
+`;
+
+export const Profile = styled.img`
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 `;
 
 export const LinkList = styled.ul`
