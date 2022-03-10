@@ -8,7 +8,8 @@ export const Body = styled.div`
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  background-color: #faebef;
+
+  /* background-color: #faebef; */
   color: #333d79;
 `;
 
