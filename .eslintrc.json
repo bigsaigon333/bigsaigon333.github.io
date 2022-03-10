@@ -42,7 +42,11 @@
         ],
         "pathGroups": [
           {
-            "pattern": "+(react|react-dom|next/**)",
+            "pattern": "next/**",
+            "group": "builtin"
+          },
+          {
+            "pattern": "next",
             "group": "builtin"
           },
           {
