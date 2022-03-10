@@ -5,7 +5,7 @@ import matter from "gray-matter";
 import { remark } from "remark";
 import remarkHtml from "remark-html";
 
-type MatterData = { title: string; date: string };
+type MatterData = { title: string; date: string; summary: string };
 
 const postsDirectory = path.join(process.cwd(), "posts");
 

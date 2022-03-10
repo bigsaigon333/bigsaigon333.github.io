@@ -1,6 +1,7 @@
 ---
 title: "test article"
 date: "2020-03-09"
+summary: "Sunt exercitation exercitation ut dolore sint eu magna et esse officia consequat commodo. "
 ---
 
 Sunt exercitation exercitation ut dolore sint eu magna et esse officia consequat commodo. Ipsum ullamco sint ea ex ipsum duis nulla anim et. Ea ut laboris sint proident. Fugiat irure deserunt minim culpa cillum non elit cupidatat. Exercitation tempor sint labore esse qui ad magna ad aliqua ut reprehenderit proident ut.
