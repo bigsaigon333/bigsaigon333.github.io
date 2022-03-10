@@ -16,6 +16,16 @@ export const Article = styled.article`
     font-size: 2.5rem;
     margin-bottom: 1rem;
     font-weight: 800;
+
+    @media (max-width: 600px) {
+      font-size: 2rem;
+      margin-bottom: 0.75rem;
+    }
+
+    @media (max-width: 375px) {
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
   }
 
   time {
