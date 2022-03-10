@@ -5,6 +5,8 @@ import matter from "gray-matter";
 import { remark } from "remark";
 import remarkHtml from "remark-html";
 
+import { __IS_DEV__ } from "../constant";
+
 type MatterData = { title: string; date: string; summary: string };
 
 const postsDirectory = path.join(process.cwd(), "posts");
@@ -18,7 +20,7 @@ export const getSortedPostsData = () => {
   const fileNames = readdirSync(postsDirectory);
 
   const allPostsData = fileNames
-    .filter((fileName) => !isDraft(fileName))
+    .filter((fileName) => __IS_DEV__ || !isDraft(fileName))
     .map((fileName) => {
       const id = fileName.replace(/\.md$/, "");
 
