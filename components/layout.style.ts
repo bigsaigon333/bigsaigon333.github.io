@@ -11,6 +11,8 @@ export const Body = styled.div`
 
   /* background-color: #faebef; */
   color: #333d79;
+  max-width: 768px;
+  margin: auto;
 `;
 
 export const Header = styled.header`
@@ -70,7 +72,7 @@ export const GithubLink = styled.a`
 
 export const Footer = styled.footer`
   display: flex;
-  width: 100%;
+  width: calc(100vw - 3rem);
   padding: 2rem 0 1rem;
   border-top: 1px solid #eaeaea;
   justify-content: center;
