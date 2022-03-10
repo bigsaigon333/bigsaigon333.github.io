@@ -9,14 +9,6 @@ const GlobalStyle = createGlobalStyle`
     box-sizing: border-box;
   }
 
-  html {
-    inline-sizing: normal;
-  }
-
-  body {
-    margin: 0;
-  }
-
   [hidden] {
     display: none;
   }
@@ -71,7 +63,6 @@ const GlobalStyle = createGlobalStyle`
     max-width: 100%;
   }
 
-
   picture {
     display: contents;
   }
@@ -94,7 +85,6 @@ const GlobalStyle = createGlobalStyle`
   audio:not([controls]) {
     display: none;
   }
-
 
   img {
     border-style: none;
@@ -124,14 +114,12 @@ const GlobalStyle = createGlobalStyle`
     padding: 0;
   }
 
-
   /* custom global style */
   html,
   body {
   padding: 0;
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
-    Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "맑은 고딕", "나눔고딕", "Nanum Gothic", "Noto Sans KR", "Noto Sans CJK KR", arial, "돋움", Dotum, Tahoma, Geneva, "Helvetica Neue", sans-serif;
   }
 
   a {
