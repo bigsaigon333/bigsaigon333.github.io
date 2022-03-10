@@ -1,4 +1,3 @@
-import Image from "next/image";
 import styled from "styled-components";
 
 export const Body = styled.div`
@@ -19,8 +18,10 @@ export const Header = styled.header`
   align-items: center;
 `;
 
-export const Profile = styled(Image)`
+export const Profile = styled.img`
   border-radius: 35%;
+  object-fit: cover;
+  aspect-ratio: 1 / 1;
 `;
 
 export const Title = styled.h1`

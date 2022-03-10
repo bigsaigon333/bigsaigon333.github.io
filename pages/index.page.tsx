@@ -41,7 +41,6 @@ const Home = ({
               alt="김동희 프로필"
               width={160}
               height={160}
-              objectFit="cover"
             />
             <span>
               프론트엔드 개발자
