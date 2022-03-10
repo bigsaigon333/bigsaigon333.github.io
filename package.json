@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build && next export",
+    "deploy": "npm run build && touch out/.nojekyll && NODE_DEBUG=gh-pages gh-pages -d out -t",
     "start": "next start",
     "eslint": "eslint --cache --fix .",
     "stylelint": "stylelint --cache --fix .",
@@ -34,6 +35,7 @@
     "eslint-plugin-react": "7.29.3",
     "eslint-plugin-react-hooks": "4.3.0",
     "eslint-plugin-unicorn": "41.0.0",
+    "gh-pages": "3.2.3",
     "husky": "7.0.4",
     "lint-staged": "12.3.5",
     "postcss-syntax": "0.36.2",
