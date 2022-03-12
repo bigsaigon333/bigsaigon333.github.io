@@ -671,6 +671,196 @@ bigint를 그냥 console.log로 찍어보면 끝에 n이 기재되어 출력되�
 
 bigint => string 도 number => string 과 동일하다. toString, String 쓰면 된다.
 
-## 5. 파일입출력
+## 5. 입출력
+
+Node.js와 브라우저의 차이 중에 가장 두드러지는 점이 입출력이 아닐까 생각합니다.
+
+브라우저에서는 유저로부터 입력을 어떻게 받고 어떻게 출력하나요?
+
+로그인 폼을 생각해보겠습니다. 유저로부터 어떻게 id와 pw를 입력받나요?
+
+input, form 요소로 입력을 받습니다. 그러면 결과물은 어떻게 출력하나요? 로그인이 성공적으로 수행되었다던가, 로딩중이라던가, 비밀번호가 일치하지 않는가 등의 결과를요.
+다양한 방법이 있을 것입니다. window.alert 도 있을 수 있을거 같구요, 아니면 원하는 내용을 담은 새로운 DOM 요소를 추가하고 예쁘게 스타일링할 수도 있습니다.
+
+Node.js는 브라우저가 아닌 일반 터미널에서 실행되죠. 흔히 생각하는 검은 바탕에서 흰 글자가 깜빡거리는 그 곳입니다.
+특히 C와 같은 저수준의 언어를 해보셨다면 친숙한 환경이 아닐까 싶습니다.
+
+브라우저가 유저로부터 입력을 받을 수 있기 위해 input, form요소와 이벤트 핸들러를 제공하듯이 Node.js는 유저로부터 입력을 받을 수 있는 내장 모듈 몇가지를 제공합니다.
+
+### 5-1. fs 모듈
+
+자바스크립트의 가장 큰 특징으로 꼽히는 것이 비동기 프로그래밍이기에 자바스크립트의 내장 모듈을 기본적으로 비동기로 처리됩니다. 하지만, 코딩테스트에서 입력을 받은 뒤에 계산을 하고 출력을 합니다. 계산 도중에 인터랙티브하게 유저로부터 입력을 받는 일이 없습니다. 따라서, 이벤트 드리븐 방식의 복잡한 readline 모듈을 사용할 필요가 전혀 없습니다.
+
+전형적으로 동기적 실행이기 때문에 동기적으로 실행되는 fs 모듈의 readFileSync만을 소개하겠습니다.
+
+`fs`는 `file system`을 의미합니다. POSIX 시스템에서는 모든 프로세스에 대해 커널이 현재 열려 있는 파일 및 리소스 테이블을 유지 관리합니다. 열려 있는 각 파일에는 파일 설명자(file descriptor)라는 간단한 숫자 식별자가 할당됩니다. 시스템 수준에서 모든 파일 시스템 작업은 이러한 파일 설명자를 사용하여 각 특정 파일을 식별하고 추적합니다. 윈도우즈 시스템은 리소스를 추적하기 위해 다르지만 개념적으로 유사한 메커니즘을 사용합니다. 사용자를 위한 작업을 단순화하기 위해 Node.js는 운영 체제 간의 특정 차이를 추상화하고 열려 있는 모든 파일에 숫자 파일 설명자를 할당합니다. 참고로, 표준입력(stdin: standard input)의 파일 설명자는 0 입니다.
+
+`readFile`함수는 비동기적으로 파일의 전체를 읽으므로 파일을 읽어들이기가 완료된 후에 콜백 함수를 통하여 다음 스텝을 진행할 수 있는 반면, `readFileSync`는 동기적으로 파일을 읽어들입니다. 어차피 입력을 다 받아야만 계산을 진행할 수 있으므로, 동기적 처리 방식이 코드도 간결하고 이해하기 편합니다.
+
+`fs.readFileSync(path[, options])`
+
+- path: <string\> | <Buffer\> | <URL\> | <integer\> filename or file descriptor
+- options: <Object\> | <string\>
+  - encoding <string\> | <null\> Default: null
+  - flag <string\> See support of file system flags. Default: 'r'.
+- Returns: <string\> | <Buffer\>
+
+```javascript
+const fs = require("fs");
+
+// 개행문자(\n)로 구분된 각 행을 요소로 가지는 배열을 반환.
+// 인코딩을 명시적으로 넘기지 않은 경우에는 raw Buffer가 반환되므로
+// toString()함수를 호출하여 string으로 변환하여야 한다.
+const input1 = fs.readFileSync(0).toString().split("\n");
+
+// options으로 인코딩을 string 자료형으로 넘기는 경우, string을 반환한다.
+const input2 = fs.readFileSync(0, "utf8").split("\n");
+
+// input2와 동일
+const input3 = fs.readFileSync(0, { encoding: "utf8" }).split("\n");
+```
+
+참고: [Node.js v14.15.4 Documentation - File system](https://nodejs.org/dist/latest-v14.x/docs/api/fs.html#fs_file_system)
+
+#### readFileSync 는 파일 전체를 한 번에 읽어들인다
+
+한 줄 씩 읽어들여서 처리하지 않는다. 다 읽어들인다. 따라서 다 이를 한 줄씩 읽어들이는 것과 같은 효과를 내려면 보조함수를 작성하여야 한다.
+
+클로저를 이용하여 변수의 스콥을 제한하고 한 줄씩 문자열을 반환하게끔 할 수 있다.
+
+```js
+const getLine = (() => {
+  const input = require("fs").readFileSync(0, "utf8").split("\n");
+  let i = 0;
+
+  return () => input[i++];
+})();
+```
+
+### 5-2. 출력
+
+#### console.log
+
+표준출력으로 console.log를 사용한다. console 객체는 브라우저에도 존재하고 Node.js 에도 존재하므로 매우 친숙할 것이다.
+Node.js에서 더욱 저수준의 출력 내장 모듈을 제공하나 console.log 로 대부분 충분하다.
+
+#### 다만, console.log는 굉장히 느리다
+
+`console.log`를 이용해서 출력을 하면 됩니다.
+다만,`console.log`는 호출시 많은 시간이 소요되는 함수이므로, 백트래킹과 같이 알고리즘 중간중간에 출력을 하는 경우에는 배열이나 `string`에 출력값을 저장해두었다가 계산 종료후 한번에 출력을 해주는 것이 좋습니다.
+
+아래는 [BOJ 15649번 문제 N과 M (1)](https://www.acmicpc.net/problem/15649)의 채점결과입니다. 위에는 계산 종료후 코드의 마지막에 한번만 출력을 해준 경우이고, 아래는 계산 중간중간에 계속해서 출력을 해준 경우입니다. 보시다시피 실행 시간의 차이가 엄청 많이 나신다는 것을 알 수 있습니다.
+
+```javascript
+// 계산 종료후 마지막에 한번만 출력
+...
+let print = "";
+
+(function rec(lev) {
+  if (lev === M) {
+    print += `${arr.join(" ")}\n`; // depth가 M일 때마다 print에 출력 값 저장
+    return;
+  }
+
+  ...
+  rec(lev + 1);
+  ...
+})(0);
+
+console.log(print); // 계산 종료후 마지막에 출력
+```
+
+```javascript
+// 계산 중간중간에 출력
+...
+
+(function rec(lev) {
+  if (lev === M) {
+    console.log(`${arr.join(" ")}\n`); // depth가 M일 때마다 print에 출력 값 저장
+    return;
+  }
+
+  ...
+  rec(lev + 1);
+  ...
+})(0);
+```
+
+![BOJ 15649번 문제 채점결과](https://images.velog.io/images/bigsaigon333/post/14c5f8aa-2f4a-4f4a-be0d-6399d5863abc/%ED%95%9C%EB%B2%88%EC%97%90_%EC%B6%9C%EB%A0%A5_vs_%EB%A7%A4%EB%B2%88_%EC%B6%9C%EB%A0%A5.png)
+
+※ `process.stdout.write` vs `console.log`
+Writable 스트림인 `process.stdout`의 `write`함수를 이용하여 출력을 할 수 있습니다. `console.log`도 내부적으로 `process.stdout.write`를 이용하여 출력한다고 합니다. 하지만 경험적으로 `console.log`와 `process.stdout.write`의 실행속도 차이를 느끼지 못하였습니다. `console.log`, `process.stdout.write` 모두 무거운 함수 호출이므로, 이를 최소화하기 위하여 배열이나 `string`에 출력값을 저장해두는 테크닉이 더 실행속도 단축에 도움이 되는 것 같습니다.
+
+참고URL: [Node.js v14.15.4 Documentation - Writable Stream: writable.write(chunk[, encoding][, callback])](https://nodejs.org/dist/latest-v14.x/docs/api/stream.html#stream_writable_write_chunk_encoding_callback)
+
+### 5-3. BOJ 1000
+
+#### 마지막의 공백문자, 개행문자는 무시된다
+
+### 5-4. 함수형 타입의 코딩테스트
+
+앞서 설명한 입출력이 굉장히 번거롭게 느껴지기도 한다. FE 개발자들은 Node.js 파일시스템 내장 모듈을 사용할 일이 생각보다 없다. 그래서 기업에서도 그냥 입출력으로 문제를 판단하는게 아니라 함수를 작성할 것을 요구한다. 함수의 매개변수로 입력값을 넣어주고, 출력값을 함수의 반환값으로 하라는 것이다.
+
+오히려 좋아.
+
+input compute output 의 3단계로 구분해서 문제를 풀자
+
+BOJ는 input compute output 3단계를 다 구현하는 것이고
+
+Programmers는 compute만 구현하는 것이라 생각하면 된다.
+
+그러면 다 대응된다.
 
 ## 6. 문제풀이 예시
+
+### 6-1. 한수 - acmicpc.net/problem/1065
+
+- 문제 읽고 이해
+- 입력의 조건 이해
+  N: [1, 1000]
+- 생각은 큰 단위에서 작은 단위로
+- 구현은 작은 단위에서 큰 단위로
+- isHansu: (n: number) => boolean;
+  isHansu(1) === true
+  isHansu(246) === true
+  isHansu(247) === false
+
+---
+
+isHansu 구현
+1자리수
+2자리수
+3자리수 이상
+3_2_5 공차가 마이너스일 수도 있다
+
+1부터 N까지 순회하면서 isHansu가 true이면 count를 1씩 증가
+
+계산된 count를 반환후 stdout으로 출력
+
+테스트
+
+실제 제출
+
+---
+
+왜 완전탐색인가? 1부터 N까지 순서대로 모든 숫자가 한수인지 isHansu 에 인자를 넣어서 확인했다
+O(N logN) 이다
+
+N이 만약 2자리수, 즉 99이하이면 그냥 N을 반환하게 할 수도 있다.
+그러면 N이 99 이하이면 O(1) 이 된다
+isHansu 조건이 굉장히 복잡하다고 가정했을 때에도, isHansu의 시간복잡도가 낮다면, 하나씩 다 탐색하여서 문제를 풀어낼 수 있다.
+
+---
+
+포인트 1) 자료형을 명확하게 표기하자: 암시적 형변환에 의존하면, 나중에 큰일 난다
+
+포인트 2) for 문을 줄일 수 있다면 줄이자. 이번에는 Option!
+
+- 배열의 한 요소가 다른 요소는 간섭하지 않는다.
+- 상위 스코프의 값을 참조하지 않는다 => 순수함수이다
+  for 문보다 배열 내장 메소드가 먼저 떠오를만큼 숙달된다면 바로 쓰자!
+  왜 강조? 이게 바로 자바스크립트다운 배열 순회 방법. 기능의 분리.
+  Brute Force와 동일. 내가 익숙한 문법으로 정확하게 작성할 수 있다면 그걸로 keep going.
+  아니라면 이런 방법도 같이 익혀가면, 알고리즘 공부하면서 작성한 코드 스킬들이 나중에 프로젝트에서도 도움이 된다
+
+---
