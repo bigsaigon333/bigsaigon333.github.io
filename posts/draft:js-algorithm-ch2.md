@@ -374,6 +374,12 @@ https://en.wikipedia.org/wiki/Double-precision_floating-point_format
 (0.3 - 0.2) - 0.1 < Number.EPSILON
 ```
 
+##### 절대오차 상대오차 개념
+
+절대오차 = | 내가 제출한 답 - 정답 |
+
+상대 오차 = | 내가 제출한 답 - 정답 | / 정답
+
 #### EPSILON 이란...
 
 Number.EPSILON
