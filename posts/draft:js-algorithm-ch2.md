@@ -649,6 +649,12 @@ a.toString(); // Uncaught TypeError: Cannot read property 'toString' of null
 
 -0 을 임의로 할당하는 경우는 거의 없다. 주로 나오는 경우는 음수를 Infinity 로 나눈 값을 할당한 경우다. 상당히 디버깅이 까다로운 케이스중 하나인데, 왜냐하면 이론적으로는 다 맞기 때문이다. 테스트 케이스중에 이런 경우가 존재하는지 잘 판단해야 한다. 아니면 Infinity 로 나눌 때에는 명시적으로 Math.abs() 로 감싸는 것도 하나의 방법이다.
 
+### 소수를 정수로 변환
+
+Number.isInteger => 정수인지 판별 가능
+
+Math.floor, Math.ceil, Math.round, Math.trunc,
+
 ### bigint
 
 큰 수를 다룰 때에 bigint 자료형을 쓴다.
