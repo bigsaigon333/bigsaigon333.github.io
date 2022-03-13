@@ -11,7 +11,7 @@ export const Title = styled.h1`
   margin: 0;
   line-height: 1.25;
   width: 100%;
-  font-size: 3.5rem;
+  font-size: 3.6rem;
   text-align: center;
   display: flex;
   column-gap: 2rem;
@@ -20,20 +20,8 @@ export const Title = styled.h1`
   font-weight: 800;
 
   @media (max-width: 767px) {
-    font-size: 3.25rem;
+    font-size: 7.5vw;
     column-gap: 1rem;
-  }
-
-  @media (max-width: 600px) {
-    font-size: 2.5rem;
-  }
-
-  @media (max-width: 375px) {
-    font-size: 2rem;
-  }
-
-  @media (max-width: 320px) {
-    font-size: 1.75rem;
   }
 `;
 
