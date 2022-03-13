@@ -174,6 +174,8 @@ filter
 
 reduce
 
+https://www.acmicpc.net/problem/11720
+
 reverse
 
 join
@@ -200,3 +202,7 @@ Array.prototype.reduce,filter
 Array.prototype.forEach
 Array.prototype.reduce,
 Math.max, Math.min, destructuring
+
+### https://www.acmicpc.net/problem/4673
+
+Array.prototype.fill, map, entries, filter
