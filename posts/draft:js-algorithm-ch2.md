@@ -679,7 +679,7 @@ number 와 bigint 자료형은 암시적으로 형변환이 되지 않는다.
 1038428n;
 ```
 
-bigint를 그냥 console.log로 찍어보면 끝에 n이 기재되어 출력되지만, 문자열로 바꾸면 끝에 'n' 이 없다. 따라서 이 부분은 신경쓰지 않아도 된다.
+bigint를 그냥 console.log로 찍어보면 끝에 n이 기재되어 출력되지만, 문자열로 바꾸면 끝에 'n' 이 없다. 따라서 문자열로 바꿔서 반드시 출력하도록 하자. 안그러면 n도 같이 출력된다.
 
 bigint => string 도 number => string 과 동일하다. toString, String 쓰면 된다.
 
