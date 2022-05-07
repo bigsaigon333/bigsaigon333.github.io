@@ -8,7 +8,6 @@ export const Body = styled.div`
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  color: #333d79;
   max-width: 768px;
   margin: auto;
 
