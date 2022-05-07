@@ -322,7 +322,7 @@ entries
 
 https://www.acmicpc.net/problem/1316
 
-- 정규식, Set size 비교로 배열의 요소가 모두 고유한지 파악
+- 정규표현식, Set size 비교로 배열의 요소가 모두 고유한지 파악
 
 https://www.acmicpc.net/problem/3273
 
