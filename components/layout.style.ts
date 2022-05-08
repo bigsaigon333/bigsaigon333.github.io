@@ -2,7 +2,7 @@ import styled from "styled-components";
 
 export const Body = styled.div`
   min-height: 100vh;
-  padding: 4rem 2rem 0;
+  padding: 3rem 2rem 0;
   flex: 1;
   display: flex;
   flex-direction: column;
