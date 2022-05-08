@@ -13,7 +13,7 @@ const Layout = ({ home, children }: PropsWithChildren<LayoutProps>) => {
       <Body>
         <Header home={home} />
         {children}
-        <Footer>Copyright&copy; 2022 All right preserved</Footer>
+        <Footer>Copyright&copy; 2022 All right reserved</Footer>
       </Body>
     </>
   );
