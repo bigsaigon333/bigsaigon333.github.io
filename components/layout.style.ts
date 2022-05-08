@@ -8,6 +8,7 @@ export const Body = styled.div`
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  row-gap: 2rem;
   max-width: 768px;
   margin: auto;
 

@@ -3,6 +3,9 @@ import styled from "styled-components";
 export const Section = styled.section`
   width: 100%;
   flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  row-gap: 2rem;
 
   a:hover {
     text-decoration: underline;
@@ -10,11 +13,9 @@ export const Section = styled.section`
 `;
 
 export const Article = styled.article`
-  margin: 2rem 0;
-
   h2 {
     font-size: 2.5rem;
-    margin-bottom: 0.5rem;
+    margin: 0 0 0.5rem;
     font-weight: 800;
 
     @media (max-width: 600px) {
