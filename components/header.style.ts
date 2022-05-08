@@ -15,6 +15,7 @@ export const Title = styled.h1`
   text-align: center;
   display: flex;
   column-gap: 2rem;
+  justify-content: center;
   align-items: center;
   font-weight: 800;
 
