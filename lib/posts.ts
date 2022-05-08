@@ -7,7 +7,7 @@ import remarkHtml from "remark-html";
 
 import { __IS_DEV__ } from "../constant";
 
-type MatterData = { title: string; date: string; summary: string };
+type MatterData = { title: string; date: string };
 
 const postsDirectory = path.join(process.cwd(), "posts");
 

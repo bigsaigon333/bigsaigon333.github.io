@@ -24,7 +24,7 @@ const Home = ({
       </Head>
 
       <Section>
-        {allPostsData.map(({ id, title, date, summary }) => (
+        {allPostsData.map(({ id, title, date }) => (
           <Article key={id}>
             <Link href={`/posts/${id}`}>
               <a>
@@ -32,7 +32,6 @@ const Home = ({
               </a>
             </Link>
             <time>{date}</time>
-            <p>{summary}</p>
           </Article>
         ))}
       </Section>
