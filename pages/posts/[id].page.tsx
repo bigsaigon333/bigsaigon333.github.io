@@ -2,6 +2,7 @@ import { InferGetStaticPropsType } from "next";
 
 import Layout from "../../components/layout";
 import { getAllPostIds, getPostData } from "../../lib/posts";
+import { Article } from "../index.style";
 import { Main } from "./[id].style";
 
 export const getStaticPaths = async () => {
@@ -26,10 +27,10 @@ const Post = ({ postData }: InferGetStaticPropsType<typeof getStaticProps>) => {
 
   return (
     <Layout>
-      <div>
-        <h1>{title}</h1>
+      <Article>
+        <h2>{title}</h2>
         <time>{date}</time>
-      </div>
+      </Article>
       <Main dangerouslySetInnerHTML={{ __html: contentHtml }} />
     </Layout>
   );

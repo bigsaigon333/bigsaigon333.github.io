@@ -7,7 +7,7 @@ export const Body = styled.div`
   display: flex;
   flex-direction: column;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start;
   row-gap: 2rem;
   max-width: 768px;
   margin: auto;
