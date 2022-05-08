@@ -19,7 +19,7 @@ export const Body = styled.div`
 
 export const Footer = styled.footer`
   display: flex;
-  width: calc(100vw - 3rem);
+  width: 100%;
   padding: 2rem 0 1rem;
   border-top: 1px solid #eaeaea;
   justify-content: center;
