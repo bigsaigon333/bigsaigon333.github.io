@@ -1,7 +1,6 @@
 ---
 title: Ambient Type Declaration
 date: "2022-05-07"
-summary: .d.ts 파일은 언제 쓰는 걸까
 ---
 
 타입스크립트의 타입 선언은 `.ts, .tsx` 확장자를 가진 파일에서도 할 수 있지만 `.d.ts` 확장자를 가진 파일에서도 할 수 있습니다.
