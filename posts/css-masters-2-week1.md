@@ -1,12 +1,19 @@
 ---
-title: css-masters-2-week1
+title: css-masters-2 1주차 정리
 date: "2022-05-08"
-summary: css-masters-2-week1
+---
+
+[css-masters-2](https://github.com/fe-backpackers/css-masters-2) 라는 이름으로 css 스터디를 하고 있습니다.
+
+모던 웹을 위한 HTML5 + CSS3 바이블 3판을 매주 정해진 분량만큼 읽고 의견을 공유하는 방식입니다.
+
+아래는 1주차에 학습한 내용 등을 정리한 것입니다.
+
 ---
 
 ## 웹 표준은 W3C에서 만듭니다
 
-웹 표준은 W3C에서 만든다. 여기서 웹은 HTML, CSS, JS, 웹 브라우져, WebAssembly, 접근성 등 웹과 관련된 모든 것을 의미합니다.
+웹 표준은 W3C에서 만듭니다. 여기서 웹은 HTML, CSS, JS, 웹 브라우져, WebAssembly, 접근성 등 웹과 관련된 모든 것을 의미합니다.
 다만, HTML 표준은 WHATWG 에서, JS 표준은 ECMA 에서, 3D Graphics의 표준은 Khronos 에서 작성합니다.
 
 <https://www.w3.org/TR/> 에서 표준을 검색할 수 있습니다.
