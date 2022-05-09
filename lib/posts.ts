@@ -2,8 +2,11 @@ import { readFileSync, readdirSync } from "fs";
 import path from "path";
 
 import matter from "gray-matter";
-import { remark } from "remark";
-import remarkHtml from "remark-html";
+import rehypeHighlight from "rehype-highlight";
+import rehypeStringify from "rehype-stringify";
+import remarkParse from "remark-parse";
+import remarkRehype from "remark-rehype";
+import { unified } from "unified";
 
 import { __IS_DEV__ } from "../constant";
 
@@ -50,9 +53,13 @@ export const getPostData = async (id: string) => {
   const matterResult = matter(fileContents);
   const data = matterResult.data as MatterData;
 
-  const processedContent = await remark()
-    .use(remarkHtml)
+  const processedContent = await unified()
+    .use(remarkParse)
+    .use(remarkRehype)
+    .use(rehypeHighlight)
+    .use(rehypeStringify)
     .process(matterResult.content);
+
   const contentHtml = processedContent.toString();
 
   return {

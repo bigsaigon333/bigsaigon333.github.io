@@ -1,5 +1,7 @@
 import { InferGetStaticPropsType } from "next";
 
+import "highlight.js/styles/base16/monokai.css";
+
 import Layout from "../../components/layout";
 import { getAllPostIds, getPostData } from "../../lib/posts";
 import { Article } from "../index.style";

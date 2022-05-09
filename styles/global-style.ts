@@ -126,6 +126,12 @@ const GlobalStyle = createGlobalStyle`
     color: inherit;
     text-decoration: none;
   }
+
+  code[class*=language-],
+  pre[class*=language-] {
+    font-family: "Source Code Pro", Consolas, Menlo, Monaco,Courier New,monospace;
+    font-size: 0.825rem;
+  }
 `;
 
 export default GlobalStyle;
