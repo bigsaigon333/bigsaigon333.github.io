@@ -236,7 +236,7 @@ function makeUpperCase(arr) {
 
 버젼2 시간복잡도: O(N) 공간복잡도: O(N)
 
-#### 또다른 예시로는 정렬도 있다.
+#### 또다른 예시로는 정렬도 있다
 
 선택 정렬
 머지 소트
@@ -253,7 +253,7 @@ function makeUpperCase(arr) {
 
 또 재귀에서는 호출 스택이라는 숨겨진 공간복잡도가 있는데 이 부분에 대해서는 재귀 챕터에서 자세히 다루겠다.
 
-#### 문제를 풀 때 시간 복잡도와 공간 복잡도를 잘 고려하자.
+#### 문제를 풀 때 시간 복잡도와 공간 복잡도를 잘 고려하자
 
 각 상황마다 주어진 최소 허용 속도와 메모리 한도를 알아야 한다. 제약을 이해하고 다양한 알고리즘 중에서 고르고 선택할 수 있고 속도와 메모리 요구사항에 맞게 효율성을 유지할 수 있다.
 
@@ -321,7 +321,7 @@ console.log(0.3 - 0.2 === 0.1) 을 자바스크립트로 실행시키면 true가
 
 ### 3-2. double-precision 64-bit binary format IEEE 754
 
-https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number
+<https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number>
 
 자바스크립트에서 숫자를 나타내는 원시자료형(primitive type)은 두가지가 있습니다. number와 bigint 입니다.
 
@@ -350,7 +350,7 @@ bigint는 ES2020에 추가된 스펙인데, 여기서는 일단 number에 대해
 
 #### 가장 큰 수
 
-https://en.wikipedia.org/wiki/Double-precision_floating-point_format
+<https://en.wikipedia.org/wiki/Double-precision_floating-point_format>
 
 따라서 이러한 정의에 따라 표현할 수 있는 가장 큰 숫자는 아래와 같고, 이는 Number.MAX_VALUE 로 접근 가능.
 
@@ -380,14 +380,14 @@ https://en.wikipedia.org/wiki/Double-precision_floating-point_format
 
 상대 오차 = | 내가 제출한 답 - 정답 | / 정답
 
-#### EPSILON 이란...
+#### EPSILON 이란
 
 Number.EPSILON
 The value of Number.EPSILON is the Number value for the magnitude of the difference between 1 and the smallest value greater than 1 that is representable as a Number value, which is approximately 2.2204460492503130808472633361816 × 10-16.
 
 #### 가장 큰 양의 정수
 
-https://tc39.es/ecma262/multipage/numbers-and-dates.html#sec-properties-of-the-number-constructor
+<https://tc39.es/ecma262/multipage/numbers-and-dates.html#sec-properties-of-the-number-constructor>
 
 The value of Number.MAX_SAFE_INTEGER is 9007199254740991𝔽 (𝔽(2\*\*53 - 1)).
 
@@ -406,7 +406,7 @@ Infinity 는 어떠한 연산을 사용하더라도 절대 도달할 수 없는 
 
 `funtion min(arr: number[]):number` 가 있다고 가정해보자.
 
-```min
+```
 
 function min(arr) {
   let min = Infinity;
@@ -482,7 +482,7 @@ console.log(a instanceof Number); // true
 console.log(b instanceof Number); // false
 ```
 
-혼란을 피하기 위하여 ** new Number는 사용하지 않습니다.**
+혼란을 피하기 위하여 **new Number는 사용하지 않습니다.**
 
 ##### Number vs parseInt
 
@@ -877,7 +877,7 @@ isHansu 조건이 굉장히 복잡하다고 가정했을 때에도, isHansu의 �
 
 ---
 
-### https://www.acmicpc.net/problem/2798
+### <https://www.acmicpc.net/problem/2798>
 
 시간복잡도에 너무 집착하지 마라
 
