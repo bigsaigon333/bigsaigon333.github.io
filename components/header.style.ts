@@ -27,6 +27,10 @@ export const A = styled.a`
   column-gap: 2rem;
   justify-content: center;
   align-items: center;
+
+  &:hover p span {
+    box-shadow: 0 0.25rem 0 0 black;
+  }
 `;
 
 export const ProfileWrapper = styled.div`
