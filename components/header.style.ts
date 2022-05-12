@@ -11,17 +11,25 @@ export const Title = styled.h1`
   margin: 0;
   line-height: 1.25;
   width: 100%;
+  font-weight: 800;
+
+  @media (max-width: 767px) {
+    font-size: 7.5vw;
+    column-gap: 1rem;
+  }
+`;
+
+export const A = styled.a`
+  width: 100%;
   font-size: 3.6rem;
   text-align: center;
   display: flex;
   column-gap: 2rem;
   justify-content: center;
   align-items: center;
-  font-weight: 800;
 
-  @media (max-width: 767px) {
-    font-size: 7.5vw;
-    column-gap: 1rem;
+  &:hover p span {
+    box-shadow: 0 0.25rem 0 0 black;
   }
 `;
 

@@ -1,4 +1,7 @@
+import Link from "next/link";
+
 import {
+  A,
   Container,
   EmailLink,
   GithubLink,
@@ -16,14 +19,18 @@ const Header = ({ home }: HeaderProps) => {
   return (
     <Container>
       <Title>
-        <ProfileWrapper>
-          <Profile src="/profile.jpg" alt="프로필" />
-        </ProfileWrapper>
-        <span>
-          프론트엔드 개발자
-          <br />
-          김동희입니다
-        </span>
+        <Link href="/" passHref={true}>
+          <A>
+            <ProfileWrapper>
+              <Profile src="/profile.jpg" alt="프로필" />
+            </ProfileWrapper>
+            <p>
+              <span>프론트엔드 개발자</span>
+              <br />
+              <span>김동희입니다</span>
+            </p>
+          </A>
+        </Link>
       </Title>
 
       {home && (
