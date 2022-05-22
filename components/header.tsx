@@ -24,11 +24,11 @@ const Header = ({ home }: HeaderProps) => {
             <ProfileWrapper>
               <Profile src="/profile.jpg" alt="프로필" />
             </ProfileWrapper>
-            <p>
+            <div>
               <span>프론트엔드 개발자</span>
               <br />
               <span>김동희입니다</span>
-            </p>
+            </div>
           </A>
         </Link>
       </Title>
