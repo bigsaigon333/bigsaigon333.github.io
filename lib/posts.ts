@@ -55,9 +55,9 @@ export const getPostData = async (id: string) => {
 
   const processedContent = await unified()
     .use(remarkParse)
-    .use(remarkRehype)
+    .use(remarkRehype, { allowDangerousHtml: true })
     .use(rehypeHighlight)
-    .use(rehypeStringify)
+    .use(rehypeStringify, { allowDangerousHtml: true })
     .process(matterResult.content);
 
   const contentHtml = processedContent.toString();
