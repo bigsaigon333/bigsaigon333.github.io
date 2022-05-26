@@ -1,6 +1,6 @@
 ---
 title: 실무에서 바로 써먹는 정규표현식(1)
-date: "2022-05-07"
+date: "2022-05-26"
 summary: 실무에서 바로 써먹는 정규표현식
 ---
 
@@ -35,7 +35,7 @@ summary: 실무에서 바로 써먹는 정규표현식
 검색한 결과가 있다면 주어진 문자열이 정규표현식에 일치하는 것을 알 수 있습니다.
 검색한 결과가 없다면 주어진 문자열에 정규표현식으로 표현되는 패턴에 존재하지 않는다, 즉 주어진 문자열이 정규표현식에 일치하지 않는 것을 알 수 있습니다.
 
-이를 응용하면 정규표현식에 일치하는 부분 문자열이 무엇이었는지 특정하거나, 해당 부분 문자열을 다른 문자열로 치환하거나, 빈문자열로 치환하여 삭제하는 것도 가능해집니다.
+이를 응용하면 1) 정규표현식에 일치하는 부분 문자열을 특정하거나, 2) 특정된 부분 문자열을 다른 문자열로 치환하거나, 3) 빈문자열로 치환하여 삭제하는 것도 가능합니다.
 
 또한, 정규표현식의 문자열 처음, 문자열 끝을 나타내는 메타문자를 활용한다면 문자열 전체를 대상으로 한 패턴을 기술할 수도 있습니다. 이를 이용하여 주어진 문자열 그 자체가 정규표현식에 일치하는지를 검색하여, 전체 문자열을 검증할 수도 있습니다.
 
@@ -157,11 +157,11 @@ summary: 실무에서 바로 써먹는 정규표현식
 
 ```js
 function hasBannedWords(requestMessage) {
-  return `/빨리|빠르게|퀵|스피디/`.test(requestMessage);
+  return /빨리|빠르게|퀵|스피디/.test(requestMessage);
 }
 
-console.log(hasBannedWords("빠르게 와주세요")); // true
-console.log(hasBannedWords("초인종 누르지 말아주세요")); // false
+console.assert(hasBannedWords("빠르게 와주세요") === true);
+console.assert(hasBannedWords("초인종 누르지 말아주세요") === false);
 ```
 
 `RegExp.prototype.test`는 인자로 주어진 문자열이 정규표현식에 일치하는지 여부를 boolean으로 반환합니다.
@@ -259,64 +259,71 @@ const re =
 function isValidBirthday(birthday) {
   return re.test(birthday);
 }
+```
 
+<details>
+  <summary>검증 코드</summary>
+
+```js
 // 연도 검증
-console.log(isValidBirthday("2999-08-28")); // false
-console.log(isValidBirthday("1899-08-28")); // false
-console.log(isValidBirthday("1999-08-28")); // true
+console.assert(isValidBirthday("2999-08-28") === false);
+console.assert(isValidBirthday("1899-08-28") === false);
+console.assert(isValidBirthday("1999-08-28") === true);
 
 // 월 검증
-console.log(isValidBirthday("1999-00-28")); // false
-console.log(isValidBirthday("1999-13-28")); // false
+console.assert(isValidBirthday("1999-00-28") === false);
+console.assert(isValidBirthday("1999-13-28") === false);
 
 // 일 검증
-console.log(isValidBirthday("1999-08-32")); // false
-console.log(isValidBirthday("1999-08-00")); // false
+console.assert(isValidBirthday("1999-08-32") === false);
+console.assert(isValidBirthday("1999-08-00") === false);
 
 // 1,3,5,7,8,10,12월 검증
-console.log(isValidBirthday("1999-01-31")); // true
-console.log(isValidBirthday("1999-03-31")); // true
-console.log(isValidBirthday("1999-05-31")); // true
-console.log(isValidBirthday("1999-07-31")); // true
-console.log(isValidBirthday("1999-08-31")); // true
-console.log(isValidBirthday("1999-10-31")); // true
-console.log(isValidBirthday("1999-12-31")); // true
+console.assert(isValidBirthday("1999-01-31") === true);
+console.assert(isValidBirthday("1999-03-31") === true);
+console.assert(isValidBirthday("1999-05-31") === true);
+console.assert(isValidBirthday("1999-07-31") === true);
+console.assert(isValidBirthday("1999-08-31") === true);
+console.assert(isValidBirthday("1999-10-31") === true);
+console.assert(isValidBirthday("1999-12-31") === true);
 
 // 4,6,9,11월 검증
-console.log(isValidBirthday("1999-04-31")); // false
-console.log(isValidBirthday("1999-06-31")); // false
-console.log(isValidBirthday("1999-09-31")); // false
-console.log(isValidBirthday("1999-11-31")); // false
+console.assert(isValidBirthday("1999-04-31") === false);
+console.assert(isValidBirthday("1999-06-31") === false);
+console.assert(isValidBirthday("1999-09-31") === false);
+console.assert(isValidBirthday("1999-11-31") === false);
 
 // 2월 검증
-console.log(isValidBirthday("1999-02-28")); // true
-console.log(isValidBirthday("1999-02-29")); // false
-console.log(isValidBirthday("1999-02-30")); // false
-console.log(isValidBirthday("1999-02-31")); // false
+console.assert(isValidBirthday("1999-02-28") === true);
+console.assert(isValidBirthday("1999-02-29") === false);
+console.assert(isValidBirthday("1999-02-30") === false);
+console.assert(isValidBirthday("1999-02-31") === false);
 
 // 기타
-console.log(isValidBirthday("1999-35-31")); // false
-console.log(isValidBirthday("1999-03-02")); // true
-console.log(isValidBirthday("1999-08-28")); // true
-console.log(isValidBirthday("1999-08-32")); // false
-console.log(isValidBirthday("1999-11-30")); // true
-console.log(isValidBirthday("1999-11-31")); // false
-console.log(isValidBirthday("1999-02-28")); // true
-console.log(isValidBirthday("1939-04-28")); // true
-console.log(isValidBirthday("1999-02-29")); // false
-console.log(isValidBirthday("1999-00-31")); // false
-console.log(isValidBirthday("2023-00-31")); // false
-console.log(isValidBirthday("2023-01-31")); // false
-console.log(isValidBirthday("2022-01-31")); // true
-console.log(isValidBirthday("1822-01-31")); // false
-console.log(isValidBirthday("1922-01-31")); // true
+console.assert(isValidBirthday("1999-35-31") === false);
+console.assert(isValidBirthday("1999-03-02") === true);
+console.assert(isValidBirthday("1999-08-28") === true);
+console.assert(isValidBirthday("1999-08-32") === false);
+console.assert(isValidBirthday("1999-11-30") === true);
+console.assert(isValidBirthday("1999-11-31") === false);
+console.assert(isValidBirthday("1999-02-28") === true);
+console.assert(isValidBirthday("1939-04-28") === true);
+console.assert(isValidBirthday("1999-02-29") === false);
+console.assert(isValidBirthday("1999-00-31") === false);
+console.assert(isValidBirthday("2023-00-31") === false);
+console.assert(isValidBirthday("2023-01-31") === false);
+console.assert(isValidBirthday("2022-01-31") === true);
+console.assert(isValidBirthday("1822-01-31") === false);
+console.assert(isValidBirthday("1922-01-31") === true);
 ```
+
+</details>
 
 하지만 위의 식에는 치명적인 문제점이 있습니다.
 
 ```js
-console.log(isValidBirthday("1999-08-281")); // true
-console.log(isValidBirthday("11999-08-28")); // true
+console.assert(isValidBirthday("1999-08-281") === true);
+console.assert(isValidBirthday("11999-08-28") === true);
 ```
 
 이게 어찌된 영문일까요? 정규표현식은 문자열의 패턴을 표현하는 방법입니다.
@@ -339,15 +346,15 @@ function isValidBirthday(birthday) {
   return re.test(birthday);
 }
 
-console.log(isValidBirthday("1999-08-28")); // true
-console.log(isValidBirthday("1999-08-281")); // false
-console.log(isValidBirthday("11999-08-28")); // false
+console.assert(isValidBirthday("1999-08-28") === true);
+console.assert(isValidBirthday("1999-08-281") === false);
+console.assert(isValidBirthday("11999-08-28") === false);
 ```
 
 ## V. 마무리
 
-정규표현식 기본 연산자 3개만으로도 많은 걸 할 수 있습니다. 기본 연산자 외에 탐색, 캡쳐와 같은 기능을 익힌다면 더욱 많은 것들을 정규표현식을 이용하여 할 수 있습니다.
+위의 예시에서는 정규표현식만으로 주어진 요구사항을 구현하려고 하였기에 정규표현식이 꽤 복잡해졌습니다.
+유지보수성, 가독성 등을 고려하면 정규표현식만을 사용하지 않고, `String.prototype` 메서드와 조건문, 정규표현식 기본 연산자를 조합해서 쓰는 것이 더 좋은 방법인 경우가 많습니다.
+`String.prototype` 메서드와 조건문은 이미 익숙하시기에, 정규표현식 기본 연산자를 잘 아는 것만으로도 웬만한 건 다 하실 수 있으리라 생각합니다.
 
-다만 정규표현식으로 할 수 있다고 하더라도 유지보수성, 가독성 등을 고려하면 정규표현식이 항상 최선의 선택인 것은 아닙니다. 예제2 에서 보다시피 정규표현식을 사용하면 오히려 굉장히 복잡해질 수도 있습니다.
-
-다음 편에서는 탐색, 캡쳐와 같은 기능을 알아보고 정규표현식에 일치하는 문자열에서 일치하는 부분을 추출하고 치환하는 방법에 대해서 알아보겠습니다.
+다음 편에서는 탐색, 캡쳐와 같은 기능을 알아보고 정규표현식에 일치하는 부분 문자열을 특정하고 치환하는 방법에 대해서 알아보겠습니다.
