@@ -24,4 +24,8 @@ export const Main = styled.main`
     padding: 0.15em 0.2em 0.05em;
     white-space: normal;
   }
+
+  details > summary {
+    cursor: pointer;
+  }
 `;
