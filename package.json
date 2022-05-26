@@ -54,5 +54,11 @@
     "*.{js,ts,jsx,tsx}": "eslint --cache --fix",
     "*.style.{ts,tsx}": "stylelint --cache --fix",
     "*": "prettier --write --ignore-unknown"
+  },
+  "engineStrict": true,
+  "engines": {
+    "node": "^16.0.0",
+    "npm": "^8.0.0",
+    "yarn": "use-npm"
   }
 }
