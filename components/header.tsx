@@ -22,7 +22,10 @@ const Header = ({ home }: HeaderProps) => {
         <Link href="/" passHref={true}>
           <A>
             <ProfileWrapper>
-              <Profile src="/profile.jpg" alt="프로필" />
+              <picture>
+                <source srcSet="/profile.webp" type="image/webp" />
+                <Profile src="/profile.jpg" alt="프로필" />
+              </picture>
             </ProfileWrapper>
             <div>
               <span>프론트엔드 개발자</span>
