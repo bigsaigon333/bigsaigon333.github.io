@@ -28,4 +28,16 @@ export const Main = styled.main`
   details > summary {
     cursor: pointer;
   }
+
+  blockquote {
+    margin: 0 1.75rem 1.75rem -1.75rem;
+    padding: 0 0 0 1.25rem;
+    font-size: 1.25rem;
+    line-height: 1.75rem;
+    color: inherit;
+    font-style: italic;
+    border-left: 0.3281rem solid hsl(0deg 0% 0% / 90%);
+    border-left-color: inherit;
+    opacity: 0.8;
+  }
 `;
