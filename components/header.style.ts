@@ -12,11 +12,6 @@ export const Title = styled.h1`
   line-height: 1.25;
   width: 100%;
   font-weight: 800;
-
-  @media (max-width: 767px) {
-    font-size: 7.5vw;
-    column-gap: 1rem;
-  }
 `;
 
 export const A = styled.a`
@@ -30,6 +25,11 @@ export const A = styled.a`
 
   &:hover p span {
     box-shadow: 0 0.25rem 0 0 black;
+  }
+
+  @media (max-width: 767px) {
+    font-size: 9vw;
+    column-gap: 1rem;
   }
 `;
 
