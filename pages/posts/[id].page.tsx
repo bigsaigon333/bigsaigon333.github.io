@@ -1,4 +1,5 @@
 import { InferGetStaticPropsType } from "next";
+import Head from "next/head";
 
 import "highlight.js/styles/base16/monokai.css";
 
@@ -29,11 +30,23 @@ const Post = ({ postData }: InferGetStaticPropsType<typeof getStaticProps>) => {
 
   return (
     <Layout>
+      <Head>
+        <title>{title}</title>
+      </Head>
       <Article>
         <h2>{title}</h2>
         <time>{date}</time>
       </Article>
       <Main dangerouslySetInnerHTML={{ __html: contentHtml }} />
+      <script
+        src="https://utteranc.es/client.js"
+        /* @ts-ignore */
+        repo="bigsaigon333/bigsaigon333.github.io"
+        issue-term="title"
+        theme="boxy-light"
+        crossOrigin="anonymous"
+        async
+      ></script>
     </Layout>
   );
 };
