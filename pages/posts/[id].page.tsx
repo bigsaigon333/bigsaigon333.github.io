@@ -40,14 +40,14 @@ export const getStaticProps = async ({ params }: Params) => {
 
 const Post = ({ postData }: InferGetStaticPropsType<typeof getStaticProps>) => {
   const { title, date, contentHtml } = postData;
-  const mainRef = useRef<HTMLElement>(null);
+  const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (mainRef.current === null) {
+    if (ref.current === null) {
       return;
     }
 
-    mainRef.current.insertAdjacentElement("afterend", createUtterancScript());
+    ref.current.replaceWith(createUtterancScript());
   }, []);
 
   return (
@@ -59,7 +59,8 @@ const Post = ({ postData }: InferGetStaticPropsType<typeof getStaticProps>) => {
         <h2>{title}</h2>
         <time>{date}</time>
       </Article>
-      <Main ref={mainRef} dangerouslySetInnerHTML={{ __html: contentHtml }} />
+      <Main dangerouslySetInnerHTML={{ __html: contentHtml }} />
+      <div ref={ref} />
     </Layout>
   );
 };
