@@ -82,6 +82,8 @@ extends 키워드를 이용하면 제네릭 타입으로 입력할 수 있는 �
 
 - typeof 키워드
 - instanceof 키워드
+- in 연산자
+- never type
 - 식별 가능한 유니온 타입(discriminated union)
 - assertion function
 
@@ -133,3 +135,5 @@ const assertIsString = (val: any): asserts val is string => {
 <https://www.typescriptlang.org/docs/handbook/release-notes/typescript-3-7.html?#assertion-functions>
 
 <https://github.com/microsoft/TypeScript/pull/33622>
+
+<https://www.typescriptlang.org/docs/handbook/2/narrowing.html#the-in-operator-narrowing>
