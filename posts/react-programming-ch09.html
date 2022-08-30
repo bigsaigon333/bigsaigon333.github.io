@@ -1,0 +1,161 @@
+<!DOCTYPE html><html lang="ko"><head><meta charSet="utf-8"/><meta name="viewport" content="initial-scale=1.0, width=device-width"/><title>실전 리액트 프로그래밍 09장 정적 타입 그리고 타입스크립트</title><meta name="next-head-count" content="3"/><link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin=""/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin /><link rel="preload" href="/_next/static/css/9d33c709da292899.css" as="style"/><link rel="stylesheet" href="/_next/static/css/9d33c709da292899.css" data-n-p=""/><noscript data-n-css=""></noscript><script defer="" nomodule="" src="/_next/static/chunks/polyfills-5cd94c89d3acac5f.js"></script><script src="/_next/static/chunks/webpack-9b312e20a4e32339.js" defer=""></script><script src="/_next/static/chunks/framework-5f4595e5518b5600.js" defer=""></script><script src="/_next/static/chunks/main-a4d9e436b9a532ca.js" defer=""></script><script src="/_next/static/chunks/pages/_app-4adef2976501865e.js" defer=""></script><script src="/_next/static/chunks/641-91ae8bb3644174ea.js" defer=""></script><script src="/_next/static/chunks/pages/posts/%5Bid%5D-3df0fe811b81fef9.js" defer=""></script><script src="/_next/static/0nBrjdt3uJlmTcYzW47qB/_buildManifest.js" defer=""></script><script src="/_next/static/0nBrjdt3uJlmTcYzW47qB/_ssgManifest.js" defer=""></script><script src="/_next/static/0nBrjdt3uJlmTcYzW47qB/_middlewareManifest.js" defer=""></script><style data-styled="" data-styled-version="5.3.3">*,::before,::after{box-sizing:border-box;}/*!sc*/
+[hidden]{display:none;}/*!sc*/
+h1{margin:0.67em 0;font-size:2rem;}/*!sc*/
+h2{font-size:1.5rem;}/*!sc*/
+h3{font-size:1.17rem;}/*!sc*/
+h4{font-size:1rem;}/*!sc*/
+h5{font-size:0.83rem;}/*!sc*/
+h6{font-size:0.67rem;}/*!sc*/
+pre{white-space:pre-wrap;}/*!sc*/
+hr{border-style:solid;border-width:1px 0 0;color:inherit;height:0;overflow:visible;}/*!sc*/
+img,svg,video,canvas,audio,iframe,embed,object{display:block;vertical-align:middle;max-width:100%;}/*!sc*/
+picture{display:contents;}/*!sc*/
+source{display:none;}/*!sc*/
+img,svg,video,canvas{height:auto;}/*!sc*/
+audio{width:100%;}/*!sc*/
+audio:not([controls]){display:none;}/*!sc*/
+img{border-style:none;}/*!sc*/
+svg{overflow:hidden;}/*!sc*/
+article,aside,details,figcaption,figure,footer,header,hgroup,main,nav,section{display:block;}/*!sc*/
+[type="checkbox"],[type="radio"]{box-sizing:border-box;padding:0;}/*!sc*/
+html,body{padding:0;margin:0;font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","맑은 고딕","나눔고딕","Nanum Gothic","Noto Sans KR","Noto Sans CJK KR",arial,"돋움",Dotum,Tahoma,Geneva,"Helvetica Neue",sans-serif;}/*!sc*/
+a{color:inherit;-webkit-text-decoration:none;text-decoration:none;}/*!sc*/
+code[class*=language-],pre[class*=language-]{font-family:"Source Code Pro",Consolas,Menlo,Monaco,Courier New,monospace;font-size:0.825rem;}/*!sc*/
+data-styled.g1[id="sc-global-jkJdhN1"]{content:"sc-global-jkJdhN1,"}/*!sc*/
+.jzwiwO{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;-webkit-align-items:center;-webkit-box-align:center;-ms-flex-align:center;align-items:center;width:100%;}/*!sc*/
+data-styled.g2[id="sc-6d17420c-0"]{content:"jzwiwO,"}/*!sc*/
+.hCxheK{margin:0;line-height:1.25;width:100%;font-weight:800;}/*!sc*/
+data-styled.g3[id="sc-6d17420c-1"]{content:"hCxheK,"}/*!sc*/
+.deSAmu{width:100%;font-size:3.6rem;text-align:center;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-column-gap:2rem;column-gap:2rem;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;-webkit-align-items:center;-webkit-box-align:center;-ms-flex-align:center;align-items:center;}/*!sc*/
+.deSAmu:hover p span{box-shadow:0 0.25rem 0 0 black;}/*!sc*/
+@media (max-width:767px){.deSAmu{font-size:9vw;-webkit-column-gap:1rem;column-gap:1rem;}}/*!sc*/
+data-styled.g4[id="sc-6d17420c-2"]{content:"deSAmu,"}/*!sc*/
+.iMxutK{position:relative;overflow:hidden;border-radius:35%;width:25%;padding-bottom:25%;}/*!sc*/
+@media (max-width:600px){.iMxutK{width:20%;padding-bottom:20%;}}/*!sc*/
+data-styled.g5[id="sc-6d17420c-3"]{content:"iMxutK,"}/*!sc*/
+.hunNUo{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover;}/*!sc*/
+data-styled.g6[id="sc-6d17420c-4"]{content:"hunNUo,"}/*!sc*/
+.jzrTAN{min-height:100vh;padding:3rem 2rem 0;-webkit-flex:1;-ms-flex:1;flex:1;display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;-webkit-flex-direction:column;-ms-flex-direction:column;flex-direction:column;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;-webkit-align-items:flex-start;-webkit-box-align:flex-start;-ms-flex-align:flex-start;align-items:flex-start;row-gap:2rem;max-width:768px;margin:auto;}/*!sc*/
+@media (max-width:600px){.jzrTAN{padding:2rem 1rem 0;}}/*!sc*/
+data-styled.g10[id="sc-436a7e6d-0"]{content:"jzrTAN,"}/*!sc*/
+.fCWfQB{display:-webkit-box;display:-webkit-flex;display:-ms-flexbox;display:flex;width:100%;padding:2rem 0 1rem;border-top:1px solid #eaeaea;-webkit-box-pack:center;-webkit-justify-content:center;-ms-flex-pack:center;justify-content:center;-webkit-align-items:center;-webkit-box-align:center;-ms-flex-align:center;align-items:center;}/*!sc*/
+data-styled.g11[id="sc-436a7e6d-1"]{content:"fCWfQB,"}/*!sc*/
+.kLhcQd h2{font-size:2.5rem;margin:0 0 0.5rem;font-weight:800;}/*!sc*/
+@media (max-width:600px){.kLhcQd h2{font-size:2rem;}}/*!sc*/
+@media (max-width:375px){.kLhcQd h2{font-size:1.5rem;}}/*!sc*/
+.kLhcQd time{font-size:1rem;}/*!sc*/
+.kLhcQd p{font-size:1.25rem;line-height:1.75rem;}/*!sc*/
+data-styled.g13[id="sc-564a7b06-1"]{content:"kLhcQd,"}/*!sc*/
+.lmqIuX{width:100%;-webkit-box-flex:1;-webkit-flex-grow:1;-ms-flex-positive:1;flex-grow:1;line-height:1.75;}/*!sc*/
+.lmqIuX a{word-break:break-word;}/*!sc*/
+.lmqIuX a:hover{box-shadow:0 0.125rem 0 0 black;}/*!sc*/
+.lmqIuX ul{margin:0;padding-inline-start:20px;}/*!sc*/
+.lmqIuX :not(pre) > code{border-radius:0.3em;background:rgb(255 229 100 / 20%);color:#1a1a1a;padding:0.15em 0.2em 0.05em;white-space:normal;}/*!sc*/
+.lmqIuX details > summary{cursor:pointer;}/*!sc*/
+.lmqIuX blockquote{margin:0 1.75rem 1.75rem -1.75rem;padding:0 0 0 1.25rem;font-size:1.25rem;line-height:1.75rem;color:inherit;font-style:italic;border-left:0.3281rem solid hsl(0deg 0% 0% / 90%);border-left-color:inherit;opacity:0.8;}/*!sc*/
+.lmqIuX table{display:block;width:100%;width:-webkit-max-content;width:-moz-max-content;width:max-content;max-width:100%;overflow:auto;margin-top:0;margin-bottom:1rem;border-spacing:0;border-collapse:collapse;}/*!sc*/
+.lmqIuX table tr{border-top:1px solid hsl(210deg 18% 87% / 100%);}/*!sc*/
+.lmqIuX table tr:nth-child(2n){background-color:#f6f8fa;}/*!sc*/
+.lmqIuX table th{font-weight:600;}/*!sc*/
+.lmqIuX table th,.lmqIuX table td{padding:6px 13px;border:1px solid #d0d7de;}/*!sc*/
+data-styled.g14[id="sc-863196f3-0"]{content:"lmqIuX,"}/*!sc*/
+</style><style data-href="https://fonts.googleapis.com/css2?family=Source+Code+Pro&display=swap">@font-face{font-family:'Source Code Pro';font-style:normal;font-weight:400;font-display:swap;src:url(https://fonts.gstatic.com/s/sourcecodepro/v22/HI_diYsKILxRpg3hIP6sJ7fM7PqPMcMnZFqUwX28DMyQhM0.woff) format('woff')}@font-face{font-family:'Source Code Pro';font-style:normal;font-weight:400;font-display:swap;src:url(https://fonts.gstatic.com/s/sourcecodepro/v22/HI_diYsKILxRpg3hIP6sJ7fM7PqPMcMnZFqUwX28DMyQtMRrSlcZZJmOpwVS.woff) format('woff');unicode-range:U+0460-052F,U+1C80-1C88,U+20B4,U+2DE0-2DFF,U+A640-A69F,U+FE2E-FE2F}@font-face{font-family:'Source Code Pro';font-style:normal;font-weight:400;font-display:swap;src:url(https://fonts.gstatic.com/s/sourcecodepro/v22/HI_diYsKILxRpg3hIP6sJ7fM7PqPMcMnZFqUwX28DMyQtM1rSlcZZJmOpwVS.woff) format('woff');unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116}@font-face{font-family:'Source Code Pro';font-style:normal;font-weight:400;font-display:swap;src:url(https://fonts.gstatic.com/s/sourcecodepro/v22/HI_diYsKILxRpg3hIP6sJ7fM7PqPMcMnZFqUwX28DMyQtMVrSlcZZJmOpwVS.woff) format('woff');unicode-range:U+1F00-1FFF}@font-face{font-family:'Source Code Pro';font-style:normal;font-weight:400;font-display:swap;src:url(https://fonts.gstatic.com/s/sourcecodepro/v22/HI_diYsKILxRpg3hIP6sJ7fM7PqPMcMnZFqUwX28DMyQtMprSlcZZJmOpwVS.woff) format('woff');unicode-range:U+0370-03FF}@font-face{font-family:'Source Code Pro';font-style:normal;font-weight:400;font-display:swap;src:url(https://fonts.gstatic.com/s/sourcecodepro/v22/HI_diYsKILxRpg3hIP6sJ7fM7PqPMcMnZFqUwX28DMyQtMZrSlcZZJmOpwVS.woff) format('woff');unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+1EA0-1EF9,U+20AB}@font-face{font-family:'Source Code Pro';font-style:normal;font-weight:400;font-display:swap;src:url(https://fonts.gstatic.com/s/sourcecodepro/v22/HI_diYsKILxRpg3hIP6sJ7fM7PqPMcMnZFqUwX28DMyQtMdrSlcZZJmOpwVS.woff) format('woff');unicode-range:U+0100-024F,U+0259,U+1E00-1EFF,U+2020,U+20A0-20AB,U+20AD-20CF,U+2113,U+2C60-2C7F,U+A720-A7FF}@font-face{font-family:'Source Code Pro';font-style:normal;font-weight:400;font-display:swap;src:url(https://fonts.gstatic.com/s/sourcecodepro/v22/HI_diYsKILxRpg3hIP6sJ7fM7PqPMcMnZFqUwX28DMyQtMlrSlcZZJmOpw.woff) format('woff');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+2074,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}</style></head><body><div id="__next" data-reactroot=""><div class="sc-436a7e6d-0 jzrTAN"><header class="sc-6d17420c-0 jzwiwO"><h1 class="sc-6d17420c-1 hCxheK"><a href="/" class="sc-6d17420c-2 deSAmu"><div class="sc-6d17420c-3 iMxutK"><picture><source srcSet="/profile.webp" type="image/webp"/><img src="/profile.jpg" alt="프로필" class="sc-6d17420c-4 hunNUo"/></picture></div><div><span>프론트엔드 개발자</span><br/><span>김동희입니다</span></div></a></h1></header><article class="sc-564a7b06-1 kLhcQd"><h2>실전 리액트 프로그래밍 09장 정적 타입 그리고 타입스크립트</h2><time>2022-08-27</time></article><main class="sc-863196f3-0 lmqIuX"><h2>1. 인덱스 타입</h2>
+<p>속성 이름을 구체적으로 정의하지 않고 값의 타입만 정의하는 것</p>
+<pre><code class="hljs language-ts"><span class="hljs-keyword">interface</span> I {
+  [<span class="hljs-attr">key</span>: <span class="hljs-built_in">string</span>]: <span class="hljs-built_in">number</span>;
+}
+</code></pre>
+<h2>2. 타입 호환성</h2>
+<p>어떤 타입을 다른 타입으로 취급해도 되는지 판단하는 것.
+어떤 변수가 다른 변수에 할당 가능하기 위해서는 해당 변수의 타입이 다른 변수의 타입에 할당 가능해야 한다.</p>
+<p><code>타입 A가 타입 B에 할당 가능하다 = 타입 A는 타입 B의 서브타입이다</code></p>
+<p>타입은 할당 가능한 값의 집합이다. 따라서 할당 가능을 판단할 때에는 타입이 가질 수 있는 값의 집합을 생각하면 이해하기 쉽다.</p>
+<h3>2.1 인터페이스의 타입 호환성</h3>
+<p>인터페이스 A가 인터페이스 B로 할당 가능하려면 다음 조건을 만족해야 한다.</p>
+<ul>
+<li>B에 있는 모든 필수 속성의 이름이 A에도 존재해야 한다.</li>
+<li>같은 속성 이름에 대해, A의 속성이 B의 속성에 할당 가능해야 한다.</li>
+</ul>
+<h3>2.2 함수의 타입 호환성</h3>
+<p>함수는 호출하는 시점에 문제가 없어야 할당 가능하다.</p>
+<h4>2.3 함수 타입 A가 함수 타입 B로 할당 가능하기 위한 조건</h4>
+<p>(=함수 타입 A가 함수 타입B의 서브타입이기 위한 조건)</p>
+<ul>
+<li>A의 매개변수 개수가 B의 매개변수 개수보다 적어야 한다.</li>
+<li>같은 위치의 매개변수에 대해 B의 매개변수가 A의 매개변수로 할당 가능해야 한다.(매개변수는 반변)</li>
+<li>A의 반환값은 B의 반환값으로 할당 가능하다. (반환값은 공변)</li>
+</ul>
+<h2>3. 구조적 타이핑</h2>
+<p>타입의 이름은 다르더라도 내부 구조가 같으면 같은 타입으로 취급하는 것.</p>
+<pre><code class="hljs language-ts"><span class="hljs-keyword">interface</span> <span class="hljs-title class_">Person</span> {
+  <span class="hljs-attr">name</span>: <span class="hljs-built_in">string</span>;
+  <span class="hljs-attr">age</span>: <span class="hljs-built_in">number</span>;
+}
+
+<span class="hljs-keyword">interface</span> <span class="hljs-title class_">Product</span> {
+  <span class="hljs-attr">name</span>: <span class="hljs-built_in">string</span>;
+  <span class="hljs-attr">age</span>: <span class="hljs-built_in">number</span>;
+}
+
+<span class="hljs-keyword">const</span> <span class="hljs-attr">person</span>: <span class="hljs-title class_">Person</span> = { <span class="hljs-attr">name</span>: <span class="hljs-string">"mike"</span>, <span class="hljs-attr">age</span>: <span class="hljs-number">23</span> };
+<span class="hljs-keyword">const</span> <span class="hljs-attr">peroduct</span>: <span class="hljs-title class_">Product</span> = person;
+</code></pre>
+<h2>4. extends, infer</h2>
+<h3>4.1 extends</h3>
+<p>런타임의 삼항 연산자와 유사한 역할을 하는 키워드.</p>
+<p>조건부 타입에서 사용된다. 입력된 제네릭 타입에 따라 타입을 결정할 수 있다. 어떠한 타입이 해당 타입의 서브 타입인 경우에 해당할 때와 해당하지 않을 때의 타입을 명시할 수 있다.</p>
+<p>extends 키워드를 이용하면 제네릭 타입으로 입력할 수 있는 타입의 종류를 제한할 수 있다.</p>
+<h3>4.2 infer</h3>
+<p>조건부 타입을 정의할 때 extends 키워드 뒤에 사용된다.</p>
+<p>추론된 타입을 담는 변수와 같은 역할을 수행한다.</p>
+<h2>5. 타입 가드</h2>
+<p>조건문을 이용해 타입의 범위를 좁히는 기능. 타입 가드를 잘 활용하면 불필요한 타입 단언(assertion) 코드를 피할 수 있으므로 생산성과 가독성이 높아진다.</p>
+<ul>
+<li>typeof 키워드</li>
+<li>instanceof 키워드</li>
+<li>in 연산자</li>
+<li>never type</li>
+<li>식별 가능한 유니온 타입(discriminated union)</li>
+<li>assertion function</li>
+</ul>
+<h3>5.1 assertion function</h3>
+<p>기대하지 않은 일이 발생하면 에러를 던지는 함수를 assertion function이라고 한다. assertion function은 호출 이후의 스코프 내에서 체크하는 조건이 무엇이던지 간에 반드시 참일 것을 보장한다. assertion function은 실제로 기대되는 타입이 아닌 경우 런타임에서 에러를 방출하므로, 에러 발생시 어떻게 대처할지도 고민해야한다.(대부분은 개발자의 실수로 인한 것이겠지만)</p>
+<pre><code class="hljs language-ts"><span class="hljs-keyword">function</span> <span class="hljs-title function_">assertIsString</span>(<span class="hljs-params">val: <span class="hljs-built_in">any</span></span>): asserts val is <span class="hljs-built_in">string</span> {
+  <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> val !== <span class="hljs-string">"string"</span>) {
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">AssertionError</span>(<span class="hljs-string">"Not a string!"</span>);
+  }
+}
+
+<span class="hljs-keyword">function</span> <span class="hljs-title function_">yell</span>(<span class="hljs-params">str: <span class="hljs-built_in">any</span></span>) {
+  <span class="hljs-title function_">assertIsString</span>(str);
+
+  <span class="hljs-comment">// 이제 TypeScript는 'str'이 문자열 타입인 것을 안다</span>
+  <span class="hljs-keyword">return</span> str.<span class="hljs-title function_">toUppercase</span>();
+  <span class="hljs-comment">//         ~~~~~~~~~~~</span>
+  <span class="hljs-comment">// 문자열 타입에는 toUppercase 라는 메소드가 존재하지 않으므로 에러를 방출한다.</span>
+  <span class="hljs-comment">// (toUpperCase 메소드만 존재)</span>
+}
+</code></pre>
+<p>assertion function은 정의할 때 항상 명시적으로 정의해야한다.</p>
+<pre><code class="hljs language-ts"><span class="hljs-keyword">function</span> <span class="hljs-title function_">assertIsString</span>(<span class="hljs-params">val: <span class="hljs-built_in">any</span></span>): asserts val is <span class="hljs-built_in">string</span> {
+  <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> val !== <span class="hljs-string">"string"</span>) {
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">AssertionError</span>(<span class="hljs-string">"Not a string!"</span>);
+  }
+} <span class="hljs-comment">// ok</span>
+
+<span class="hljs-keyword">const</span> assertIsString (<span class="hljs-attr">val</span>: <span class="hljs-built_in">any</span>) => asserts val is <span class="hljs-built_in">string</span> = <span class="hljs-function">(<span class="hljs-params">val</span>) =></span> {
+  <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> val !== <span class="hljs-string">"string"</span>) {
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">AssertionError</span>(<span class="hljs-string">"Not a string!"</span>);
+  }
+}; <span class="hljs-comment">// ok</span>
+
+<span class="hljs-keyword">const</span> assertIsString = (<span class="hljs-attr">val</span>: <span class="hljs-built_in">any</span>): asserts val is <span class="hljs-built_in">string</span> => {
+  <span class="hljs-keyword">if</span> (<span class="hljs-keyword">typeof</span> val !== <span class="hljs-string">"string"</span>) {
+    <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-title class_">AssertionError</span>(<span class="hljs-string">"Not a string!"</span>);
+  }
+}; <span class="hljs-comment">// Assertions require every name in the call target to be declared</span>
+   <span class="hljs-comment">// with an explicit type annotation. ts(2775)</span>
+</code></pre>
+<p><a href="https://www.typescriptlang.org/docs/handbook/release-notes/typescript-3-7.html?#assertion-functions">https://www.typescriptlang.org/docs/handbook/release-notes/typescript-3-7.html?#assertion-functions</a></p>
+<p><a href="https://github.com/microsoft/TypeScript/pull/33622">https://github.com/microsoft/TypeScript/pull/33622</a></p>
+<p><a href="https://www.typescriptlang.org/docs/handbook/2/narrowing.html#the-in-operator-narrowing">https://www.typescriptlang.org/docs/handbook/2/narrowing.html#the-in-operator-narrowing</a></p></main><div></div><footer class="sc-436a7e6d-1 fCWfQB">Copyright© 2022 All right reserved</footer></div></div><script id="__NEXT_DATA__" type="application/json">{"props":{"pageProps":{"postData":{"id":"react-programming-ch09","contentHtml":"\u003ch2\u003e1. 인덱스 타입\u003c/h2\u003e\n\u003cp\u003e속성 이름을 구체적으로 정의하지 않고 값의 타입만 정의하는 것\u003c/p\u003e\n\u003cpre\u003e\u003ccode class=\"hljs language-ts\"\u003e\u003cspan class=\"hljs-keyword\"\u003einterface\u003c/span\u003e I {\n  [\u003cspan class=\"hljs-attr\"\u003ekey\u003c/span\u003e: \u003cspan class=\"hljs-built_in\"\u003estring\u003c/span\u003e]: \u003cspan class=\"hljs-built_in\"\u003enumber\u003c/span\u003e;\n}\n\u003c/code\u003e\u003c/pre\u003e\n\u003ch2\u003e2. 타입 호환성\u003c/h2\u003e\n\u003cp\u003e어떤 타입을 다른 타입으로 취급해도 되는지 판단하는 것.\n어떤 변수가 다른 변수에 할당 가능하기 위해서는 해당 변수의 타입이 다른 변수의 타입에 할당 가능해야 한다.\u003c/p\u003e\n\u003cp\u003e\u003ccode\u003e타입 A가 타입 B에 할당 가능하다 = 타입 A는 타입 B의 서브타입이다\u003c/code\u003e\u003c/p\u003e\n\u003cp\u003e타입은 할당 가능한 값의 집합이다. 따라서 할당 가능을 판단할 때에는 타입이 가질 수 있는 값의 집합을 생각하면 이해하기 쉽다.\u003c/p\u003e\n\u003ch3\u003e2.1 인터페이스의 타입 호환성\u003c/h3\u003e\n\u003cp\u003e인터페이스 A가 인터페이스 B로 할당 가능하려면 다음 조건을 만족해야 한다.\u003c/p\u003e\n\u003cul\u003e\n\u003cli\u003eB에 있는 모든 필수 속성의 이름이 A에도 존재해야 한다.\u003c/li\u003e\n\u003cli\u003e같은 속성 이름에 대해, A의 속성이 B의 속성에 할당 가능해야 한다.\u003c/li\u003e\n\u003c/ul\u003e\n\u003ch3\u003e2.2 함수의 타입 호환성\u003c/h3\u003e\n\u003cp\u003e함수는 호출하는 시점에 문제가 없어야 할당 가능하다.\u003c/p\u003e\n\u003ch4\u003e2.3 함수 타입 A가 함수 타입 B로 할당 가능하기 위한 조건\u003c/h4\u003e\n\u003cp\u003e(=함수 타입 A가 함수 타입B의 서브타입이기 위한 조건)\u003c/p\u003e\n\u003cul\u003e\n\u003cli\u003eA의 매개변수 개수가 B의 매개변수 개수보다 적어야 한다.\u003c/li\u003e\n\u003cli\u003e같은 위치의 매개변수에 대해 B의 매개변수가 A의 매개변수로 할당 가능해야 한다.(매개변수는 반변)\u003c/li\u003e\n\u003cli\u003eA의 반환값은 B의 반환값으로 할당 가능하다. (반환값은 공변)\u003c/li\u003e\n\u003c/ul\u003e\n\u003ch2\u003e3. 구조적 타이핑\u003c/h2\u003e\n\u003cp\u003e타입의 이름은 다르더라도 내부 구조가 같으면 같은 타입으로 취급하는 것.\u003c/p\u003e\n\u003cpre\u003e\u003ccode class=\"hljs language-ts\"\u003e\u003cspan class=\"hljs-keyword\"\u003einterface\u003c/span\u003e \u003cspan class=\"hljs-title class_\"\u003ePerson\u003c/span\u003e {\n  \u003cspan class=\"hljs-attr\"\u003ename\u003c/span\u003e: \u003cspan class=\"hljs-built_in\"\u003estring\u003c/span\u003e;\n  \u003cspan class=\"hljs-attr\"\u003eage\u003c/span\u003e: \u003cspan class=\"hljs-built_in\"\u003enumber\u003c/span\u003e;\n}\n\n\u003cspan class=\"hljs-keyword\"\u003einterface\u003c/span\u003e \u003cspan class=\"hljs-title class_\"\u003eProduct\u003c/span\u003e {\n  \u003cspan class=\"hljs-attr\"\u003ename\u003c/span\u003e: \u003cspan class=\"hljs-built_in\"\u003estring\u003c/span\u003e;\n  \u003cspan class=\"hljs-attr\"\u003eage\u003c/span\u003e: \u003cspan class=\"hljs-built_in\"\u003enumber\u003c/span\u003e;\n}\n\n\u003cspan class=\"hljs-keyword\"\u003econst\u003c/span\u003e \u003cspan class=\"hljs-attr\"\u003eperson\u003c/span\u003e: \u003cspan class=\"hljs-title class_\"\u003ePerson\u003c/span\u003e = { \u003cspan class=\"hljs-attr\"\u003ename\u003c/span\u003e: \u003cspan class=\"hljs-string\"\u003e\"mike\"\u003c/span\u003e, \u003cspan class=\"hljs-attr\"\u003eage\u003c/span\u003e: \u003cspan class=\"hljs-number\"\u003e23\u003c/span\u003e };\n\u003cspan class=\"hljs-keyword\"\u003econst\u003c/span\u003e \u003cspan class=\"hljs-attr\"\u003eperoduct\u003c/span\u003e: \u003cspan class=\"hljs-title class_\"\u003eProduct\u003c/span\u003e = person;\n\u003c/code\u003e\u003c/pre\u003e\n\u003ch2\u003e4. extends, infer\u003c/h2\u003e\n\u003ch3\u003e4.1 extends\u003c/h3\u003e\n\u003cp\u003e런타임의 삼항 연산자와 유사한 역할을 하는 키워드.\u003c/p\u003e\n\u003cp\u003e조건부 타입에서 사용된다. 입력된 제네릭 타입에 따라 타입을 결정할 수 있다. 어떠한 타입이 해당 타입의 서브 타입인 경우에 해당할 때와 해당하지 않을 때의 타입을 명시할 수 있다.\u003c/p\u003e\n\u003cp\u003eextends 키워드를 이용하면 제네릭 타입으로 입력할 수 있는 타입의 종류를 제한할 수 있다.\u003c/p\u003e\n\u003ch3\u003e4.2 infer\u003c/h3\u003e\n\u003cp\u003e조건부 타입을 정의할 때 extends 키워드 뒤에 사용된다.\u003c/p\u003e\n\u003cp\u003e추론된 타입을 담는 변수와 같은 역할을 수행한다.\u003c/p\u003e\n\u003ch2\u003e5. 타입 가드\u003c/h2\u003e\n\u003cp\u003e조건문을 이용해 타입의 범위를 좁히는 기능. 타입 가드를 잘 활용하면 불필요한 타입 단언(assertion) 코드를 피할 수 있으므로 생산성과 가독성이 높아진다.\u003c/p\u003e\n\u003cul\u003e\n\u003cli\u003etypeof 키워드\u003c/li\u003e\n\u003cli\u003einstanceof 키워드\u003c/li\u003e\n\u003cli\u003ein 연산자\u003c/li\u003e\n\u003cli\u003enever type\u003c/li\u003e\n\u003cli\u003e식별 가능한 유니온 타입(discriminated union)\u003c/li\u003e\n\u003cli\u003eassertion function\u003c/li\u003e\n\u003c/ul\u003e\n\u003ch3\u003e5.1 assertion function\u003c/h3\u003e\n\u003cp\u003e기대하지 않은 일이 발생하면 에러를 던지는 함수를 assertion function이라고 한다. assertion function은 호출 이후의 스코프 내에서 체크하는 조건이 무엇이던지 간에 반드시 참일 것을 보장한다. assertion function은 실제로 기대되는 타입이 아닌 경우 런타임에서 에러를 방출하므로, 에러 발생시 어떻게 대처할지도 고민해야한다.(대부분은 개발자의 실수로 인한 것이겠지만)\u003c/p\u003e\n\u003cpre\u003e\u003ccode class=\"hljs language-ts\"\u003e\u003cspan class=\"hljs-keyword\"\u003efunction\u003c/span\u003e \u003cspan class=\"hljs-title function_\"\u003eassertIsString\u003c/span\u003e(\u003cspan class=\"hljs-params\"\u003eval: \u003cspan class=\"hljs-built_in\"\u003eany\u003c/span\u003e\u003c/span\u003e): asserts val is \u003cspan class=\"hljs-built_in\"\u003estring\u003c/span\u003e {\n  \u003cspan class=\"hljs-keyword\"\u003eif\u003c/span\u003e (\u003cspan class=\"hljs-keyword\"\u003etypeof\u003c/span\u003e val !== \u003cspan class=\"hljs-string\"\u003e\"string\"\u003c/span\u003e) {\n    \u003cspan class=\"hljs-keyword\"\u003ethrow\u003c/span\u003e \u003cspan class=\"hljs-keyword\"\u003enew\u003c/span\u003e \u003cspan class=\"hljs-title class_\"\u003eAssertionError\u003c/span\u003e(\u003cspan class=\"hljs-string\"\u003e\"Not a string!\"\u003c/span\u003e);\n  }\n}\n\n\u003cspan class=\"hljs-keyword\"\u003efunction\u003c/span\u003e \u003cspan class=\"hljs-title function_\"\u003eyell\u003c/span\u003e(\u003cspan class=\"hljs-params\"\u003estr: \u003cspan class=\"hljs-built_in\"\u003eany\u003c/span\u003e\u003c/span\u003e) {\n  \u003cspan class=\"hljs-title function_\"\u003eassertIsString\u003c/span\u003e(str);\n\n  \u003cspan class=\"hljs-comment\"\u003e// 이제 TypeScript는 'str'이 문자열 타입인 것을 안다\u003c/span\u003e\n  \u003cspan class=\"hljs-keyword\"\u003ereturn\u003c/span\u003e str.\u003cspan class=\"hljs-title function_\"\u003etoUppercase\u003c/span\u003e();\n  \u003cspan class=\"hljs-comment\"\u003e//         ~~~~~~~~~~~\u003c/span\u003e\n  \u003cspan class=\"hljs-comment\"\u003e// 문자열 타입에는 toUppercase 라는 메소드가 존재하지 않으므로 에러를 방출한다.\u003c/span\u003e\n  \u003cspan class=\"hljs-comment\"\u003e// (toUpperCase 메소드만 존재)\u003c/span\u003e\n}\n\u003c/code\u003e\u003c/pre\u003e\n\u003cp\u003eassertion function은 정의할 때 항상 명시적으로 정의해야한다.\u003c/p\u003e\n\u003cpre\u003e\u003ccode class=\"hljs language-ts\"\u003e\u003cspan class=\"hljs-keyword\"\u003efunction\u003c/span\u003e \u003cspan class=\"hljs-title function_\"\u003eassertIsString\u003c/span\u003e(\u003cspan class=\"hljs-params\"\u003eval: \u003cspan class=\"hljs-built_in\"\u003eany\u003c/span\u003e\u003c/span\u003e): asserts val is \u003cspan class=\"hljs-built_in\"\u003estring\u003c/span\u003e {\n  \u003cspan class=\"hljs-keyword\"\u003eif\u003c/span\u003e (\u003cspan class=\"hljs-keyword\"\u003etypeof\u003c/span\u003e val !== \u003cspan class=\"hljs-string\"\u003e\"string\"\u003c/span\u003e) {\n    \u003cspan class=\"hljs-keyword\"\u003ethrow\u003c/span\u003e \u003cspan class=\"hljs-keyword\"\u003enew\u003c/span\u003e \u003cspan class=\"hljs-title class_\"\u003eAssertionError\u003c/span\u003e(\u003cspan class=\"hljs-string\"\u003e\"Not a string!\"\u003c/span\u003e);\n  }\n} \u003cspan class=\"hljs-comment\"\u003e// ok\u003c/span\u003e\n\n\u003cspan class=\"hljs-keyword\"\u003econst\u003c/span\u003e assertIsString (\u003cspan class=\"hljs-attr\"\u003eval\u003c/span\u003e: \u003cspan class=\"hljs-built_in\"\u003eany\u003c/span\u003e) =\u003e asserts val is \u003cspan class=\"hljs-built_in\"\u003estring\u003c/span\u003e = \u003cspan class=\"hljs-function\"\u003e(\u003cspan class=\"hljs-params\"\u003eval\u003c/span\u003e) =\u003e\u003c/span\u003e {\n  \u003cspan class=\"hljs-keyword\"\u003eif\u003c/span\u003e (\u003cspan class=\"hljs-keyword\"\u003etypeof\u003c/span\u003e val !== \u003cspan class=\"hljs-string\"\u003e\"string\"\u003c/span\u003e) {\n    \u003cspan class=\"hljs-keyword\"\u003ethrow\u003c/span\u003e \u003cspan class=\"hljs-keyword\"\u003enew\u003c/span\u003e \u003cspan class=\"hljs-title class_\"\u003eAssertionError\u003c/span\u003e(\u003cspan class=\"hljs-string\"\u003e\"Not a string!\"\u003c/span\u003e);\n  }\n}; \u003cspan class=\"hljs-comment\"\u003e// ok\u003c/span\u003e\n\n\u003cspan class=\"hljs-keyword\"\u003econst\u003c/span\u003e assertIsString = (\u003cspan class=\"hljs-attr\"\u003eval\u003c/span\u003e: \u003cspan class=\"hljs-built_in\"\u003eany\u003c/span\u003e): asserts val is \u003cspan class=\"hljs-built_in\"\u003estring\u003c/span\u003e =\u003e {\n  \u003cspan class=\"hljs-keyword\"\u003eif\u003c/span\u003e (\u003cspan class=\"hljs-keyword\"\u003etypeof\u003c/span\u003e val !== \u003cspan class=\"hljs-string\"\u003e\"string\"\u003c/span\u003e) {\n    \u003cspan class=\"hljs-keyword\"\u003ethrow\u003c/span\u003e \u003cspan class=\"hljs-keyword\"\u003enew\u003c/span\u003e \u003cspan class=\"hljs-title class_\"\u003eAssertionError\u003c/span\u003e(\u003cspan class=\"hljs-string\"\u003e\"Not a string!\"\u003c/span\u003e);\n  }\n}; \u003cspan class=\"hljs-comment\"\u003e// Assertions require every name in the call target to be declared\u003c/span\u003e\n   \u003cspan class=\"hljs-comment\"\u003e// with an explicit type annotation. ts(2775)\u003c/span\u003e\n\u003c/code\u003e\u003c/pre\u003e\n\u003cp\u003e\u003ca href=\"https://www.typescriptlang.org/docs/handbook/release-notes/typescript-3-7.html?#assertion-functions\"\u003ehttps://www.typescriptlang.org/docs/handbook/release-notes/typescript-3-7.html?#assertion-functions\u003c/a\u003e\u003c/p\u003e\n\u003cp\u003e\u003ca href=\"https://github.com/microsoft/TypeScript/pull/33622\"\u003ehttps://github.com/microsoft/TypeScript/pull/33622\u003c/a\u003e\u003c/p\u003e\n\u003cp\u003e\u003ca href=\"https://www.typescriptlang.org/docs/handbook/2/narrowing.html#the-in-operator-narrowing\"\u003ehttps://www.typescriptlang.org/docs/handbook/2/narrowing.html#the-in-operator-narrowing\u003c/a\u003e\u003c/p\u003e","title":"실전 리액트 프로그래밍 09장 정적 타입 그리고 타입스크립트","date":"2022-08-27"}},"__N_SSG":true},"page":"/posts/[id]","query":{"id":"react-programming-ch09"},"buildId":"0nBrjdt3uJlmTcYzW47qB","isFallback":false,"gsp":true,"scriptLoader":[]}</script></body></html>
