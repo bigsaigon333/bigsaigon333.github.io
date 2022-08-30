@@ -24,9 +24,12 @@ export const getSortedPostsData = () => {
   const fileNames = readdirSync(postsDirectory);
 
   const allPostsData = fileNames
+    .filter((fileName) => /\.md$/.test(fileName))
     .filter((fileName) => __IS_DEV__ || !isDraft(fileName))
     .map((fileName) => {
       const id = fileName.replace(/\.md$/, "");
+
+      console.log(fileName);
 
       const fullPath = path.join(postsDirectory, fileName);
       const fileContents = readFileSync(fullPath, "utf8");
@@ -41,11 +44,13 @@ export const getSortedPostsData = () => {
 };
 
 export const getAllPostIds = () =>
-  readdirSync(postsDirectory).map((fileName) => {
-    const id = fileName.replace(/\.md$/, "");
+  readdirSync(postsDirectory)
+    .filter((fileName) => /\.md$/.test(fileName))
+    .map((fileName) => {
+      const id = fileName.replace(/\.md$/, "");
 
-    return { params: { id } };
-  });
+      return { params: { id } };
+    });
 
 export const getPostData = async (id: string) => {
   const fullPath = path.join(postsDirectory, `${id}.md`);
