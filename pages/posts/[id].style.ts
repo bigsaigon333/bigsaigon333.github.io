@@ -31,9 +31,8 @@ export const Main = styled.main`
   }
 
   blockquote {
-    margin: 0 1.75rem 1.75rem -1.75rem;
-    padding: 0 0 0 1.25rem;
-    font-size: 1.25rem;
+    margin: 0 1.75rem 1.75rem 0.5rem;
+    padding: 0 0 0 1rem;
     line-height: 1.75rem;
     color: inherit;
     font-style: italic;
