@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next-remote-watch posts",
     "build": "next build && next export",
     "deploy": "npm run build && touch out/.nojekyll && NODE_DEBUG=gh-pages gh-pages -d out -t",
     "start": "next start",
@@ -41,6 +41,7 @@
     "gh-pages": "3.2.3",
     "husky": "7.0.4",
     "lint-staged": "12.3.5",
+    "next-remote-watch": "^2.0.0",
     "postcss-syntax": "0.36.2",
     "prettier": "2.5.1",
     "remark-gfm": "3.0.1",
