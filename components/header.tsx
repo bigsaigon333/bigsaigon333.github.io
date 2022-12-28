@@ -19,7 +19,7 @@ const Header = ({ home }: HeaderProps) => {
   return (
     <Container>
       <Title>
-        <Link href="/" passHref={true}>
+        <Link href="/" passHref={true} legacyBehavior>
           <A>
             <ProfileWrapper>
               <picture>

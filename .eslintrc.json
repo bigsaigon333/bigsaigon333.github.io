@@ -1,22 +1,12 @@
 {
   "extends": [
     "eslint:recommended",
-    "plugin:react/recommended",
-    "plugin:react-hooks/recommended",
     "plugin:import/recommended",
     "plugin:unicorn/recommended",
-    "plugin:@next/next/recommended",
     "next",
     "prettier"
   ],
-  "plugins": [
-    "@next/eslint-plugin-next",
-    "react",
-    "react-hooks",
-    "jsx-a11y",
-    "import",
-    "unicorn"
-  ],
+  "plugins": ["jsx-a11y", "import", "unicorn"],
   "rules": {
     "unicorn/prefer-node-protocol": "off",
     "unicorn/prevent-abbreviations": "off",

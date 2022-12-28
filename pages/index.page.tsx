@@ -26,10 +26,8 @@ const Home = ({
       <Section>
         {allPostsData.map(({ id, title, date }) => (
           <Article key={id}>
-            <Link href={`/posts/${id}`}>
-              <a>
-                <h2>{title}</h2>
-              </a>
+            <Link href={`/posts/${id}`} passHref>
+              <h2>{title}</h2>
             </Link>
             <time>{date}</time>
           </Article>
