@@ -20,7 +20,6 @@ const Home = ({
       <Head>
         <title>김동희입니다</title>
         <meta name="description" content="김동희의 블로그" />
-        <link rel="icon" href="/favicon.ico" />
       </Head>
 
       <Section>
