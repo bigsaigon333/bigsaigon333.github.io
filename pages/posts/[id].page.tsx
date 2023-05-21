@@ -39,7 +39,7 @@ export const getStaticProps = async ({ params }: Params) => {
 };
 
 const Post = ({ postData }: InferGetStaticPropsType<typeof getStaticProps>) => {
-  const { title, date, contentHtml } = postData;
+  const { id, title, date, description, contentHtml, keywords } = postData;
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -50,10 +50,32 @@ const Post = ({ postData }: InferGetStaticPropsType<typeof getStaticProps>) => {
     ref.current.replaceWith(createUtterancScript());
   }, []);
 
+  const url = `https://bigsaigon333.github.io/posts/${id}`;
+
   return (
     <Layout>
       <Head>
         <title>{title}</title>
+        <meta name="description" content={description} />
+        <meta name="author" content="김동희" />
+        <meta name="keywords" content={keywords.join(", ")} />
+        <link rel="canonical" href={url} />
+
+        <meta property="og:title" content={title} />
+        <meta property="og:description" content={description} />
+        <meta property="og:url" content={url} />
+        <meta property="og:type" content="article" />
+        <meta
+          property="og:image"
+          content="https://bigsaigon333.github.io/main-og-image.jpg"
+        />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={title} />
+        <meta name="twitter:description" content={description} />
+        <meta
+          name="twitter:image"
+          content="https://bigsaigon333.github.io/main-og-image.jpg"
+        />
       </Head>
       <Article>
         <h2>{title}</h2>
