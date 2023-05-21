@@ -1,0 +1,9 @@
+# *
+User-agent: *
+Allow: /
+
+# Host
+Host: https://bigsaigon333.github.io
+
+# Sitemaps
+Sitemap: https://bigsaigon333.github.io/sitemap.xml
