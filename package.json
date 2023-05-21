@@ -7,7 +7,6 @@
     "build": "next build && next export",
     "postbuild": "next-sitemap",
     "deploy": "npm run build && touch out/.nojekyll && NODE_DEBUG=gh-pages gh-pages -d out -t",
-    "start": "next start",
     "eslint": "eslint --cache --fix .",
     "stylelint": "stylelint --cache --fix .",
     "prettier": "prettier --write --ignore-unknown .",
@@ -27,6 +26,7 @@
     "remark-parse": "10.0.1",
     "remark-rehype": "10.1.0",
     "styled-components": "5.3.3",
+    "superstruct": "^1.0.3",
     "unified": "10.1.2"
   },
   "devDependencies": {
