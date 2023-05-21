@@ -1,6 +1,7 @@
 import { readdirSync } from "fs";
 import path from "path";
 
+import { compareDesc } from "date-fns";
 import matter from "gray-matter";
 import rehypeHighlight from "rehype-highlight";
 import rehypeKatex from "rehype-katex";
@@ -14,6 +15,7 @@ import {
   array,
   coerce,
   create,
+  date,
   defaulted,
   object,
   optional,
@@ -28,7 +30,7 @@ type MatterData = Infer<typeof MatterData>;
 // eslint-disable-next-line no-redeclare
 const MatterData = object({
   title: string(),
-  date: string(),
+  date: coerce(date(), string(), (value) => new Date(value)),
   description: defaulted(string(), ""),
   keywords: coerce(
     array(string()),
@@ -40,7 +42,7 @@ const MatterData = object({
 const postsDirectory = path.join(process.cwd(), "posts");
 
 const sortByDateDesc = ({ date: a }: MatterData, { date: b }: MatterData) =>
-  b.localeCompare(a);
+  compareDesc(a, b);
 
 const isDraft = (fileName: string) => /^draft:/i.test(fileName);
 

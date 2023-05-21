@@ -1,6 +1,7 @@
 import { InferGetStaticPropsType } from "next";
 import Head from "next/head";
 
+import { format } from "date-fns";
 import "highlight.js/styles/base16/monokai.css";
 import { useEffect, useRef } from "react";
 
@@ -79,7 +80,7 @@ const Post = ({ postData }: InferGetStaticPropsType<typeof getStaticProps>) => {
       </Head>
       <Article>
         <h2>{title}</h2>
-        <time>{date}</time>
+        <time dateTime={date.toISOString()}>{format(date, "yyyy-MM-dd")}</time>
       </Article>
       <Main dangerouslySetInnerHTML={{ __html: contentHtml }} />
       <div ref={ref} />

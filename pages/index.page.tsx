@@ -2,6 +2,8 @@ import { InferGetStaticPropsType } from "next";
 import Head from "next/head";
 import Link from "next/link";
 
+import { format } from "date-fns";
+
 import Layout from "../components/layout";
 import { getSortedPostsData } from "../lib/posts";
 import { Article, Section } from "./index.style";
@@ -59,7 +61,9 @@ const Home = ({
             <Link href={`/posts/${id}`}>
               <h2>{title}</h2>
             </Link>
-            <time>{date}</time>
+            <time dateTime={date.toISOString()}>
+              {format(date, "yyyy-MM-dd")}
+            </time>
           </Article>
         ))}
       </Section>
