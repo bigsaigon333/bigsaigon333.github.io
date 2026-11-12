@@ -1,0 +1,49 @@
+{
+  "entries": [
+    {
+      "check": "routes",
+      "item": "asset:_next/**",
+      "reason": "Next.js 런타임 산출물. Astro 빌드에는 없다."
+    },
+    {
+      "check": "routes",
+      "item": "asset:vercel.svg",
+      "reason": "Next 템플릿에 딸려 온 파일. 어디서도 참조하지 않는다."
+    },
+    {
+      "check": "routes",
+      "item": "asset:.nojekyll",
+      "reason": "gh-pages 브랜치 배포용 파일. GitHub Actions 배포는 Jekyll을 거치지 않는다."
+    },
+    {
+      "check": "routes",
+      "item": "asset:sitemap.xml",
+      "reason": "빌드할 때마다 lastmod가 바뀌어 바이트로 비교할 수 없다. sitemap 검사가 <loc> 집합으로 비교한다."
+    },
+    {
+      "check": "sitemap",
+      "item": "loc:https://bigsaigon333.github.io/posts/proxy-to-built-in-objects",
+      "reason": "배포본의 sitemap.xml은 저장소에 커밋돼 있던 낡은 파일이라 가장 최근 글이 빠져 있다. 새 sitemap은 모든 글을 싣는다."
+    },
+    {
+      "check": "hover",
+      "item": "route:/404",
+      "reason": "Next 기본 404 화면을 재현하지 않고 사이트 레이아웃을 쓴다."
+    },
+    {
+      "check": "head",
+      "item": "route:/404",
+      "reason": "Next 기본 404 화면을 재현하지 않고 사이트 레이아웃을 쓴다."
+    },
+    {
+      "check": "content",
+      "item": "route:/404",
+      "reason": "Next 기본 404 화면을 재현하지 않고 사이트 레이아웃을 쓴다."
+    },
+    {
+      "check": "visual",
+      "item": "route:/404",
+      "reason": "Next 기본 404 화면을 재현하지 않고 사이트 레이아웃을 쓴다."
+    }
+  ]
+}

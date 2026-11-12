@@ -1,0 +1,10 @@
+{
+  "name": "astro-check-ts6",
+  "version": "0.0.0",
+  "private": true,
+  "description": "루트의 TypeScript 7 옆에서 .astro 타입 검사(npm run check)를 돌리기 위한 자리. @astrojs/check 와 Astro 언어 서버는 TypeScript 6 의 언어 서비스 API 가 필요하다.",
+  "dependencies": {
+    "@astrojs/check": "^0.9.12",
+    "typescript": "6.0.3"
+  }
+}

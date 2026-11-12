@@ -1,0 +1,29 @@
+---
+// Google Analytics(gtag.js). 레이아웃이 <head> 안에서 한 번 렌더한다.
+//
+// 두 스크립트 모두 is:inline 이다. Astro 가 번들하면 type="module" 이 붙어 실행이 문서 파싱 뒤로 밀리고,
+// 외부 URL 인 로더는 애초에 번들 대상이 아니다. 구글이 안내하는 스니펫처럼 쓴 자리에서 쓴 대로 나가야 한다.
+//
+// 측정 ID 는 define:vars 로 넘긴다. Astro 는 그 스크립트 본문을
+//   (function(){ const gaId = "G-…"; … })();
+// 로 감싸므로 안에서 선언한 함수는 전역이 되지 않는다. 예전 사이트처럼 전역 gtag() 가 남도록 window 에 직접 단다.
+// (is:inline 스크립트 안의 주석은 모든 페이지의 HTML 에 그대로 실리므로 설명은 여기에 적는다.)
+import { SITE } from "../lib/site";
+
+const { gaId } = SITE;
+---
+
+<script
+  is:inline
+  async
+  src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`}
+></script>
+<script is:inline define:vars={{ gaId }}>
+  window.dataLayer = window.dataLayer || [];
+  window.gtag = function gtag() {
+    dataLayer.push(arguments);
+  };
+  gtag("js", new Date());
+
+  gtag("config", gaId);
+</script>
