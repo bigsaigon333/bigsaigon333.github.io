@@ -14,11 +14,14 @@ npm ci
 ## 개발·빌드
 
 ```sh
-npm run dev       # 개발 서버
-npm run build     # dist/ 에 정적 사이트 생성
-npm run preview   # 빌드 결과 미리 보기
-npm run check     # astro check (타입·템플릿 검사)
+npm run dev         # 개발 서버
+npm run build       # dist/ 에 정적 사이트 생성
+npm run preview     # 빌드 결과 미리 보기
+npm run check       # .astro 까지 타입·템플릿 검사 (@astrojs/check + TypeScript 6)
+npm run typecheck   # .ts 타입 검사 (tsc --noEmit, TypeScript 7)
 ```
+
+루트의 `typescript`는 7(네이티브 컴파일러)이다. `.astro`를 검사하는 `@astrojs/check`는 TypeScript 6의 언어 서비스 API가 필요해서 `tools/astro-check/` 워크스페이스에 TypeScript 6과 함께 따로 설치된다(`npm ci` 한 번이면 둘 다 깔린다). `astro check` 명령은 루트의 TypeScript가 7이면 실행을 거부하므로 `npm run check`를 쓴다.
 
 ## 글 쓰기
 

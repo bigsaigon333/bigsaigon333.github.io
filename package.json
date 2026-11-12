@@ -3,11 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "workspaces": [
+    "tools/astro-check"
+  ],
   "scripts": {
     "dev": "ASTRO_TELEMETRY_DISABLED=1 astro dev",
     "build": "ASTRO_TELEMETRY_DISABLED=1 astro build",
     "preview": "ASTRO_TELEMETRY_DISABLED=1 astro preview",
-    "check": "ASTRO_TELEMETRY_DISABLED=1 astro check",
+    "check": "ASTRO_TELEMETRY_DISABLED=1 astro sync && tools/astro-check/node_modules/.bin/astro-check",
+    "typecheck": "ASTRO_TELEMETRY_DISABLED=1 astro sync && tsc --noEmit",
     "verify": "node scripts/verify/run.mjs",
     "verify:setup": "node scripts/verify/setup.mjs",
     "verify:selftest": "node scripts/verify/selftest.mjs",
@@ -20,14 +24,13 @@
     "node": ">=24"
   },
   "dependencies": {
-    "@astrojs/check": "^0.9.12",
     "@astrojs/markdown-remark": "^7.3.8",
     "astro": "^7.4.11",
     "highlight.js": "11.5.1",
     "rehype-highlight": "^7.0.2",
     "rehype-katex": "^7.0.1",
     "remark-math": "^6.0.0",
-    "typescript": "^6.0.3"
+    "typescript": "^7.0.2"
   },
   "devDependencies": {
     "cheerio": "^1.2.0",
