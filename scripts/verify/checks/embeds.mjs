@@ -3,11 +3,17 @@
 // Read from the live DOM after scripts have run, with the embeds themselves blocked (lib/browser.mjs):
 //   ga.loader    ids of <script src="https://www.googletagmanager.com/gtag/js?id=…">
 //   ga.config    ids passed to gtag("config", …), as recorded in window.dataLayer
-//   utterances   repo, issue-term, theme, crossorigin and async of the utteranc.es client script, or null
+//   ga.calls     every entry of window.dataLayer, in order and in full: gtag("js", <Date>), gtag("config", "G-…").
+//                A dropped call or an extra argument ({ send_page_view: false }) changes what is measured without
+//                changing an id. An entry pushed as an array is not one pushed by gtag(): gtag.js ignores it.
+//   utterances   repo, issue-term, theme, crossorigin and async of the utteranc.es client script, and where it
+//                stands: the tag names of its parent and of the elements before and after it. The widget is
+//                inserted right after the script, so a script that has moved is comments in another place. Or null.
 import fs from "node:fs";
 import path from "node:path";
 
 import { mapLimit, MAX_PAGES, openBrowser } from "../lib/browser.mjs";
+import { postFiles, routeOfPage } from "../lib/html.mjs";
 
 const NAME = "embeds";
 const VIEWPORT = { width: 1280, height: 900 };
@@ -43,6 +49,29 @@ function readEmbeds() {
     if (entry && entry[0] === "config") config.push(String(entry[1]));
   }
 
+  // A value as it can be compared: a Date is a different one on every load, the rest is kept as it is.
+  const isArguments = (value) =>
+    Object.prototype.toString.call(value) === "[object Arguments]";
+  const plain = (value, depth) => {
+    if (value instanceof Date) return "<Date>";
+    if (typeof value === "function") return "<function>";
+    if (value === undefined) return "<undefined>";
+    if (value === null || typeof value !== "object") return value;
+    if (depth > 5) return "<…>";
+    if (Array.isArray(value) || isArguments(value))
+      return Array.from(value, (item) => plain(item, depth + 1));
+    const copy = {};
+    for (const key of Object.keys(value).sort())
+      copy[key] = plain(value[key], depth + 1);
+    return copy;
+  };
+  const calls = Array.from(window.dataLayer ?? [], (entry) => {
+    const text = JSON.stringify(plain(entry, 0));
+    // gtag() pushes its `arguments` object; that is the only kind of entry gtag.js acts on.
+    return isArguments(entry) ? `gtag(${text.slice(1, -1)})` : text;
+  });
+
+  const tagOf = (element) => (element ? element.localName : null);
   const utterances = Array.from(
     document.querySelectorAll('script[src="https://utteranc.es/client.js"]'),
     (script) => ({
@@ -51,11 +80,14 @@ function readEmbeds() {
       theme: script.getAttribute("theme"),
       crossorigin: script.crossOrigin,
       async: script.async,
+      parent: tagOf(script.parentElement),
+      previous: tagOf(script.previousElementSibling),
+      next: tagOf(script.nextElementSibling),
     }),
   );
 
   return {
-    ga: { loader: loader.sort(), config: config.sort() },
+    ga: { loader: loader.sort(), config: config.sort(), calls },
     // One script is the normal case; more than one is a difference worth seeing.
     utterances:
       utterances.length === 0
@@ -90,6 +122,7 @@ function collect(browser, url, route, ready, timeout) {
 const FIELDS = [
   ["ga.loader", (embeds) => embeds.ga.loader],
   ["ga.config", (embeds) => embeds.ga.config],
+  ["ga.calls", (embeds) => embeds.ga.calls],
   ["utterances", (embeds) => embeds.utterances],
 ];
 
@@ -211,6 +244,10 @@ function editChunks(dir, pattern, replacement) {
     );
 }
 
+// Analytics is wired the same on every page and utterances on every post: one page of each kind shows a mutation.
+const HOME = ["/"];
+const aPost = (dir) => [routeOfPage(postFiles(dir)[0])];
+
 export default {
   name: NAME,
   kind: "browser",
@@ -220,14 +257,58 @@ export default {
     mutations: [
       {
         name: "GA 측정 ID 변경",
+        routes: HOME,
         apply(dir) {
           editChunks(dir, /\bG-[A-Z0-9]{6,}\b/g, "G-MUTANT0000");
         },
       },
       {
         name: "utterances 테마 변경",
+        routes: aPost,
         apply(dir) {
           editChunks(dir, /\("theme","[^"]+"\)/, '("theme","github-dark")');
+        },
+      },
+      {
+        // The page puts the script where its placeholder <div> stood, between <main> and <footer>.
+        name: "utterances 스크립트를 body 끝으로 이동",
+        routes: aPost,
+        apply(dir) {
+          editChunks(
+            dir,
+            /\b\w+\.current\.replaceWith\(/,
+            "document.body.append(",
+          );
+        },
+      },
+      {
+        name: 'gtag("js", new Date()) 호출 삭제',
+        routes: HOME,
+        apply(dir) {
+          editChunks(dir, /gtag\('js', new Date\(\)\);/, "");
+        },
+      },
+      {
+        name: 'gtag("config") 에 { send_page_view: false } 추가',
+        routes: HOME,
+        apply(dir) {
+          editChunks(
+            dir,
+            /gtag\('config', '([^']+)'\)/,
+            "gtag('config', '$1', { send_page_view: false })",
+          );
+        },
+      },
+      {
+        // The same two calls, pushed as arrays: nothing gtag.js would act on.
+        name: "gtag 호출을 arguments 가 아닌 배열로 push",
+        routes: HOME,
+        apply(dir) {
+          editChunks(
+            dir,
+            /dataLayer\.push\(arguments\)/,
+            "dataLayer.push(Array.from(arguments))",
+          );
         },
       },
     ],
