@@ -26,12 +26,9 @@
     "node": ">=24"
   },
   "dependencies": {
-    "@astrojs/markdown-remark": "^7.3.8",
+    "@astrojs/markdown-satteri": "^0.4.9",
     "astro": "^7.4.11",
-    "highlight.js": "11.5.1",
-    "rehype-highlight": "^7.0.2",
-    "rehype-katex": "^7.0.1",
-    "remark-math": "^6.0.0",
+    "katex": "^0.16.47",
     "typescript": "^7.0.2"
   },
   "devDependencies": {

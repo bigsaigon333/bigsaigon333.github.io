@@ -26,7 +26,7 @@
   padding-inline-start: 20px;
 }
 
-/* 문장 안의 `code`. 코드 블록(pre > code)은 highlight.js 테마가 칠한다. */
+/* 문장 안의 `code`. 코드 블록(pre > code)은 code.css 가 칠한다. */
 .prose :not(pre) > code {
   border-radius: 0.3em;
   background: rgb(255 229 100 / 20%);

@@ -11,8 +11,8 @@ import { getPublishedPosts, postUrl } from "../../lib/posts";
 // 다른 import 뒤에 둔다. 이 둘은 한 묶음이 되고, 묶음은 그 안에서 가장 먼저 import 된 파일의 자리에 놓인다.
 // 하나라도 맨 위로 올리면 둘 다 global.css 앞으로 가서, 특이도가 같은 규칙에서 전역 스타일에 지게 된다.
 //
-// 1. 코드 블록의 색: npm 패키지 안의 테마 파일을 바로 가져온다(package.json 에 고정한 highlight.js 11.5.1 의 것).
-import "highlight.js/styles/base16/monokai.css";
+// 1. 코드 블록의 색: Shiki 가 붙인 CSS 변수 중 라이트·다크 어느 쪽을 쓸지 정한다.
+import "../../styles/code.css";
 // 2. 본문(<main class="prose"> 아래): <Content /> 가 그린 요소에는 scoped <style> 이 닿지 않아 전역 CSS 로 둔다.
 import "../../styles/prose.css";
 
