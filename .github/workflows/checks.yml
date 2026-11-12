@@ -69,5 +69,7 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm run verify:setup
+      # 기능 검사와 명령 사례는 새 빌드(dist/)를 대상으로 자체 검증한다.
+      - run: npm run build
       # 검사기가 차이를 실제로 잡는지(변이본은 실패해야 한다) 확인한다.
       - run: npm run verify:selftest
