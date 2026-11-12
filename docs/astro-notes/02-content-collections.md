@@ -9,7 +9,7 @@
 - **컬렉션 = 로더(어디서 읽나) + 스키마(어떤 모양이어야 하나).** `src/content.config.ts`가 `collections`를 export 하면 Astro가 빌드 맨 앞의 `Syncing content` 단계에서 한 번에 읽고 검증한다.
 - **로더** `glob({ pattern: "*.md", base: "./posts" })`: `base`는 프로젝트 루트 기준이고 `src/` 밖이어도 된다(문서에 예시가 없어 직접 확인했다). 패턴이 `*.md`라서 `posts/draft/`의 초안 21개는 읽지 않는다.
 - **id**: 기본 `generateId`는 경로를 github-slugger로 바꾼다(`Zz_Fixture Upper.md` → `zz_fixture-upper`). 이 블로그는 id가 곧 URL이라 `generateId`로 "파일 이름에서 `.md`만 뗀 것"으로 고정했다.
-- **스키마**는 Zod 4(`astro/zod`)다. `z.iso.date()`는 실제 달력 날짜인 `"YYYY-MM-DD"` 문자열만 통과시키고, `.transform`이 UTC 자정의 `Date`로 바꾼다. `keywords`는 `"a, b"` → `["a", "b"]`, 없으면 `[]`. 스키마의 출력 타입이 `CollectionEntry<"posts">["data"]`의 타입이 된다(`.astro/content.d.ts`).
+- **스키마**는 Zod 4(`astro/zod`)다. `z.iso.date()`는 실제 달력 날짜인 `"YYYY-MM-DD"` 문자열만 통과시키고, `.transform`이 UTC 자정의 `Date`로 바꾼다. 따옴표 없는 날짜는 일부러 받지 않는다(아래 실험 2). `keywords`는 `"a, b"` → `["a", "b"]`, 없으면 `[]`. `description`이 없으면 `summary`를 쓴다. 스키마의 출력 타입이 `CollectionEntry<"posts">["data"]`의 타입이 된다(`.astro/content.d.ts`).
 - **데이터 스토어**: 검증된 데이터와 렌더된 HTML은 `node_modules/.astro/data-store.json`에 들어간다. 파일 내용의 digest가 같으면 다음 빌드에서 다시 파싱하지 않는다. `getCollection("posts")`는 파일 시스템이 아니라 이 스토어를 읽는다.
 - **순서는 보장되지 않는다.** 그래서 `getPublishedPosts()`가 날짜 내림차순으로 직접 정렬한다(같은 날짜면 id 순).
 - **날짜 표시**는 `formatDate()` = `toISOString().slice(0, 10)`. UTC 기준이라 빌드하는 곳의 시간대를 타지 않는다.
@@ -46,8 +46,8 @@
 
 1. `src/content.config.ts`의 패턴을 `"**/*.md"`로 바꾸고 `npm run build`.
    <details><summary>예상 결과</summary>초안까지 읽다가 `posts → draft/draft:from-mathematics-to-generic-programming-ch07 data does not match collection schema`(`title: Required`, `date: Required`)로 실패한다. frontmatter가 없는 초안이다.</details>
-2. 아무 글이나 복사해 `posts/zz-test.md`를 만들고 `date: 2022-05-08`처럼 따옴표를 빼고 빌드한다. 끝나면 파일을 지운다.
-   <details><summary>예상 결과</summary>`date: Expected type "string", received "object"`. YAML이 따옴표 없는 날짜를 `Date` 객체로 만들기 때문이다. 스키마는 문자열만 받는다.</details>
+2. 아무 글이나 복사해 `posts/zz-test.md`를 만들고 `date: 2022-02-30`처럼 따옴표를 빼고 빌드한다. 다음에는 스키마의 `date`를 `z.date()`로 바꿔 다시 빌드한다. 끝나면 되돌리고 파일을 지운다.
+   <details><summary>예상 결과</summary>첫 번째는 `date 는 따옴표로 감싼 "YYYY-MM-DD" 형식의 실제 날짜여야 한다`로 실패한다. YAML이 따옴표 없는 날짜를 `Date` 객체로 넘기고 스키마는 문자열만 받기 때문이다. 두 번째는 빌드가 성공하고 날짜가 `2022-03-02`로 나온다. YAML이 없는 날짜를 조용히 넘겨 버려서, 스키마가 문자열만 받게 해 두었다.</details>
 3. `src/content.config.ts`에서 `generateId` 줄을 지우고 `posts/Zz_Test Upper.md`를 만들어 빌드한 뒤 `grep -o 'href="/posts/[Zz][^"]*"' dist/index.html`. 끝나면 되돌린다.
    <details><summary>예상 결과</summary>`href="/posts/zz_test-upper"`. `generateId`가 있으면 `href="/posts/Zz_Test Upper"`다.</details>
 
