@@ -1,0 +1,81 @@
+/*
+ * 글 본문. 예전 pages/posts/[id].style.ts 의 Main 을 옮긴 것이다. src/pages/posts/[id].astro 가 import 한다.
+ *
+ * <Content /> 가 그린 Markdown 요소에는 data-astro-cid 속성이 없어서 scoped <style> 로는 닿지 않는다.
+ * 그래서 import 하는 전역 스타일시트로 두고, <main class="prose"> 아래로만 걸리게 클래스 하나로 묶었다.
+ * 선택자는 배포본에 실제로 나간 모양(.iEffIV a → .prose a)대로 펼쳐 써서 특이도가 예전과 같다.
+ */
+
+/* 레이아웃의 세로 flex(align-items: flex-start) 안에서 폭을 다 쓰고, 남는 높이를 채워 푸터를 바닥에 둔다. */
+.prose {
+  width: 100%;
+  flex-grow: 1;
+  line-height: 1.75;
+}
+
+.prose a {
+  word-break: break-word;
+}
+
+.prose a:hover {
+  box-shadow: 0 0.125rem 0 0 black;
+}
+
+.prose ul {
+  margin: 0;
+  padding-inline-start: 20px;
+}
+
+/* 문장 안의 `code`. 코드 블록(pre > code)은 highlight.js 테마가 칠한다. */
+.prose :not(pre) > code {
+  border-radius: 0.3em;
+  background: rgb(255 229 100 / 20%);
+  color: #1a1a1a;
+  padding: 0.15em 0.2em 0.05em;
+  white-space: normal;
+}
+
+.prose details > summary {
+  cursor: pointer;
+}
+
+.prose blockquote {
+  margin: 0 1.75rem 1.75rem 0.5rem;
+  padding: 0 0 0 1rem;
+  line-height: 1.75rem;
+  color: inherit;
+  font-style: italic;
+  border-left: 0.3281rem solid hsl(0deg 0% 0% / 90%);
+  border-left-color: inherit;
+  opacity: 0.8;
+}
+
+.prose table {
+  display: block;
+  width: 100%;
+  width: max-content;
+  max-width: 100%;
+  overflow: auto;
+  margin-top: 0;
+  margin-bottom: 1rem;
+  border-spacing: 0;
+  border-collapse: collapse;
+}
+
+.prose table tr {
+  border-top: 1px solid hsl(210deg 18% 87% / 100%);
+}
+
+.prose table tr:nth-child(2n) {
+  background-color: #f6f8fa;
+}
+
+.prose table th {
+  font-weight: 600;
+}
+
+.prose table th,
+.prose table td {
+  padding: 6px 13px;
+  border: 1px solid #d0d7de;
+}

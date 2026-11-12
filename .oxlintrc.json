@@ -1,0 +1,27 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  // 기본 플러그인(eslint, typescript, unicorn, oxc)에 import, promise 를 더한다.
+  // plugins 를 쓰면 기본값을 덮으므로 기본 넷도 함께 적는다.
+  "plugins": ["eslint", "typescript", "unicorn", "oxc", "import", "promise"],
+  // 틀렸거나 쓸모없는 코드만 오류로 잡는다. 코드 모양은 Prettier 가 맡는다.
+  "categories": {
+    "correctness": "error"
+  },
+  "options": {
+    // 더는 필요 없는 oxlint-disable 주석을 남기지 않는다.
+    "reportUnusedDisableDirectives": "error"
+  },
+  // 앞의 "/" 는 이 파일이 있는 곳(저장소 루트)에 고정한다. "posts" 라고만 쓰면 src/pages/posts/ 도 빠진다.
+  "ignorePatterns": ["/dist", "/.astro", "node_modules", "/public", "/posts"],
+  "overrides": [
+    {
+      // .mjs 는 tsc 도 astro check 도 타입을 보지 않는다(checkJs 꺼짐).
+      // 정의되지 않은 이름(오타)은 여기서만 잡힌다.
+      "files": ["**/*.mjs"],
+      "env": { "node": true },
+      "rules": {
+        "eslint/no-undef": "error"
+      }
+    }
+  ]
+}
