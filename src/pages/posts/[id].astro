@@ -4,6 +4,9 @@ import { render } from "astro:content";
 
 import Comments from "../../components/Comments.astro";
 import PostHeader from "../../components/PostHeader.astro";
+import PostTags from "../../components/PostTags.astro";
+import SeriesNav from "../../components/SeriesNav.astro";
+import Toc from "../../components/Toc.astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import {
   displayTitle,
@@ -32,7 +35,7 @@ type Props = InferGetStaticPropsType<typeof getStaticPaths>;
 
 const { post } = Astro.props;
 const { title, date, description, keywords } = post.data;
-const { Content } = await render(post);
+const { Content, headings } = await render(post);
 ---
 
 <BaseLayout
@@ -48,9 +51,12 @@ const { Content } = await render(post);
   }}
 >
   <PostHeader title={displayTitle(post)} date={date} />
+  <PostTags keywords={keywords} />
+  <Toc headings={headings} />
   <main class="prose">
     <Content />
   </main>
+  <SeriesNav postId={post.id} />
   {
     // 초안(dev 에서만 그려진다)에는 댓글을 싣지 않는다. utterances 가 초안 제목으로 이슈를 만들면 안 된다.
     !isDraft(post) && <Comments />
