@@ -1,0 +1,42 @@
+---
+title: MDX 시연
+date: "2026-11-13"
+description: .mdx 초안에서 컴포넌트, 수식, 코드 블록, 각주가 .md 와 같이 그려지는지 본다
+keywords: astro, mdx
+---
+
+import Callout from "../../src/components/mdx/Callout.astro";
+
+export const answer = 6 * 7;
+
+`.mdx` 는 Markdown 안에서 컴포넌트를 쓰고 JS 식을 넣을 수 있다. 이 글은 초안이라 `astro dev` 에서만 보인다.
+
+<Callout type="tip" title="컴포넌트">
+  `Callout` 은 `src/components/mdx/Callout.astro` 다. 안쪽도 **Markdown** 으로 쓴다.
+</Callout>
+
+JS 식: 답은 {answer} 이다.
+
+## 수식
+
+인라인 $a^2 + b^2 = c^2$ 와 블록 수식:
+
+$$
+\sum_{i=1}^{n} i = \frac{n(n+1)}{2}
+$$
+
+## 코드 블록
+
+```ts
+const square = (x: number): number => x * x;
+```
+
+## 각주
+
+각주도 된다.[^1]
+
+<Callout type="warning">
+  MDX 에서는 `<` 와 `{` 가 문법이다. 글자로 쓰려면 `\{` 처럼 이스케이프한다.
+</Callout>
+
+[^1]: GFM 각주. 되돌아가기 링크의 aria-label 은 "Back to content" 다.
