@@ -150,12 +150,12 @@ const count = entries.reduce(
   .reading-time {
     margin: 0 0 0.75rem;
     font-size: 0.875rem;
-    /* 흰 배경에서 대비 7.0:1 */
-    color: #595959;
+    /* 흰 배경에서 대비 7.0:1, 다크 배경(#0d1117)에서 6.2:1. 토큰은 global.css */
+    color: var(--color-muted);
   }
 
   .toc {
-    border-left: 0.25rem solid #d0d7de;
+    border-left: 0.25rem solid var(--color-border);
     padding-left: 1rem;
   }
 
@@ -180,6 +180,6 @@ const count = entries.reduce(
 
   .toc a:hover,
   .toc a:focus-visible {
-    box-shadow: 0 0.125rem 0 0 black;
+    box-shadow: 0 0.125rem 0 0 var(--color-text);
   }
 </style>

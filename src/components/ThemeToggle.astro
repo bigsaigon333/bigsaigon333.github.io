@@ -1,0 +1,109 @@
+---
+// 다크 모드 토글(S6.1). Header 가 모든 페이지에 그린다.
+//
+// 진짜 <button> 이라 Tab 으로 닿고 Enter·Space 로 눌린다. 이름은 aria-label "다크 모드" 하나로 고정하고,
+// 켜져 있는지는 aria-pressed 로 알린다(토글 버튼 패턴: 이름을 상태에 따라 바꾸지 않는다). 그림(해·달)은 장식이라 aria-hidden.
+//
+// 테마를 정하고 저장하는 일은 BaseLayout <head> 의 인라인 스크립트가 한다(window.__theme). 여기 <script> 는
+// Astro 가 번들하는 모듈이라 문서를 다 읽은 뒤에 돈다. 그때 aria-pressed 를 지금 테마에 맞추고, 누르면 반대 테마로
+// set() 한다. 다른 곳(시스템 설정 변경)에서 테마가 바뀌면 "themechange" 이벤트로 듣는다.
+//
+// 자리: 오른쪽 위에 position: absolute 로 띄운다. 흐름에서 빠지므로 헤더와 그 아래의 배치는 예전과 같다.
+---
+
+<button
+  type="button"
+  class="theme-toggle"
+  aria-label="다크 모드"
+  aria-pressed="false"
+>
+  <svg
+    class="moon"
+    viewBox="0 0 24 24"
+    width="20"
+    height="20"
+    aria-hidden="true"
+    focusable="false"
+  >
+    <path
+      fill="currentColor"
+      d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"
+    ></path>
+  </svg>
+  <svg
+    class="sun"
+    viewBox="0 0 24 24"
+    width="20"
+    height="20"
+    aria-hidden="true"
+    focusable="false"
+  >
+    <circle cx="12" cy="12" r="4.5" fill="currentColor"></circle>
+    <path
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      d="M12 1.5v2.5M12 20v2.5M1.5 12h2.5M20 12h2.5M4.6 4.6l1.8 1.8M17.6 17.6l1.8 1.8M4.6 19.4l1.8-1.8M17.6 6.4l1.8-1.8"
+    ></path>
+  </svg>
+</button>
+
+<script>
+  type Theme = "light" | "dark";
+  const themes = (window as unknown as { __theme?: { set(t: Theme): void } })
+    .__theme;
+  const root = document.documentElement;
+
+  for (const button of document.querySelectorAll<HTMLButtonElement>(
+    ".theme-toggle",
+  )) {
+    const sync = () =>
+      button.setAttribute(
+        "aria-pressed",
+        String(root.dataset.theme === "dark"),
+      );
+    sync();
+    document.addEventListener("themechange", sync);
+    button.addEventListener("click", () => {
+      themes?.set(root.dataset.theme === "dark" ? "light" : "dark");
+    });
+  }
+</script>
+
+<style>
+  .theme-toggle {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    padding: 0;
+    border: 1px solid var(--color-border);
+    border-radius: 50%;
+    background: var(--color-bg);
+    color: var(--color-text);
+    cursor: pointer;
+  }
+
+  .theme-toggle:hover {
+    border-color: currentColor;
+  }
+
+  .theme-toggle:focus-visible {
+    outline: 2px solid var(--color-text);
+    outline-offset: 2px;
+  }
+
+  /* 누르면 갈 테마의 그림을 보인다: 라이트에서는 달, 다크에서는 해. svg 는 global.css 에서 display: block 이다. */
+  .sun,
+  :global([data-theme="dark"]) .moon {
+    display: none;
+  }
+
+  :global([data-theme="dark"]) .sun {
+    display: block;
+  }
+</style>

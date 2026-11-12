@@ -2,8 +2,8 @@
  * 코드 블록. Shiki(config/markdown.mjs 의 shikiConfig)가 빌드 때 토큰마다 style="--shiki-light:…;--shiki-dark:…" 를
  * 붙이고(defaultColor: false), 여기서 어느 쪽 변수를 쓸지 고른다. src/pages/posts/[id].astro 가 import 한다.
  *
- * 지금은 라이트 테마(github-light-high-contrast)만 쓴다. 다크 모드를 켤 때는 [data-theme="dark"] 같은 조건 아래에서
- * 같은 선택자에 --shiki-dark* 를 쓰면 된다.
+ * 라이트(github-light-high-contrast)가 기본이고, <html data-theme="dark"> 아래에서는 같은 선택자에
+ * --shiki-dark*(github-dark-high-contrast)를 쓴다(S6.1). 두 테마 모두 고대비라 다크 배경에서도 AA 를 넘긴다.
  */
 
 .astro-code,
@@ -13,6 +13,15 @@
   font-style: var(--shiki-light-font-style);
   font-weight: var(--shiki-light-font-weight);
   text-decoration: var(--shiki-light-text-decoration);
+}
+
+[data-theme="dark"] .astro-code,
+[data-theme="dark"] .astro-code span {
+  color: var(--shiki-dark);
+  background-color: var(--shiki-dark-bg);
+  font-style: var(--shiki-dark-font-style);
+  font-weight: var(--shiki-dark-font-weight);
+  text-decoration: var(--shiki-dark-text-decoration);
 }
 
 /*
