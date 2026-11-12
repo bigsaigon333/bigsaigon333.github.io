@@ -25,6 +25,21 @@ npm run verify:live -- --serve=<dir>      # 위 검사를 로컬에서 예행연
 
 출력은 검사당 한 줄이다. 상세는 `.verify/report/<검사>.json`에 있다.
 
+### 실패한 단계의 한 줄
+
+`check`(astro check)나 `build` 단계가 실패하면 그 줄은 로그의 끝이 아니라 **첫 오류**를 보인다. 색 코드와 시각을 지우고, 세 가지를 저마다 한 항목으로 싣는다(결과 줄은 항목마다 110자에서 자르는데, Astro 내용 오류의 첫 줄만 90자쯤이다): "error"라고 말하는 첫 줄, 그 아래 들여 쓴 설명 줄(Astro 오류라면 `Hint:`·`Location:`·`Stack trace:` 앞까지), 전체 로그의 위치. 실패 수는 그대로 1이고 종료 코드도 같다.
+
+```text
+FAIL  build     0/1  -: [InvalidContentEntryDataError] posts → foo data does not match collection schema. | -: Unrecognized key: "desciption" | -: see .verify/report/build.log  → .verify/report/build.json
+```
+
+예전에는 마지막 여섯 줄을 보였다. Astro 오류는 문서 URL(색 코드 포함)·위치·스택으로 끝나서, 문제를 말하는 줄은 `.verify/report/build.log`에만 있었다.
+
+- Astro는 문제를 `**<키>**: <설명>`으로 쓰는데, 스키마가 모르는 키는 객체 자체의 문제라서 키 자리가 비어 `****: Unrecognized key: …`가 된다. 별표와 빈 키는 뗀다.
+- 설명은 코드 프레임(vite의 `╭─[`), 스택 프레임, 빈 줄 뒤의 들여 쓰지 않은 줄(astro check가 소스 줄을 찍는 자리)에서도 끝난다. astro check 오류는 `src/x.astro:6:7 - error ts(6133): …` 한 줄이 된다.
+- "error"라는 줄이 없는 로그(설정을 읽지 못한 경우 등)는 첫 스택 앞의 마지막 줄들을 보인다: `[astro] Unable to load your Astro config ⏎ Tsconfig not found …`.
+- 끝의 `→ .verify/report/build.json`은 검사 줄과 같은 꼴이라 붙는다. 단계의 상세는 `.log`에 있다.
+
 ## 통과가 통과이려면
 
 - **종료 코드**: 모두 통과 0, 검사 실패 1, 명령줄이 없는 것을 가리키면 2.
@@ -135,6 +150,16 @@ export default {
    - 0개를 본 검사는 통과가 아니다. 기본 scope 는 `local`이다.
    - 내용 저장소(`data-store.json`)의 렌더 결과 하나를 고쳐 놓고 게이트를 돌려도 고친 내용이 `dist/`에 나오지 않는다. 먼저 그냥 `astro build`로는 나온다는 것을 확인하므로, 저장소 재사용이 사라지면 이 시험이 알려 준다. 끝나면 저장소와 `dist/`를 되돌린다.
    - `verify:live --serve=.verify/baseline`은 `migrated` 하나로 실패하고, `--serve=dist`는 통과한다.
+   - **front matter 스키마**(`build:` 사례). `src/content.config.ts`는 아는 키와 따옴표로 감싼 날짜만 받는다. 이것을 시험하려면 스키마가 거절할 글이 있어야 하는데, `posts/`에 둔 그런 글은 모든 빌드를 멈춘다. 그래서 저장소 밖 임시 디렉터리(`verify-frontmatter-*`)에 프로젝트 사본을 만들어 글을 더하고 `astro build --force`로 빌드한다. 저장소의 `posts/`에는 아무것도 쓰지 않는다.
+     - 사본에는 빌드가 읽는 것만 넣는다: `astro.config.mjs`, `config/`, `src/`, `posts/`의 최상위 `*.md`, `public/`, `tsconfig.json`, `package.json`. `node_modules`는 디렉터리 하나를 링크하지 않고 저장소의 패키지마다 링크를 건다. 그래야 Astro가 쓰는 `node_modules/.astro`(내용 저장소)가 저장소가 아니라 사본에 남는다.
+     - 사본은 사례마다 새로 만들고, 사례가 실패하거나 예외로 끝나도 지운다.
+     - 대조군: 올바른 글 하나를 더한 사본이 빌드되고, 그 글이 `dist/posts/<id>.html`·홈 목록·`sitemap.xml`에 나온다.
+     - `desciption` 키가 있는 글은 빌드를 멈추고, 출력이 `Unrecognized key: "desciption"`과 파일(`posts/<파일>.md`)을 말한다.
+     - 따옴표 없는 `date`는 빌드를 멈추고, 출력이 `date` 키와 파일을 말한다.
+     - 최상위의 `draft:<이름>.md`와 `draft: true`인 글은 빌드되지만, `dist/`의 어느 파일 이름에도 내용에도 없다. 로더가 둘을 읽었다는 것(사본의 내용 저장소에 있다)과 함께 더한 올바른 글은 실린다는 것을 먼저 확인한다.
+     - 거절을 종료 코드만으로 판정하지 않는다. 사본을 만들지 못하거나 `node_modules` 링크가 빠지면 대조군은 "빌드되지 않았다"로, 거절 사례는 "스키마가 아닌 이유로 실패했다"로 실패한다. 스키마를 `z.object`(모르는 키를 버린다)로 느슨하게 하면 `desciption` 사례가 실패한다.
+   - **실패한 빌드의 결과 줄**(위 "실패한 단계의 한 줄"). `run.mjs`는 작업 디렉터리의 프로젝트를 검사한다(`lib/paths.mjs`가 git에 최상위를 묻는다). 그래서 `desciption` 글을 더한 사본을 git 작업 트리로 만들고 `scripts/verify`와 기준선을 링크한 뒤, 그 안에서 `node scripts/verify/run.mjs --no-check --only=routes`를 그대로 돌린다. 사본의 `build.log`가 그 글을 말하고(사본을 빌드했다), 종료 코드가 1이고, 검사는 돌지 않았고, `FAIL  build` 줄에 색 코드 없이 `posts → <id>`와 `Unrecognized key: "desciption"`이 있어야 한다.
+   - 이 다섯 사례는 사본을 만들고 빌드하는 데 저마다 1초 안팎이 든다.
 
 `--only=cli`로 3만, `--only=<검사>`로 그 검사의 1·2만 돌린다. 브라우저 검사의 변이를 실제 브라우저에서 확인할 때는 기준선이 하이드레이션하면서 전역 규칙을 다시 쓴다는 점에 주의한다(`lib/html.mjs`의 `editPages` 주석).
 
