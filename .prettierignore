@@ -1,1 +1,6 @@
-.next
+dist
+.astro
+.verify
+package-lock.json
+public
+posts

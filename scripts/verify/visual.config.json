@@ -1,0 +1,31 @@
+{
+  "colorThreshold": 0,
+  "maxDiffRatio": 0,
+  "measuredNoise": 0,
+  "viewports": [
+    {
+      "width": 375,
+      "height": 812
+    },
+    {
+      "width": 414,
+      "height": 896
+    },
+    {
+      "width": 600,
+      "height": 960
+    },
+    {
+      "width": 700,
+      "height": 1024
+    },
+    {
+      "width": 768,
+      "height": 1024
+    },
+    {
+      "width": 1280,
+      "height": 900
+    }
+  ]
+}

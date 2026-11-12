@@ -1,0 +1,49 @@
+---
+import type { GetStaticPaths, InferGetStaticPropsType } from "astro";
+import { render } from "astro:content";
+
+import Comments from "../../components/Comments.astro";
+import PostHeader from "../../components/PostHeader.astro";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { getPublishedPosts, postUrl } from "../../lib/posts";
+
+// 글 페이지에만 실리는 전역 CSS 두 개. 이 페이지만 import 하므로 홈과 404 에는 나가지 않는다.
+// 다른 import 뒤에 둔다. 이 둘은 한 묶음이 되고, 묶음은 그 안에서 가장 먼저 import 된 파일의 자리에 놓인다.
+// 하나라도 맨 위로 올리면 둘 다 global.css 앞으로 가서, 특이도가 같은 규칙에서 전역 스타일에 지게 된다.
+//
+// 1. 코드 블록의 색: npm 패키지 안의 테마 파일을 바로 가져온다(package.json 에 고정한 highlight.js 11.5.1 의 것).
+import "highlight.js/styles/base16/monokai.css";
+// 2. 본문(<main class="prose"> 아래): <Content /> 가 그린 요소에는 scoped <style> 이 닿지 않아 전역 CSS 로 둔다.
+import "../../styles/prose.css";
+
+export const getStaticPaths = (async () => {
+  const posts = await getPublishedPosts();
+
+  return posts.map((post) => ({ params: { id: post.id }, props: { post } }));
+}) satisfies GetStaticPaths;
+
+type Props = InferGetStaticPropsType<typeof getStaticPaths>;
+
+const { post } = Astro.props;
+const { title, date, description, keywords } = post.data;
+const { Content } = await render(post);
+---
+
+<BaseLayout
+  seo={{
+    // 제목 뒤에 아무것도 붙이지 않는다. utterances 가 문서 제목으로 댓글 이슈를 찾는다.
+    title,
+    description,
+    // build.format "file" 에서는 Astro.url.pathname 이 ".html" 로 끝난다. canonical 은 id 로 조립한다.
+    url: postUrl(post.id),
+    type: "article",
+    keywords,
+    publishedTime: date,
+  }}
+>
+  <PostHeader title={title} date={date} />
+  <main class="prose">
+    <Content />
+  </main>
+  <Comments />
+</BaseLayout>

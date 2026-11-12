@@ -1,0 +1,36 @@
+---
+// dist/404.html 이 된다. GitHub Pages 는 없는 경로 어디에서든 이 파일을 404 상태로 돌려준다.
+// 어느 깊이의 URL 에서 열릴지 모르므로 이 페이지의 링크와 자산 경로는 모두 "/" 로 시작해야 한다.
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { SITE } from "../lib/site";
+---
+
+<BaseLayout
+  seo={{
+    title: "404: 페이지를 찾을 수 없습니다",
+    description: SITE.description,
+    url: `${SITE.url}/404`,
+    type: "website",
+    keywords: SITE.keywords,
+    // /404 와 /404.html 은 직접 열면 200 으로 응답한다. 검색 결과에 실리지 않게 한다.
+    noindex: true,
+  }}
+>
+  <main>
+    <p>요청하신 페이지를 찾을 수 없습니다.</p>
+    <a href="/">홈으로 돌아가기</a>
+  </main>
+</BaseLayout>
+
+<style>
+  /* 홈의 <section>, 글의 <main> 과 같은 값: 레이아웃의 세로 flex 안에서 남는 높이를 채워 푸터를 바닥에 둔다. */
+  main {
+    width: 100%;
+    flex-grow: 1;
+  }
+
+  /* 전역 스타일이 링크의 밑줄과 색을 없앤다. 이 페이지에서 할 수 있는 일은 이 링크 하나뿐이라 늘 보이게 둔다. */
+  a {
+    text-decoration: underline;
+  }
+</style>

@@ -1,6 +1,8 @@
 ---
 title: css-masters-2 1주차 정리
 date: "2022-05-08"
+description: 모던 웹을 위한 HTML5 + CSS3 바이블 3판을
+keywords: css, html5, css3, 웹표준, w3c, void 요소, 요소vs태그
 ---
 
 [css-masters-2](https://github.com/fe-backpackers/css-masters-2) 라는 이름으로 css 스터디를 하고 있습니다.

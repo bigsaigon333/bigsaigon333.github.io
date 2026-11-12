@@ -1,0 +1,73 @@
+# 배포 전 검사 전부. Pull Request(ci.yml)와 배포(deploy.yml)가 이 파일 하나를 부른다.
+name: Checks
+
+on:
+  workflow_call:
+    inputs:
+      pages-artifact:
+        description: 검사를 통과한 dist/ 를 GitHub Pages 아티팩트로 올린다
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+env:
+  ASTRO_TELEMETRY_DISABLED: 1
+
+jobs:
+  static:
+    name: lint, typecheck, format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      # 배포 워크플로가 부르므로 패키지 매니저 캐시를 쓰지 않는다(setup-node 문서의 권고).
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: mise.toml
+          package-manager-cache: false
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npx prettier --check .
+
+  verify:
+    name: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: mise.toml
+          package-manager-cache: false
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run verify:setup
+      # check → build → 기준선 비교 검사 → 기능 검사 → 시각 검사
+      - run: npm run verify
+      - if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: verify-report
+          path: .verify/report
+          if-no-files-found: ignore
+      # 배포되는 것은 방금 검사한 바로 그 dist/ 다.
+      - if: inputs.pages-artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: dist
+
+  selftest:
+    name: verify selftest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: mise.toml
+          package-manager-cache: false
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run verify:setup
+      # 검사기가 차이를 실제로 잡는지(변이본은 실패해야 한다) 확인한다.
+      - run: npm run verify:selftest
