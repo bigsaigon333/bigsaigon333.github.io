@@ -9,8 +9,9 @@
 /.verify/
 /.progress/
 
-# superpowers scratch
+# agent scratch
 /.superpowers/
+/.claude/worktrees/
 
 # misc
 .DS_Store

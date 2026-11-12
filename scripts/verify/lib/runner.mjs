@@ -7,7 +7,7 @@ import { pathToFileURL } from "node:url";
 import { load } from "cheerio";
 
 import { startServer } from "../serve.mjs";
-import { allowlistFile, baselineDir, cacheDir, checksDir, distDir, reportDir } from "./paths.mjs";
+import { allowlistFile, baselineDir, cacheDir, checksDir, distDir, mainRoot, reportDir } from "./paths.mjs";
 import { listRoutes, resolve } from "./resolve.mjs";
 
 export function parseArgs(argv) {
@@ -210,7 +210,8 @@ export function toMatrix(ctx, results) {
 /** Record a verify event for the progress dashboard. Never throws. */
 export async function emitVerify({ scope, args, results, matrix, durationMs }) {
   try {
-    const { emit } = await import("../../progress/emit.mjs");
+    // Always the main checkout's emitter, so every worktree writes to the same log.
+    const { emit } = await import(pathToFileURL(path.join(mainRoot, "scripts", "progress", "emit.mjs")).href);
     emit({
       type: "verify",
       scope,
