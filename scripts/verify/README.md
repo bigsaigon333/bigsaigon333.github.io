@@ -29,6 +29,7 @@ npm run verify:live -- --serve=<dir>      # 위 검사를 로컬에서 예행연
 export default {
   name: "head", // --only 에 쓰는 이름, 리포트 파일 이름
   kind: "static", // "static" | "browser" (--static 은 static 만 돌린다)
+  scope: "parity", // 선택. "parity"(기본): 기준선과 비교 | "feature": 예전 사이트에 없던 것을 새 빌드에서 단언
 
   async run(ctx) {
     return {
@@ -43,6 +44,7 @@ export default {
 
   selftest: {
     // 기준선 사본에 가하는 변이. 변이본을 검사했을 때 이 검사가 FAIL 이어야 한다.
+    // scope 가 "feature" 인 검사는 기준선 대신 dist/ 사본에 변이를 가하고, 변이 전 dist/ 는 PASS 여야 한다.
     mutations: [
       {
         name: "제목 변경",

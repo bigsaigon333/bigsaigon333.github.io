@@ -1,12 +1,17 @@
 // npm run verify:selftest -- [--only=head] [--static]
 //
 // Proves the harness can tell "same" from "different":
-//   1. baseline vs baseline            → every check must PASS
+//   1. baseline vs baseline            → every parity check must PASS
 //   2. baseline vs a mutated copy      → the check that declared the mutation must FAIL
+//
+// Feature checks (scope: "feature") assert things the old site never had, so the baseline cannot pass them.
+// They are tested against the current build instead:
+//   1. dist/ as it is                  → the check must PASS
+//   2. a mutated copy of dist/         → the check must FAIL
 import fs from "node:fs";
 import path from "node:path";
 
-import { baselineDir, verifyDir } from "./lib/paths.mjs";
+import { baselineDir, distDir, verifyDir } from "./lib/paths.mjs";
 import {
   createContext,
   emitVerify,
@@ -24,21 +29,35 @@ if (!fs.existsSync(path.join(baselineDir, "index.html"))) {
 }
 
 const checks = await loadChecks({ only: args.only, staticOnly: args.static });
+const isFeature = (check) => check.scope === "feature";
+const parityChecks = checks.filter((check) => !isFeature(check));
+const featureChecks = checks.filter(isFeature);
 const cases = [];
 
-// 1. identical
-{
-  const ctx = createContext({ candidateDir: baselineDir, args });
+if (featureChecks.length && !fs.existsSync(path.join(distDir, "index.html"))) {
+  console.error(
+    "dist/ missing — feature checks are self-tested against the build; run `npm run build` first",
+  );
+  process.exit(2);
+}
+
+// 1. unmutated: parity checks against the baseline itself, feature checks against the build
+for (const [group, candidateDir, name] of [
+  [parityChecks, baselineDir, "identical"],
+  [featureChecks, distDir, "build passes"],
+]) {
+  if (!group.length) continue;
+  const ctx = createContext({ candidateDir, args });
   try {
-    const results = await runChecks(ctx, checks);
+    const results = await runChecks(ctx, group);
     for (const [index, result] of results.entries()) {
       cases.push({
         check: result.check,
-        name: "identical",
+        name,
         ok: result.ok,
         detail: result.ok ? "" : (result.failed[0]?.detail ?? "failed"),
       });
-      await checks[index].selftest?.afterIdentical?.(ctx, result);
+      await group[index].selftest?.afterIdentical?.(ctx, result);
     }
   } finally {
     await ctx.close();
@@ -50,7 +69,9 @@ for (const check of checks) {
   for (const mutation of check.selftest?.mutations ?? []) {
     const mutant = fs.mkdtempSync(path.join(verifyDir, "mutant-"));
     try {
-      fs.cpSync(baselineDir, mutant, { recursive: true });
+      fs.cpSync(isFeature(check) ? distDir : baselineDir, mutant, {
+        recursive: true,
+      });
       await mutation.apply(mutant);
       const ctx = createContext({ candidateDir: mutant, args });
       try {
