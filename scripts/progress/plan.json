@@ -85,7 +85,13 @@
       "part": "Part 1 — 1:1 이전",
       "title": "운영 전환",
       "stages": [
-        { "id": "S3.1", "title": "PR·CI 확인", "agent": "ORC" },
+        { "id": "S3.1", "title": "기준선 없는 검증 모드", "agent": "C1" },
+        {
+          "id": "REL",
+          "title": "main 용 릴리스 분리(작업 도구 제외)",
+          "agent": "REL"
+        },
+        { "id": "S3.1b", "title": "릴리스 PR·CI 확인", "agent": "ORC" },
         { "id": "S3.2", "title": "운영 전환·라이브 검증", "agent": "ORC" }
       ]
     },
