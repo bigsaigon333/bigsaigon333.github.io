@@ -1,0 +1,66 @@
+---
+// /tags — 모든 태그와 태그마다 글 수. build.format "file" 이라 dist/tags.html 이 된다(/tags/<슬러그> 는 dist/tags/ 아래).
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { SITE } from "../../lib/site";
+import { getTags, TAGS_PATH, tagPath } from "../../lib/tags";
+
+const tags = await getTags();
+---
+
+<BaseLayout
+  seo={{
+    title: `태그 | ${SITE.title}`,
+    description: `${SITE.title}의 글에 붙은 태그 ${tags.length}개`,
+    url: `${SITE.url}${TAGS_PATH}`,
+    type: "website",
+    keywords: tags.map((tag) => tag.label),
+  }}
+>
+  <main>
+    <h2>태그</h2>
+    <ul>
+      {tags.map((tag) => (
+        <li>
+          <a href={tagPath(tag.label)}>
+            #{tag.label} <span class="count">({tag.posts.length})</span>
+          </a>
+        </li>
+      ))}
+    </ul>
+  </main>
+</BaseLayout>
+
+<style>
+  main {
+    width: 100%;
+    flex-grow: 1;
+  }
+
+  h2 {
+    font-size: 2.5rem;
+    margin: 0 0 1.5rem;
+    font-weight: 800;
+  }
+
+  ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  a {
+    display: inline-block;
+    padding: 0.125rem 0.625rem;
+    border: 1px solid currentColor;
+    border-radius: 999px;
+    line-height: 1.5;
+  }
+
+  a:hover,
+  a:focus-visible {
+    text-decoration: underline;
+  }
+</style>

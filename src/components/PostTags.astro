@@ -1,6 +1,50 @@
 ---
-// 이음매 스텁(W6): S5.1 이 글의 태그 목록을 그린다. 지금은 아무것도 그리지 않는다.
+import { tagPath } from "../lib/tags";
+
+// 글 머리 아래의 태그 줄. frontmatter keywords 의 순서대로, 각 태그 페이지(/tags/<슬러그>)로 가는 링크다.
+// 키워드가 없는 글에는 아무것도 그리지 않는다(빈 nav 를 남기지 않는다).
 interface Props {
   keywords: string[];
 }
+
+const { keywords } = Astro.props;
+const tags = [...new Set(keywords)];
 ---
+
+{tags.length > 0 && (
+  <nav class="post-tags" aria-label="태그">
+    <ul>
+      {tags.map((keyword) => (
+        <li>
+          <a href={tagPath(keyword)}>#{keyword}</a>
+        </li>
+      ))}
+    </ul>
+  </nav>
+)}
+
+<style>
+  .post-tags ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* 글자색은 본문과 같다(전역 a { color: inherit }). 테두리로 링크임을 보인다. */
+  .post-tags a {
+    display: inline-block;
+    padding: 0.125rem 0.625rem;
+    border: 1px solid currentColor;
+    border-radius: 999px;
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+
+  .post-tags a:hover,
+  .post-tags a:focus-visible {
+    text-decoration: underline;
+  }
+</style>
