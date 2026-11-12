@@ -48,6 +48,7 @@
       "title": "시각 일치 수렴",
       "stages": [
         { "id": "S2.3", "title": "본문 스타일·서드파티 CSS", "agent": "T3" },
+        { "id": "V3", "title": "hover 검사기", "agent": "V3" },
         { "id": "R1", "title": "독립 리뷰", "agent": "R1" }
       ]
     },
