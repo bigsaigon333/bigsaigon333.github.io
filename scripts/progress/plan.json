@@ -1,0 +1,135 @@
+{
+  "title": "Astro 블로그 개편",
+  "waves": [
+    {
+      "id": "W0",
+      "part": "Part 1 — 1:1 이전",
+      "title": "준비",
+      "stages": [
+        { "id": "S0.0", "title": "진행 대시보드", "agent": "DB" },
+        { "id": "S0.1", "title": "저장소 초기화·의존성", "agent": "ORC" },
+        { "id": "S0.2", "title": "검증 골격(기준선, serve, run)", "agent": "ORC" },
+        { "id": "S0.3", "title": "오케스트레이션 스파이크", "agent": "ORC" },
+        { "id": "SCOUT1", "title": "Part 1 문서 스카우트 ×6", "agent": "SCOUT" }
+      ]
+    },
+    {
+      "id": "W1",
+      "part": "Part 1 — 1:1 이전",
+      "title": "검증 장치 + 워킹 스켈레톤",
+      "stages": [
+        { "id": "V1", "title": "정적 검사기", "agent": "V1" },
+        { "id": "V2", "title": "브라우저 검사기", "agent": "V2" },
+        { "id": "S1.1", "title": "프로젝트 구조·CLI·설정", "agent": "SK" },
+        { "id": "S1.3", "title": "콘텐츠 컬렉션", "agent": "SK" },
+        { "id": "S2.1", "title": "동적 라우트·render()", "agent": "SK" },
+        { "id": "K1", "title": "도구·CI", "agent": "K1" }
+      ]
+    },
+    {
+      "id": "W2",
+      "part": "Part 1 — 1:1 이전",
+      "title": "페이지 완성",
+      "stages": [
+        { "id": "S2.2", "title": "마크다운 파이프라인", "agent": "T1" },
+        { "id": "S1.2", "title": "컴포넌트·레이아웃·slot", "agent": "T2" },
+        { "id": "S1.4", "title": "scoped 스타일·CSS 번들링", "agent": "T2" },
+        { "id": "S2.4", "title": "script 처리·is:inline", "agent": "T4" },
+        { "id": "S2.5", "title": "정적 엔드포인트·404", "agent": "T4" }
+      ]
+    },
+    {
+      "id": "W3",
+      "part": "Part 1 — 1:1 이전",
+      "title": "시각 일치 수렴",
+      "stages": [
+        { "id": "S2.3", "title": "본문 스타일·서드파티 CSS", "agent": "T3" },
+        { "id": "R1", "title": "독립 리뷰", "agent": "R1" }
+      ]
+    },
+    {
+      "id": "W4",
+      "part": "Part 1 — 1:1 이전",
+      "title": "운영 전환",
+      "stages": [
+        { "id": "S3.1", "title": "PR·CI 확인", "agent": "ORC" },
+        { "id": "S3.2", "title": "운영 전환·라이브 검증", "agent": "ORC" }
+      ]
+    },
+    {
+      "id": "W5",
+      "part": "Part 2 — 개선",
+      "title": "Astro 네이티브 파이프라인",
+      "stages": [
+        { "id": "S4.0", "title": "기준선 교체·품질 기준 측정", "agent": "ORC" },
+        { "id": "S4.1", "title": "Sätteri·Shiki", "agent": "F1" },
+        { "id": "S4.2", "title": "Fonts API·CSS 자체 호스팅", "agent": "F2" },
+        { "id": "S4.3", "title": "astro:assets 이미지", "agent": "F3" },
+        { "id": "S4.4", "title": "초안 워크플로", "agent": "F4" }
+      ]
+    },
+    {
+      "id": "W6",
+      "part": "Part 2 — 개선",
+      "title": "콘텐츠 모델 확장",
+      "stages": [
+        { "id": "S5.1", "title": "태그 페이지", "agent": "G1" },
+        { "id": "S5.2", "title": "시리즈(file 로더·reference)", "agent": "G2" },
+        { "id": "S5.3", "title": "목차·읽는 시간", "agent": "G3" },
+        { "id": "S5.4", "title": "RSS", "agent": "G4" },
+        { "id": "S5.5", "title": "MDX", "agent": "G5" }
+      ]
+    },
+    {
+      "id": "W7",
+      "part": "Part 2 — 개선",
+      "title": "인터랙션",
+      "stages": [
+        { "id": "S6.1", "title": "다크 모드", "agent": "H1" },
+        { "id": "S6.3", "title": "스크립트 패턴(커스텀 엘리먼트)", "agent": "H2" },
+        { "id": "S6.2", "title": "View Transitions", "agent": "H3" }
+      ]
+    },
+    {
+      "id": "W8",
+      "part": "Part 2 — 개선",
+      "title": "플랫폼",
+      "stages": [
+        { "id": "S7.1", "title": "astro:env", "agent": "J1" },
+        { "id": "S7.3", "title": "커스텀 통합(Integration API)", "agent": "J2" },
+        { "id": "S7.4", "title": "Vitest·Container API", "agent": "J3" },
+        { "id": "S7.2", "title": "CSP", "agent": "J4" }
+      ]
+    },
+    {
+      "id": "LAB",
+      "part": "Part 3 — 실습과 마무리",
+      "title": "서버 기능 실습(labs/playground)",
+      "stages": [
+        { "id": "S8.0", "title": "lab 스캐폴드", "agent": "L0" },
+        { "id": "S8.1", "title": "on-demand 렌더링·API·쿠키", "agent": "L1" },
+        { "id": "S8.2", "title": "Actions·세션", "agent": "L2" },
+        { "id": "S8.3", "title": "서버/클라이언트 아일랜드", "agent": "L3" },
+        { "id": "S8.4", "title": "미들웨어·redirects·i18n·paginate", "agent": "L4" },
+        { "id": "S8.5", "title": "v7 신규·live 컬렉션·toolbar", "agent": "L5" }
+      ]
+    },
+    {
+      "id": "W9",
+      "part": "Part 3 — 실습과 마무리",
+      "title": "마무리",
+      "stages": [
+        { "id": "S9.1", "title": "검증 자산 정리", "agent": "M1" },
+        { "id": "S9.2", "title": "최종 리뷰·커버리지 표", "agent": "R2" }
+      ]
+    }
+  ],
+  "checkpoints": [
+    { "id": "CP1", "after": "W1", "title": "검증 장치·프로젝트 구조·컬렉션·라우팅" },
+    { "id": "CP2", "after": "W3", "title": "1:1 재현 완료" },
+    { "id": "CP3", "after": "S3.1", "title": "운영 전환 승인" },
+    { "id": "CP4", "after": "W6", "title": "네이티브 파이프라인·콘텐츠 모델" },
+    { "id": "CP5", "after": "W8", "title": "인터랙션·플랫폼" },
+    { "id": "CP6", "after": "W9", "title": "서버 실습·마무리" }
+  ]
+}

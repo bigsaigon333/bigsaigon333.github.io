@@ -217,7 +217,8 @@ export async function emitVerify({ scope, args, results, matrix, durationMs }) {
       scope,
       stage: args.stage ?? process.env.PROGRESS_STAGE,
       agent: args.agent ?? process.env.PROGRESS_AGENT,
-      ok: results.every((result) => result.ok),
+      // Zero checks is not a pass: nothing was verified.
+      ok: results.length > 0 && results.every((result) => result.ok),
       durationMs,
       results: results.map(({ check, ok, pass, fail, failed }) => ({
         check,
