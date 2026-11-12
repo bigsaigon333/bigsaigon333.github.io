@@ -16,6 +16,11 @@
       "reason": "gh-pages 브랜치 배포용 파일. GitHub Actions 배포는 Jekyll을 거치지 않는다."
     },
     {
+      "check": "routes",
+      "item": "asset:sitemap.xml",
+      "reason": "빌드할 때마다 lastmod가 바뀌어 바이트로 비교할 수 없다. sitemap 검사가 <loc> 집합으로 비교한다."
+    },
+    {
       "check": "head",
       "item": "route:/404",
       "reason": "Next 기본 404 화면을 재현하지 않고 사이트 레이아웃을 쓴다."
