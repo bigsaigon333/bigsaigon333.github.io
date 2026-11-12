@@ -472,7 +472,7 @@ const whyFailed = ({ status, lines }) =>
 
 /**
  * The checks of `npm run verify -- --feature` (the ones that never read the baseline) need no baseline: the gate
- * of pull requests and of the deploy workflow, in a checkout that has never fetched gh-pages. The copy has a post
+ * of pull requests and of the deploy workflow, in a checkout without a baseline. The copy has a post
  * the baseline does not have, as an ordinary pull request would add, and nothing at .verify/baseline.
  *   1. `--feature` as the workflows type it passes, runs check, build and exactly those checks, and every check
  *      that reports per route examined the new post's route

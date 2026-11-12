@@ -60,10 +60,8 @@ const run = (command, args, cwd) => {
     stdio: ["ignore", "ignore", "inherit"],
     env: { ...process.env, ASTRO_TELEMETRY_DISABLED: "1" },
   });
-  if (result.status !== 0) {
-    console.error(`${command} ${args.join(" ")} failed in ${cwd}`);
-    process.exit(result.status ?? 1);
-  }
+  if (result.status !== 0)
+    throw new Error(`${command} ${args.join(" ")} failed in ${cwd}`);
 };
 
 /** The commit `ref` names, fetched from origin when this clone does not have it. */
@@ -114,7 +112,12 @@ function install(dir) {
 }
 
 if (!fs.existsSync(path.join(repoRoot, "node_modules", ".package-lock.json"))) {
-  run("npm", ["ci", "--no-fund", "--no-audit"], repoRoot);
+  try {
+    run("npm", ["ci", "--no-fund", "--no-audit"], repoRoot);
+  } catch (error) {
+    console.error(error.message);
+    process.exit(1);
+  }
   done.push("npm ci");
 }
 
@@ -138,15 +141,22 @@ if (
     git(["worktree", "add", "--detach", "--force", tree, sha]);
     const how = install(tree);
     run("npm", ["run", "-s", "build"], tree);
+    // Without baseline.json a half-copied baseline is rebuilt next time.
+    fs.rmSync(baselineFile, { force: true });
     fs.rmSync(baselineDir, { recursive: true, force: true });
     fs.mkdirSync(verifyDir, { recursive: true });
     fs.cpSync(path.join(tree, "dist"), baselineDir, { recursive: true });
     done.push(`baseline ${ref} ${sha.slice(0, 7)} (${how})`);
+  } catch (error) {
+    // The temporary worktree is removed below either way; the old baseline stays as it was.
+    console.error(`baseline ${ref} (${sha.slice(0, 12)}): ${error.message}`);
+    process.exitCode = 1;
   } finally {
     tryGit(["worktree", "remove", "--force", tree]);
     fs.rmSync(tmp, { recursive: true, force: true });
     tryGit(["worktree", "prune"]);
   }
+  if (process.exitCode) process.exit();
   fs.writeFileSync(
     baselineFile,
     `${JSON.stringify({ ref, sha, hash: baselineHash(baselineDir) }, null, 2)}\n`,
