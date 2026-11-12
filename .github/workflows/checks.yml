@@ -12,6 +12,10 @@ on:
         description: 검사를 통과한 dist/ 를 GitHub Pages 아티팩트로 올린다
         type: boolean
         default: false
+      selftest:
+        description: 자기 검사를 돌린다. 배포는 같은 트리의 PR 에서 이미 통과했을 때만 끈다(deploy.yml)
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -48,7 +52,25 @@ jobs:
           node-version-file: mise.toml
           package-manager-cache: false
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
+      # 브라우저는 playwright 버전마다 캐시한다. 배포(pages-artifact)는 읽기만 해서 게시 워크플로가 캐시를 쓰지 않는다.
+      - id: playwright
+        run: echo "version=$(node -p "require('./package-lock.json').packages['node_modules/playwright'].version")" >> "$GITHUB_OUTPUT"
+      - if: ${{ !inputs.pages-artifact }}
+        id: browsers
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+      - if: inputs.pages-artifact
+        id: browsers-restore
+        uses: actions/cache/restore@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+      - if: steps.browsers.outputs.cache-hit == 'true' || steps.browsers-restore.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+      - if: steps.browsers.outputs.cache-hit != 'true' && steps.browsers-restore.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
       - run: npm run verify:setup -- --baseline-ref="$BASELINE_REF"
         env:
           BASELINE_REF: ${{ inputs.baseline-ref }}
@@ -66,9 +88,15 @@ jobs:
         with:
           path: dist
 
+  # 사례를 세 조각으로 나눠 동시에 돌린다(--shard). 조각은 사례 id 순서로 정해지고 새 사례도 저절로 들어간다.
   selftest:
-    name: verify selftest
+    name: verify selftest (${{ matrix.shard }}/3)
+    if: inputs.selftest
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     steps:
       - uses: actions/checkout@v7
         with:
@@ -78,11 +106,47 @@ jobs:
           node-version-file: mise.toml
           package-manager-cache: false
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
+      # 브라우저는 playwright 버전마다 캐시한다. 배포(pages-artifact)는 읽기만 해서 게시 워크플로가 캐시를 쓰지 않는다.
+      - id: playwright
+        run: echo "version=$(node -p "require('./package-lock.json').packages['node_modules/playwright'].version")" >> "$GITHUB_OUTPUT"
+      - if: ${{ !inputs.pages-artifact }}
+        id: browsers
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+      - if: inputs.pages-artifact
+        id: browsers-restore
+        uses: actions/cache/restore@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+      - if: steps.browsers.outputs.cache-hit == 'true' || steps.browsers-restore.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+      - if: steps.browsers.outputs.cache-hit != 'true' && steps.browsers-restore.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
       - run: npm run verify:setup -- --baseline-ref="$BASELINE_REF"
         env:
           BASELINE_REF: ${{ inputs.baseline-ref }}
       # 기능 검사와 명령 사례는 새 빌드(dist/)를 대상으로 자체 검증한다.
       - run: npm run build
       # 검사기가 차이를 실제로 잡는지(변이본은 실패해야 한다) 확인한다.
-      - run: npm run verify:selftest
+      - run: npm run verify:selftest -- --shard=${{ matrix.shard }}/3
+
+  # 필수 상태 검사 "verify selftest" 는 이 job 이다. 조각이 모두 성공해야 통과한다.
+  selftest-result:
+    name: verify selftest
+    needs: selftest
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          WANTED: ${{ inputs.selftest }}
+          RESULT: ${{ needs.selftest.result }}
+        run: |
+          if [ "$WANTED" = false ]; then
+            echo "selftest not run: the same tree passed it on its pull request (see the deploy workflow's selftest-plan)"
+            exit 0
+          fi
+          echo "selftest shards: $RESULT"
+          [ "$RESULT" = success ]

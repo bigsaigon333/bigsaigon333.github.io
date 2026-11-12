@@ -38,7 +38,7 @@ npm run verify:live -- --serve=<dir>      # 위 검사를 로컬에서 예행연
 - `.verify/baseline.json`에 `{ ref, sha, hash }`를 남긴다. `hash`는 기준선 파일들의 (경로, sha256) 목록을 정렬해 다시 sha256한 값이다. accept 파일이 이 값을 가리킨다.
 - `<ref>`가 가리키는 커밋이 `baseline.json`의 `sha`와 같으면 다시 빌드하지 않는다.
 
-CI는 기준선 커밋을 직접 넘긴다. PR은 base 커밋, 배포는 push 전의 main 커밋, 배포 뒤 `verify:live`는 방금 배포한 커밋이다.
+CI는 기준선 커밋을 직접 넘긴다. PR은 base 커밋, 배포는 push 전의 main 커밋, 배포 뒤 `verify:live`는 방금 배포한 Pages 아티팩트(다시 빌드하지 않는다)다.
 
 ## 의도한 차이 허용하기 (`accepted/`)
 
@@ -239,6 +239,18 @@ export default {
 
 `--only=cli`로 3만, `--only=<검사>`로 그 검사의 1·2만 돌린다. `--static`은 브라우저 검사의 1·2를 빼고, 3은 모두 돌린다. 3에서 브라우저를 띄우는 것은 mask 사례(`visual`)뿐이다.
 
+### 나눠 돌리기 (`--shard`, `--list`)
+
+```sh
+npm run verify:selftest -- --list               # 돌릴 사례의 id(`<검사>/<사례 이름>`)를 한 줄씩 찍고 아무것도 돌리지 않는다
+npm run verify:selftest -- --shard=2/3          # 사례를 셋으로 나눈 것 중 두 번째만 돌린다
+```
+
+- 고른 사례(`--only`, `--static`을 적용한 뒤) 전부를 id 순서(코드 단위 비교)로 늘어놓고, k번째(0부터) 사례를 `(k mod n) + 1`번째 조각에 둔다. 모든 사례가 정확히 한 조각에 들고, 새 사례도 저절로 들어간다. id가 겹치면 2로 끝난다.
+- `--shard`는 `<i>/<n>`(1 ≤ i ≤ n)만 받는다. 나머지는 2로 거부한다.
+- 명령 사례 `verify:selftest: --shard 의 조각들을 합치면 …`가 `--list`로 n = 1, 3, 5의 조각을 모아 나누지 않은 목록과 같고 겹치지 않음을 확인한다.
+- CI(`checks.yml`)는 자기 검사를 세 조각의 matrix(`verify selftest (1/3)` …)로 돌리고, 조각이 모두 성공해야 통과하는 job `verify selftest`가 필수 상태 검사 이름을 잇는다. 배포는 push된 커밋으로 merge된 PR의 head가 같은 트리이고 거기서 `verify selftest`가 성공했으면 자기 검사를 건너뛴다(`deploy.yml`의 `selftest-plan`이 이유를 로그에 남긴다).
+
 ## ctx
 
 | 멤버                                  | 설명                                                                                 |
@@ -286,7 +298,7 @@ export default {
 
 `status`(기준선의 모든 라우트·자산·`sitemap.xml`·`robots.txt`가 리다이렉트 없이 200), `head`, `content`, `sitemap`을 HTTP로 읽어 돌린다. `--only`로 고를 수 있다.
 
-배포 워크플로는 방금 배포한 커밋을 기준선으로 만든다(`verify:setup -- --baseline-ref=<그 sha>`). 그래서 실제 사이트가 그 빌드와 다르면 실패한다. 롤백을 확인할 때는 되돌린 커밋을 기준선으로 준다.
+배포 워크플로는 방금 배포한 Pages 아티팩트(`github-pages`의 `artifact.tar`, 검사를 통과한 그 `dist/`)를 `.verify/baseline`에 풀어 기준선으로 쓴다. `verify:live`는 `.verify/baseline`만 읽으므로 다시 빌드할 필요가 없다. 그래서 실제 사이트가 배포한 것과 다르면 실패한다. 롤백을 확인할 때는 되돌린 커밋을 기준선으로 준다.
 
 ```sh
 npm run verify:setup -- --baseline-ref=origin/main

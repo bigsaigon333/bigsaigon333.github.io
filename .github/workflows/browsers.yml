@@ -1,0 +1,33 @@
+# main 범위의 playwright 브라우저 캐시를 채운다. 배포 워크플로는 캐시를 읽기만 하고(checks.yml), PR 이 저장한 캐시는
+# 그 PR 범위라 배포가 읽을 수 없다. 이 워크플로는 쓰기 권한 없이 main 의 코드로만 캐시를 만든다.
+name: Browser cache
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  playwright:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: mise.toml
+          package-manager-cache: false
+      - id: playwright
+        run: echo "version=$(node -p "require('./package-lock.json').packages['node_modules/playwright'].version")" >> "$GITHUB_OUTPUT"
+      - id: browsers
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+      # 시스템 의존성은 캐시되지 않으므로(checks.yml 이 job 마다 설치한다) 브라우저만 받는다.
+      - if: steps.browsers.outputs.cache-hit != 'true'
+        env:
+          VERSION: ${{ steps.playwright.outputs.version }}
+        run: npx --yes "playwright@$VERSION" install chromium

@@ -1,4 +1,4 @@
-// npm run verify:selftest -- [--only=head,cli] [--route=/posts/x] [--static] [--calibrate]
+// npm run verify:selftest -- [--only=head,cli] [--route=/posts/x] [--static] [--calibrate] [--shard=<i>/<n>] [--list]
 //
 // Proves the harness can tell "same" from "different":
 //   1. baseline vs baseline            → every parity check must PASS
@@ -15,6 +15,10 @@
 //
 // Accept files (scripts/verify/accepted) never apply here: the mutations must fail whatever they declare.
 //
+// --shard=<i>/<n> runs the i-th of n disjoint parts of the selected cases: sorted by id ("<check>/<case name>"),
+// the k-th case (0-based) belongs to shard (k mod n) + 1. Every case is in exactly one shard, a new case joins one
+// by itself. --list prints the ids of the cases that would run, one per line, and runs nothing.
+//
 // A summary of the cases goes to the reporter module, if there is one (VERIFY_REPORTER, see lib/runner.mjs report()).
 import fs from "node:fs";
 import path from "node:path";
@@ -25,8 +29,9 @@ import { listRoutes } from "./lib/resolve.mjs";
 import {
   createContext,
   exitWithUsage,
+  FLAGS,
   loadChecks,
-  parseArgsOrExit,
+  parseArgs,
   report,
   runChecks,
   selectChecks,
@@ -35,11 +40,34 @@ import {
 } from "./lib/runner.mjs";
 
 const USAGE =
-  "usage: npm run verify:selftest -- [--only=<check,…|cli>] [--route=<route,…>] [--static] [--calibrate]";
+  "usage: npm run verify:selftest -- [--only=<check,…|cli>] [--route=<route,…>] [--static] [--calibrate] [--shard=<i>/<n>] [--list]";
 /** --only name of the command-level cases. */
 const CLI = "cli";
 
-const args = parseArgsOrExit("selftest", USAGE);
+let args;
+let shard = null;
+try {
+  args = parseArgs(process.argv.slice(2), {
+    ...FLAGS.selftest,
+    shard: "value",
+    list: "flag",
+  });
+  if (args.shard !== undefined) {
+    const [, index, count] = /^(\d+)\/(\d+)$/.exec(args.shard) ?? [];
+    shard = { index: Number(index), count: Number(count) };
+    if (
+      !index ||
+      shard.count < 1 ||
+      shard.index < 1 ||
+      shard.index > shard.count
+    )
+      throw new UsageError(
+        `--shard=${args.shard}: expected <i>/<n> with 1 <= i <= n, e.g. --shard=1/3`,
+      );
+  }
+} catch (error) {
+  exitWithUsage(error, USAGE);
+}
 const started = performance.now();
 
 if (!fs.existsSync(path.join(baselineDir, "index.html"))) {
@@ -72,14 +100,66 @@ try {
 }
 
 const isFeature = (check) => check.scope === "feature";
-const parityChecks = checks.filter((check) => !isFeature(check));
-const featureChecks = checks.filter(isFeature);
+const UNMUTATED = { parity: "identical", feature: "build passes" };
+const variantsOf = (check) => [
+  ...(check.selftest?.mutations ?? []).map((mutation) => ({
+    mutation,
+    label: `mutation: ${mutation.name}`,
+    mustFail: true,
+  })),
+  ...(check.selftest?.accepted ?? []).map((mutation) => ({
+    mutation,
+    label: `accepted: ${mutation.name}`,
+    mustFail: false,
+  })),
+];
+const caseId = (check, name) => `${check}/${name}`;
+
+// Every case this selection holds, then the part of it this shard runs.
+const planned = [
+  ...checks.flatMap((check) => [
+    caseId(check.name, UNMUTATED[isFeature(check) ? "feature" : "parity"]),
+    ...variantsOf(check).map(({ label }) => caseId(check.name, label)),
+  ]),
+  ...(withCli ? cliCases.map((item) => caseId(CLI, item.name)) : []),
+].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+const twice = planned.filter((id, index) => planned[index + 1] === id);
+if (twice.length) {
+  // Two cases with one id could not be told apart in a shard or in the report.
+  console.error(`case ids are not unique: ${[...new Set(twice)].join(", ")}`);
+  process.exit(2);
+}
+const selected = new Set(
+  shard
+    ? planned.filter((_, index) => index % shard.count === shard.index - 1)
+    : planned,
+);
+const runs = (check, name) => selected.has(caseId(check, name));
+
+if (args.list) {
+  for (const id of planned) if (selected.has(id)) console.log(id);
+  process.exit(0);
+}
+if (shard)
+  console.log(
+    `shard ${shard.index}/${shard.count}: ${selected.size} of ${planned.length} cases`,
+  );
+
+const parityChecks = checks.filter(
+  (check) => !isFeature(check) && runs(check.name, UNMUTATED.parity),
+);
+const featureChecks = checks.filter(
+  (check) => isFeature(check) && runs(check.name, UNMUTATED.feature),
+);
+const cliSelected = cliCases.filter((item) => withCli && runs(CLI, item.name));
+const needsBuild = [...selected].some(
+  (id) =>
+    id.startsWith(`${CLI}/`) ||
+    checks.some((check) => isFeature(check) && id.startsWith(`${check.name}/`)),
+);
 const cases = [];
 
-if (
-  (featureChecks.length || withCli) &&
-  !fs.existsSync(path.join(distDir, "index.html"))
-) {
+if (needsBuild && !fs.existsSync(path.join(distDir, "index.html"))) {
   console.error(
     "dist/ missing — feature checks and the command cases are self-tested against the build; run `npm run build` first",
   );
@@ -114,19 +194,8 @@ for (const [group, candidateDir, name] of [
 const scratch = (prefix) => fs.mkdtempSync(path.join(verifyDir, prefix));
 
 for (const check of checks) {
-  const variants = [
-    ...(check.selftest?.mutations ?? []).map((mutation) => ({
-      mutation,
-      label: `mutation: ${mutation.name}`,
-      mustFail: true,
-    })),
-    ...(check.selftest?.accepted ?? []).map((mutation) => ({
-      mutation,
-      label: `accepted: ${mutation.name}`,
-      mustFail: false,
-    })),
-  ];
-  for (const { mutation, label, mustFail } of variants) {
+  for (const { mutation, label, mustFail } of variantsOf(check)) {
+    if (!runs(check.name, label)) continue;
     const mutant = scratch("mutant-");
     // A mutation may also change what the candidate is compared with (`baseline(dir)`): some differences
     // only exist in one direction, and the real baseline cannot show the other one.
@@ -190,8 +259,8 @@ for (const check of checks) {
 }
 
 // 3. the commands
-if (withCli) {
-  for (const item of cliCases) {
+if (cliSelected.length) {
+  for (const item of cliSelected) {
     let problem;
     try {
       problem = await item.run();

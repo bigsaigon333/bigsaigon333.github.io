@@ -988,6 +988,53 @@ function maskHidesOnlyInside() {
   });
 }
 
+// ── selftest shards ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * CI runs the self-test as n jobs (`--shard=<i>/<n>`). The shards together must be the whole self-test: every case
+ * of the unsharded list in exactly one shard, nothing else. Compared on the case ids `--list` prints.
+ */
+function shardsCoverEveryCaseOnce() {
+  const list = (flags) => {
+    const { status, output, lines } = command("selftest.mjs", [
+      "--list",
+      ...flags,
+    ]);
+    if (status !== 0)
+      throw new Error(
+        `--list ${flags.join(" ")}: exit status ${status}: ${firstLine(output)}`,
+      );
+    return lines;
+  };
+  const all = list([]);
+  if (all.length === 0) return "--list printed no cases";
+  if (new Set(all).size !== all.length) return "--list printed a case twice";
+  for (const count of [1, 3, 5]) {
+    const seen = new Map();
+    for (let index = 1; index <= count; index++) {
+      const part = list([`--shard=${index}/${count}`]);
+      if (count <= all.length && part.length === 0)
+        return `shard ${index}/${count} is empty`;
+      for (const id of part) {
+        if (seen.has(id))
+          return `${id} is in shard ${seen.get(id)}/${count} and ${index}/${count}`;
+        seen.set(id, index);
+      }
+    }
+    const missing = all.filter((id) => !seen.has(id));
+    if (missing.length) return `no shard of ${count} runs ${missing[0]}`;
+    const extra = [...seen.keys()].filter((id) => !all.includes(id));
+    if (extra.length)
+      return `a shard of ${count} runs ${extra[0]}, which the unsharded list does not have`;
+  }
+  return (
+    refused("selftest.mjs", ["--shard=0/3"], /--shard=0\/3: expected/) ??
+    refused("selftest.mjs", ["--shard=4/3"], /--shard=4\/3: expected/) ??
+    refused("selftest.mjs", ["--shard=1"], /--shard=1: expected/) ??
+    refused("selftest.mjs", ["--shard"], /--shard needs a value/)
+  );
+}
+
 // ── the cases ───────────────────────────────────────────────────────────────────────────────────
 
 const aPost = () =>
@@ -1123,6 +1170,10 @@ export const cliCases = [
     run: () =>
       refused("selftest.mjs", ["--only=haed"], /no such check: haed/) ??
       refused("selftest.mjs", ["--no-build"], /unknown argument: --no-build/),
+  },
+  {
+    name: "verify:selftest: --shard 의 조각들을 합치면 나누지 않은 사례 목록과 같고 겹치지 않는다",
+    run: shardsCoverEveryCaseOnce,
   },
   {
     name: "verify:live: 없는 검사 이름·라우트와 모르는 플래그는 거부한다",
