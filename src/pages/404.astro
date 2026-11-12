@@ -12,6 +12,8 @@ import { SITE } from "../lib/site";
     url: `${SITE.url}/404`,
     type: "website",
     keywords: SITE.keywords,
+    // /404 와 /404.html 은 직접 열면 200 으로 응답한다. 검색 결과에 실리지 않게 한다.
+    noindex: true,
   }}
 >
   <main>
