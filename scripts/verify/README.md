@@ -178,3 +178,10 @@ export default {
 ## 배포 후 검사 (`verify:live`)
 
 `status`(기준선의 모든 라우트·자산·`sitemap.xml`·`robots.txt`가 리다이렉트 없이 200), `migrated`, `head`, `content`, `sitemap`을 HTTP로 읽어 돌린다. `--only`로 고를 수 있고 `migrated`도 기본으로 켜져 있다. 예전 배포본은 `migrated`에서만 실패한다: 새 배포가 실제로 나갔는지 이 검사가 가른다.
+
+그래서 **롤백 확인**(예전 배포본으로 되돌아갔는지)은 기본 실행으로 하면 안 된다. 되돌린 사이트는 `migrated`에서 실패하는 것이 정상이다.
+
+```sh
+npm run verify:live -- --base-url=<url> --only=status,head,content,sitemap   # 통과해야 한다
+npm run verify:live -- --base-url=<url> --only=migrated                      # 실패해야 한다(예전 배포본이므로)
+```
