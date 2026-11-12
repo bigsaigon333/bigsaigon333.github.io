@@ -84,11 +84,11 @@ git fetch origin
 git merge origin/main
 ```
 
-첫 머지에서는 릴리스가 바꾼 다섯 파일(`package.json`, `package-lock.json`, `.gitignore`, `.prettierignore`, `.oxlintrc.json`)이 충돌한다. 두 브랜치가 갈라진 곳(Next.js 시절의 `main`)에서 양쪽이 같은 줄을 다르게 바꿨기 때문이다. 릴리스 쪽은 `astro`의 것에서 기계적으로 만든 것이므로 `astro` 쪽을 남긴다. 그 밖의 파일은 충돌 없이 `astro`와 같아진다(`git merge-tree`로 확인했다).
+첫 머지에서는 릴리스가 바꾼 네 파일(`package.json`, `.gitignore`, `.prettierignore`, `.oxlintrc.json`)이 충돌한다. 두 브랜치가 갈라진 곳(Next.js 시절의 `main`)에서 양쪽이 같은 줄을 다르게 바꿨기 때문이다. 릴리스 쪽은 `astro`의 것에서 기계적으로 만든 것이므로 `astro` 쪽을 남긴다. 그 밖의 파일은 충돌 없이 `astro`와 같아진다(`git merge-tree`로 확인했다).
 
 ```sh
-git checkout --ours -- package.json package-lock.json .gitignore .prettierignore .oxlintrc.json
-git add package.json package-lock.json .gitignore .prettierignore .oxlintrc.json
+git checkout --ours -- package.json .gitignore .prettierignore .oxlintrc.json
+git add package.json .gitignore .prettierignore .oxlintrc.json
 git commit --no-edit
 ```
 
