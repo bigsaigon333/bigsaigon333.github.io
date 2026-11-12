@@ -1,6 +1,9 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
+import { formatDate, getPublishedPosts, postPath } from "../lib/posts";
 import { SITE } from "../lib/site";
+
+const posts = await getPublishedPosts();
 ---
 
 <BaseLayout
@@ -14,6 +17,15 @@ import { SITE } from "../lib/site";
   home
 >
   <section>
-    <p>{SITE.description}</p>
+    {
+      posts.map(({ id, data: { title, date } }) => (
+        <article>
+          <a href={postPath(id)}>
+            <h2>{title}</h2>
+          </a>
+          <time datetime={date.toISOString()}>{formatDate(date)}</time>
+        </article>
+      ))
+    }
   </section>
 </BaseLayout>
