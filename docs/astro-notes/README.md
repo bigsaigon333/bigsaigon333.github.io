@@ -6,19 +6,28 @@ Next.js 13 블로그를 Astro 7로 옮기면서 단계마다 하나씩 쓴 노�
 
 번호는 쓴 순서다. 아래 순서로 읽으면 앞 노트가 뒤 노트의 바탕이 된다.
 
-| 순서 | 노트                                                                        | Astro 개념                                                   | 단계 | `dist/`에서 볼 곳                                                    |
-| ---- | --------------------------------------------------------------------------- | ------------------------------------------------------------ | ---- | -------------------------------------------------------------------- |
-| 1    | [01. 프로젝트 구조, CLI, 설정](01-project-structure.md)                     | 예약 폴더 `src/pages/`, `astro.config.mjs`, `build.format`   | S1.1 | `find dist -name '*.html'`: `posts/<id>.html` 모양, `_astro/`가 없다 |
-| 2    | [05. 컴포넌트, props, 레이아웃, slot, head 태그](05-components-layouts.md)  | `.astro` 컴포넌트, `Astro.props`, `<slot />`                 | S1.2 | `dist/index.html`의 `<head>` 순서와 `<div class="layout">`           |
-| 3    | [06. 스타일: 전역 CSS, scoped style, :global()](06-styles.md)               | scoped `<style>`, `:global()`, CSS 묶음과 인라인             | S1.4 | `data-astro-cid-…` 속성, `</head>` 바로 앞의 인라인 `<style>`        |
-| 4    | [02. 콘텐츠 컬렉션: 로더, 스키마, getCollection](02-content-collections.md) | `glob()` 로더, Zod 스키마, `getCollection`                   | S1.3 | 홈 `<section>`의 `<article>` 12개와 `<time datetime>`                |
-| 5    | [03. 동적 라우트: getStaticPaths와 render()](03-dynamic-routes.md)          | `[id].astro`, `getStaticPaths()`, `render()`                 | S2.1 | `dist/posts/`의 파일 12개, `<main class="prose">`                    |
-| 6    | [04. 마크다운 파이프라인](04-markdown-pipeline.md)                          | `markdown.processor`(unified), remark·rehype 플러그인        | S2.2 | 글 페이지의 `<code class="hljs …">`, `class="katex"`                 |
-| 7    | [09. 글 본문 스타일](09-post-styles.md)                                     | import 한 CSS, npm 패키지 CSS, `<link>`, `<style is:inline>` | S2.3 | 글 페이지의 `<style>` 두 개와 KaTeX `<link>`                         |
-| 8    | [07. 스크립트: is:inline, define:vars, 외부 위젯](07-scripts.md)            | 처리되는 `<script>`와 `is:inline`, `define:vars`             | S2.4 | `<head>`의 GA 스크립트 두 개, `</main>` 뒤의 utterances              |
-| 9    | [08. 정적 엔드포인트와 404 페이지](08-endpoints-404.md)                     | `GET`을 export 하는 `.ts` 라우트, `404.astro`                | S2.5 | `dist/sitemap.xml`, `dist/404.html`                                  |
-| 10   | [10. SEO 메타 태그와 구조화 데이터](10-seo-meta.md)                         | 페이지 → 레이아웃 → 컴포넌트로 내려가는 props, `set:html`    | U2\* | `<meta name="robots">`, `og:*`, `application/ld+json`                |
-| 11   | [11. 타입 검사와 린트](11-typecheck-and-lint.md)                            | `astro sync`, `@astrojs/check`, TypeScript 7                 | U1\* | `dist/`는 그대로다. 설치 결과(`npm ls typescript`)를 본다            |
+| 순서 | 노트                                                                        | Astro 개념                                                    | 단계 | `dist/`에서 볼 곳                                                    |
+| ---- | --------------------------------------------------------------------------- | ------------------------------------------------------------- | ---- | -------------------------------------------------------------------- |
+| 1    | [01. 프로젝트 구조, CLI, 설정](01-project-structure.md)                     | 예약 폴더 `src/pages/`, `astro.config.mjs`, `build.format`    | S1.1 | `find dist -name '*.html'`: `posts/<id>.html` 모양, `_astro/`가 없다 |
+| 2    | [05. 컴포넌트, props, 레이아웃, slot, head 태그](05-components-layouts.md)  | `.astro` 컴포넌트, `Astro.props`, `<slot />`                  | S1.2 | `dist/index.html`의 `<head>` 순서와 `<div class="layout">`           |
+| 3    | [06. 스타일: 전역 CSS, scoped style, :global()](06-styles.md)               | scoped `<style>`, `:global()`, CSS 묶음과 인라인              | S1.4 | `data-astro-cid-…` 속성, `</head>` 바로 앞의 인라인 `<style>`        |
+| 4    | [02. 콘텐츠 컬렉션: 로더, 스키마, getCollection](02-content-collections.md) | `glob()` 로더, Zod 스키마, `getCollection`                    | S1.3 | 홈 `<section>`의 `<article>` 12개와 `<time datetime>`                |
+| 5    | [03. 동적 라우트: getStaticPaths와 render()](03-dynamic-routes.md)          | `[id].astro`, `getStaticPaths()`, `render()`                  | S2.1 | `dist/posts/`의 파일 12개, `<main class="prose">`                    |
+| 6    | [04. 마크다운 파이프라인](04-markdown-pipeline.md)                          | `markdown.processor`(unified), remark·rehype 플러그인         | S2.2 | 글 페이지의 `<code class="hljs …">`, `class="katex"`                 |
+| 7    | [09. 글 본문 스타일](09-post-styles.md)                                     | import 한 CSS, npm 패키지 CSS, `<link>`, `<style is:inline>`  | S2.3 | 글 페이지의 `<style>` 두 개와 KaTeX `<link>`                         |
+| 8    | [07. 스크립트: is:inline, define:vars, 외부 위젯](07-scripts.md)            | 처리되는 `<script>`와 `is:inline`, `define:vars`              | S2.4 | `<head>`의 GA 스크립트 두 개, `</main>` 뒤의 utterances              |
+| 9    | [08. 정적 엔드포인트와 404 페이지](08-endpoints-404.md)                     | `GET`을 export 하는 `.ts` 라우트, `404.astro`                 | S2.5 | `dist/sitemap.xml`, `dist/404.html`                                  |
+| 10   | [10. SEO 메타 태그와 구조화 데이터](10-seo-meta.md)                         | 페이지 → 레이아웃 → 컴포넌트로 내려가는 props, `set:html`     | U2\* | `<meta name="robots">`, `og:*`, `application/ld+json`                |
+| 11   | [11. 타입 검사와 린트](11-typecheck-and-lint.md)                            | `astro sync`, `@astrojs/check`, TypeScript 7                  | U1\* | `dist/`는 그대로다. 설치 결과(`npm ls typescript`)를 본다            |
+| 12   | [12. Sätteri와 Shiki: 기본 마크다운 엔진으로 옮기기](12-satteri-shiki.md)   | `satteri()` 처리기, Shiki 듀얼 테마(CSS 변수), `features.gfm` | S4.1 | 글 페이지의 `<pre class="astro-code …" data-language>`               |
+| 13   | [13. Fonts API 와 서드파티 CSS 자체 호스팅](13-fonts-third-party-css.md)    | `fonts` 설정과 `<Font>`, npm 패키지 CSS import                | S4.2 | `dist/_astro/fonts/`, `--font-source-code-pro`                       |
+| 14   | [14. astro:assets 로 이미지 최적화하기](14-image-assets.md)                 | `<Picture />`, Markdown 이미지 최적화, mdast 플러그인         | S4.3 | 글 페이지 `<img src="/_astro/….webp" srcset>`                        |
+| 15   | [15. 초안: import.meta.env.DEV, 컬렉션 필터, dev 전용 컬렉션](15-drafts.md) | `import.meta.env.DEV`, `getCollection` 필터                   | S4.4 | `grep -rl "초안" dist` → 없음                                        |
+| 16   | [16. 태그 페이지: 컬렉션에서 동적 라우트 파생](16-tag-pages.md)             | 컬렉션에서 파생한 `getStaticPaths()`, 한글 슬러그             | S5.1 | `dist/tags/`, 글 머리 아래 `nav.post-tags`                           |
+| 17   | [17. 시리즈: file() 로더와 reference()](17-series-file-loader-reference.md) | `file()` 로더, `reference()`, `getEntries()`                  | S5.2 | css-masters-2 글의 `<nav aria-label="시리즈">`                       |
+| 18   | [18. 목차와 읽는 시간: render()의 headings](18-toc-reading-time.md)         | `render()`가 돌려주는 `headings`                              | S5.3 | 글 페이지의 `<nav aria-label="목차">`, `p.reading-time`              |
+| 19   | [19. RSS: 엔드포인트와 `@astrojs/rss`](19-rss.md)                           | 정적 엔드포인트, `@astrojs/rss`의 `rss()`                     | S5.4 | `dist/rss.xml`, `<link rel="alternate" type="application/rss+xml">`  |
+| 20   | [20. MDX: `.mdx` 초안에서 컴포넌트 쓰기](20-mdx.md)                         | `@astrojs/mdx`, `mdx({ processor })`                          | S5.5 | `dist/`는 그대로다(초안). `astro dev`의 `/posts/mdx-demo`            |
 
 \* U1·U2는 계획을 세운 뒤에 생긴 "리뷰 코멘트 반영" 단계라 PLAN.md의 단계 표에는 없고, 진행 보드(`scripts/progress/plan.json`)에 있다. 나머지 단계 id는 [PLAN.md](PLAN.md)의 것이다.
 
@@ -33,8 +42,8 @@ Next.js 13 블로그를 Astro 7로 옮기면서 단계마다 하나씩 쓴 노�
 
 ## 함께 보는 문서
 
-- [`_refs/`](_refs/): 문서 스카우트가 공식 문서를 읽고 정리한 요약 6개. 노트의 "문서 근거"가 가리키는 문서를 주제별로 모았다.
-  [구조·설정](_refs/structure-config.md) · [컴포넌트·레이아웃·스타일](_refs/components-layouts-styles.md) · [콘텐츠 컬렉션](_refs/content-collections.md) · [라우팅·엔드포인트](_refs/routing-endpoints.md) · [마크다운](_refs/markdown-pipeline.md) · [스크립트·배포](_refs/scripts-deploy.md)
+- [`_refs/`](_refs/): 문서 스카우트가 공식 문서를 읽고 정리한 요약 15개. 노트의 "문서 근거"가 가리키는 문서를 주제별로 모았다.
+  [구조·설정](_refs/structure-config.md) · [컴포넌트·레이아웃·스타일](_refs/components-layouts-styles.md) · [콘텐츠 컬렉션](_refs/content-collections.md) · [라우팅·엔드포인트](_refs/routing-endpoints.md) · [마크다운](_refs/markdown-pipeline.md) · [스크립트·배포](_refs/scripts-deploy.md) · [Sätteri·Shiki](_refs/markdown-shiki.md) · [Fonts API](_refs/fonts.md) · [이미지](_refs/assets.md) · [초안](_refs/drafts.md) · [태그](_refs/tags.md) · [시리즈](_refs/series.md) · [목차](_refs/toc.md) · [RSS](_refs/rss.md) · [MDX](_refs/mdx.md)
 - [PLAN.md](PLAN.md): 개편 계획. 단계 id, 검증 장치 설계, 노트 형식이 여기서 왔다.
 - [`scripts/verify/README.md`](../../scripts/verify/README.md): 실험에 쓰는 `npm run verify`의 플래그와 검사 목록.
 

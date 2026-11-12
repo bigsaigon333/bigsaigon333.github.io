@@ -31,7 +31,6 @@ const ALLOWED = {
   "googletagmanager.com": "Google Analytics loader",
   "google-analytics.com": "Google Analytics collector",
   "utteranc.es": "utterances comments",
-  "user-images.githubusercontent.com": "images inside posts",
 };
 
 const NOT_REQUESTS = new Set([
