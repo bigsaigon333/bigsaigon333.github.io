@@ -40,15 +40,15 @@ Next.js 13 블로그를 Astro 7로 옮기면서 단계마다 하나씩 쓴 노�
 
 ## 작업 브랜치(astro)
 
-이 노트, 검증 장치, 진행 대시보드는 Next.js에서 Astro로 옮기는 작업에만 쓰는 도구라서 `main`에 들어가지 않는다. 저장소 루트의 README와 CI·배포 워크플로는 제품(사이트)만 다루고 두 브랜치에서 같다. 그래서 이 절의 명령은 루트 README에 없고, CI도 돌리지 않는다. `astro`에서 직접 돌린다.
+이 노트, 계획, 진행 대시보드, 릴리스 스크립트는 Next.js에서 Astro로 옮기는 작업에만 쓰는 1회성 도구라서 `main`에 들어가지 않는다. 검증 장치(`scripts/verify/`)는 배포 전마다 CI가 돌리는 상시 도구라서 `main`에도 들어간다. 저장소 루트의 README와 CI·배포 워크플로는 두 브랜치에서 같다.
 
 ### 브랜치
 
-| 브랜치           | 담은 것                                                                                                                                                                                                                        | `main`에 머지                                        |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------- |
-| `main`           | 제품만. push하면 GitHub Pages에 배포된다                                                                                                                                                                                       | —                                                    |
-| `astro`          | 제품과 작업 도구: `docs/`, `scripts/`, 그 아래를 돌리는 npm 스크립트(`verify`, `verify:*`, `progress`, `progress:watch`), 그것들만 쓰는 devDependencies(`playwright`, `pixelmatch`, `pngjs`, `cheerio`), 그 경로의 ignore 항목 | 하지 않는다. 작업 브랜치이자 학습 기록으로 남는다    |
-| `release/<이름>` | `scripts/release.mjs`가 `astro`에서 작업 도구를 빼고 만든 제품 트리. `origin/main` 위의 커밋 하나다                                                                                                                            | 이것만 한다. PR로 올리고 체크포인트 승인 뒤 머지한다 |
+| 브랜치           | 담은 것                                                                                                                                                                                         | `main`에 머지                                               |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| `main`           | 제품과 상시 도구(검증 장치). push하면 CI와 같은 검사를 거쳐 GitHub Pages에 배포된다                                                                                                             | —                                                           |
+| `astro`          | `main`의 것에 더해 1회성 도구: `docs/`, `scripts/progress/`, `scripts/release.mjs`, `scripts/notes-lint.mjs`, 그것들을 부르는 npm 스크립트(`progress`, `progress:watch`), 그 경로의 ignore 항목 | 하지 않는다. 작업 브랜치이자 학습 기록으로 남는다           |
+| `release/<이름>` | `scripts/release.mjs`가 `astro`에서 1회성 도구를 빼고 만든 트리. `origin/main` 위의 커밋 하나다                                                                                                 | 이것만 한다. PR로 올리고 체크포인트 승인 뒤 squash 머지한다 |
 
 ### 릴리스 만들기
 
@@ -64,11 +64,11 @@ git push -u origin release/<이름>                            # 그다음 main 
 
 1. 작업 트리가 더럽거나 브랜치가 이미 있으면 거부한다. `git fetch origin main`.
 2. `origin/main`에서 새 브랜치를 만들고, 추적 파일을 모두 지운 뒤 `git archive <from> | tar -x`로 `--from`의 트리를 푼다(트리 해시가 같은지 확인한다).
-3. `docs/`, `scripts/`를 지운다. `package.json`에서 `scripts/` 아래를 돌리는 npm 스크립트를 빼고, devDependencies와 `package-lock.json`은 `npm uninstall --package-lock-only`로 고친다. 그 네 패키지와 그것들만 쓰던 패키지가 빠지고 다른 패키지는 다시 풀리지 않는다(풀리면 실패). `.gitignore`·`.prettierignore`·`.oxlintrc.json`에서 작업 도구 항목과 Playwright 콜백 때문에 켠 browser 전역을 뺀다.
+3. 1회성 도구(`docs/`, `scripts/progress/`, `scripts/release.mjs`, `scripts/notes-lint.mjs`)를 지운다. `package.json`에서 그것들을 부르는 npm 스크립트를 뺀다. 1회성 도구만 쓰는 devDependency가 있으면 `npm uninstall --package-lock-only`로 빼고 다른 패키지가 다시 풀리지 않았는지 확인한다(지금은 없다). `.gitignore`·`.prettierignore`·`.oxlintrc.json`에서 1회성 도구의 항목을 뺀다.
 4. 검증한다.
    - (a) 뺀 경로·npm 스크립트·devDependency·ignore 항목이 남지 않았다.
-   - (b) 어떤 추적 파일(`package-lock.json` 포함)도 작업 도구를 언급하지 않는다. 찾는 이름과, 제품 글에서 오탐이 나지 않게 좁힌 방법은 스크립트의 `MENTIONS` 주석에 있다(예: `docs/`는 저장소 경로일 때만 찾고 MDN 주소 속 `/docs/`는 건너뛴다).
-   - (c) 릴리스 트리에서 `npm ci`, `npm run lint`, `npm run typecheck`, `npm run check`, `npm run build`, `npx prettier --check .`가 통과한다.
+   - (b) 어떤 추적 파일(`package-lock.json` 포함)도 1회성 도구를 언급하지 않는다(검증 장치가 대시보드를 부르는 곳도 없어야 한다). 찾는 이름과, 제품 글에서 오탐이 나지 않게 좁힌 방법은 스크립트의 `MENTIONS` 주석에 있다(예: `docs/`는 저장소 경로일 때만 찾고 MDN 주소 속 `/docs/`는 건너뛴다).
+   - (c) 릴리스 트리에서 `npm ci`, `npm run lint`, `npm run typecheck`, `npm run check`, `npm run build`, `npx prettier --check .`, `npm run verify:setup`, `npm run verify`가 통과한다(`VERIFY_REPORTER=off`: 검증 장치가 대시보드 없이 혼자 동작해야 한다).
    - (d) 릴리스 트리의 `dist/`가 `--from`을 따로 체크아웃해 같은 명령으로 빌드한 `dist/`와 바이트 단위로 같다(`diff -r`).
 5. 통과하면 커밋하고 브랜치, 커밋, `origin/main...<브랜치>`의 변경 요약, 최상위 경로를 찍는다. 임시 worktree는 성공해도 실패해도 지운다. npm 로그는 실패했을 때 남기고 경로를 찍는다.
 
@@ -104,7 +104,9 @@ npm run verify            # npm run check → astro build --force → 기준선�
 npm run verify:selftest   # 기준선이나 빌드를 일부러 망가뜨려 검사기가 차이를 잡는지 확인
 ```
 
-자세한 내용은 [scripts/verify/README.md](../../scripts/verify/README.md)에 있다. CI는 제품 검사만 돌리므로, 예전에 CI가 돌리던 `npm run verify -- --static`과 `node scripts/notes-lint.mjs`는 여기서 돌린다.
+자세한 내용은 [scripts/verify/README.md](../../scripts/verify/README.md)에 있다. 같은 검사를 PR과 배포 때 CI(`.github/workflows/checks.yml`)도 돌린다. `astro`에서만 도는 것은 노트 형식 검사(`node scripts/notes-lint.mjs`)뿐이다. 노트는 배포되지 않는다.
+
+`astro`에서 돌린 검증 결과는 대시보드에 기록된다. `npm run progress`가 `.verify/reporter.mjs`(검증 장치의 reporter 훅)를 만들어 두기 때문이다. 통합 결과로 남기려면 `PROGRESS_SCOPE=integration npm run verify`로 돌린다.
 
 ### 진행 대시보드
 

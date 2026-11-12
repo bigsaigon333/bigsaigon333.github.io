@@ -52,7 +52,17 @@
 - Part 1 동안 `posts/` 아래 파일은 한 글자도 바꾸지 않는다(내용 검사가 순수하게 파이프라인만 검증하도록).
 - `origin/gh-pages` 브랜치는 수정·삭제하지 않는다(즉시 롤백 대상).
 - 저장소 밖으로 나가는 동작(push, PR, Pages 설정, main 병합)은 오케스트레이터만 한다. 서브에이전트는 자기 worktree 안에서 커밋까지만 한다.
-- **작업 도구는 main에 들어가지 않는다**(2026-11-13 사용자 지시). `docs/`, `scripts/`, 그것들만 쓰는 npm 스크립트와 devDependencies, 그 경로를 위한 ignore 항목은 작업 브랜치 `astro`에만 있다. `astro`는 main에 병합하지 않고 학습 기록으로 남긴다. main에는 `node scripts/release.mjs --branch=release/<이름>`이 만든 릴리스 브랜치만 PR로 들어간다. 릴리스 스크립트는 릴리스 트리에 작업 도구 파일과 언급이 없는지, 제품 명령(lint, typecheck, check, build, prettier)이 통과하는지, `dist/`가 `astro`의 빌드와 바이트 단위로 같은지를 확인한다. 릴리스가 병합되면 `origin/main`을 `astro`에 다시 병합한다. README와 CI·배포 워크플로는 작업 도구에 의존하지 않는 제품용이고 두 브랜치에서 같다.
+- **1회성 작업 도구는 main에 들어가지 않고, 계속 쓰는 도구는 main에 들어간다**(2026-11-13 사용자 지시 두 번).
+  - 1회성: 계획과 학습 노트(`docs/`), 진행 대시보드(`scripts/progress/`), `scripts/release.mjs`, `scripts/notes-lint.mjs`, 그것들을 부르는 npm 스크립트, 그 경로의 ignore 항목. 작업 브랜치 `astro`에만 있다.
+  - 상시: 검증 장치(`scripts/verify/`), 그 npm 스크립트(`verify*`), devDependencies(playwright, pixelmatch, pngjs, cheerio). 배포 전마다 CI가 돌리므로 main에 들어간다. 대시보드와는 일반 reporter 훅(`.verify/reporter.mjs`)으로만 이어진다.
+  - `astro`는 main에 병합하지 않고 학습 기록으로 남긴다. main에는 `node scripts/release.mjs --branch=release/<이름>`이 만든 릴리스 브랜치만 PR로 들어간다.
+  - 릴리스 스크립트가 확인하는 것: 릴리스 트리에 1회성 도구 파일과 언급이 없다. 제품 명령(lint, typecheck, check, build, prettier)과 `verify:setup`, `verify`가 통과한다. `dist/`가 `astro`의 빌드와 바이트 단위로 같다.
+  - 릴리스가 병합되면 `origin/main`을 `astro`에 다시 병합한다.
+  - main은 선형 이력과 서명된 커밋을 요구하므로 릴리스 PR은 squash로 병합한다.
+- **배포 전 검사는 모두 CI에서 돈다**(2026-11-13 사용자 지시).
+  - 검사 정의는 `.github/workflows/checks.yml` 한 곳에 있다(lint·typecheck·format, verify, verify selftest).
+  - PR(`ci.yml`)과 배포(`deploy.yml`)가 이 파일을 부른다. 배포는 검사한 `dist/`를 그대로 올리고, 배포 뒤 `verify:live`를 돌린다.
+  - 로컬에서만 도는 배포 전 검사는 두지 않는다.
 - 운영에 영향을 주는 동작(Pages 소스 전환, main 병합)은 체크포인트에서 사용자가 "계속"이라고 한 뒤에만 한다. 체크포인트의 "계속"은 그 마일스톤의 main 병합·배포 승인을 뜻한다. 작업 브랜치 push와 Draft PR 생성은 이 계획의 승인으로 진행한다.
 - 검사를 통과시키려고 검사를 약화하지 않는다. 허용할 차이는 `scripts/verify/allowlist.json`에 사유와 함께 기록하고 학습 노트에도 적는다.
 - Node 버전은 mise로 관리한다(nvm과 `.nvmrc`는 쓰지 않는다). `mise.toml`의 `[tools] node = "24.22.3"`(정확한 버전)이 유일한 출처이고, 워크플로와 스크립트에는 Node 버전을 적지 않는다. `mise.toml`에는 `[tools]`만 둔다(`[env]`나 tasks를 넣으면 worktree마다 `mise trust`가 필요해진다). `package.json`의 `engines.node`는 `>=24` 하한만 둔다.
@@ -257,7 +267,7 @@ mise.toml                   Node 버전 고정([tools]만)
 | SK       | S1.1 프로젝트 구조·CLI·설정 / S1.3 콘텐츠 컬렉션(로더, 스키마, `getCollection`) / S2.1 동적 라우트(`getStaticPaths`, `render()`) | `astro.config.mjs`, `config/markdown.mjs`(기본값), `tsconfig.json`, `src/content.config.ts`, `src/lib/posts.ts`, `src/pages/**`, `PostHeader`, 스텁(`BaseLayout`, `Seo`, `HeadAssets`, `Analytics`, `Comments`) | `astro check` 오류 0, `dist`에 14개 라우트. 잘못된 frontmatter 픽스처로 빌드가 파일명을 짚으며 실패. `TZ=Asia/Seoul`과 `TZ=America/Los_Angeles` 빌드의 날짜 문자열 동일 |
 | K1       | 도구·CI                                                                                                                          | prettier 설정, husky 9 + lint-staged, `ci.yml`, `deploy.yml`, README                                                                                                                                            | `prettier --check`(설정 파일), 워크플로 YAML 문법 검사, 워크플로에 Node 버전 리터럴 0건                                                                                 |
 
-K1의 두 워크플로는 Node를 `actions/setup-node`의 `node-version-file: mise.toml`로 설정한다. `deploy.yml`은 `withastro/action`을 쓰지 않고 같은 일을 직접 적는다: checkout → setup-node → `npm ci` → `npm run check` → `npm run build` → `actions/upload-pages-artifact`(`dist`) → `actions/deploy-pages`. `withastro/action`은 버전 파일을 읽지 못해 Node 버전을 워크플로에 한 번 더 적어야 하기 때문이다. `deploy.yml`에서는 npm 캐시를 끈다(게시 워크플로에 대한 setup-node 문서의 권고). README의 준비 절차는 `mise install` → `npm ci`다. 두 워크플로와 README는 작업 도구에 의존하지 않는 제품용이다(PR CI: lint, typecheck, check, build, prettier). 기준선 없는 기능 검사는 `astro`에서 `npm run verify -- --feature`로 로컬에서 돌린다. Draft PR의 첫 CI 실행에서 오케스트레이터가 로그의 Node 버전이 `mise.toml`과 같은지 확인한다.
+K1의 두 워크플로는 Node를 `actions/setup-node`의 `node-version-file: mise.toml`로 설정한다. `deploy.yml`은 `withastro/action`을 쓰지 않고 같은 일을 직접 적는다: checkout → setup-node → `npm ci` → `npm run check` → `npm run build` → `actions/upload-pages-artifact`(`dist`) → `actions/deploy-pages`. `withastro/action`은 버전 파일을 읽지 못해 Node 버전을 워크플로에 한 번 더 적어야 하기 때문이다. 배포에 쓰이는 워크플로에서는 npm 캐시를 끈다(게시 워크플로에 대한 setup-node 문서의 권고). README의 준비 절차는 `mise install` → `npm ci`다. 워크플로와 README는 1회성 도구에 의존하지 않는다. W4에서 검사를 `checks.yml`로 모아 PR과 배포가 같은 검사(lint·typecheck·format, verify, verify selftest)를 돌리게 바꿨다(전역 제약 참고). Draft PR의 첫 CI 실행에서 오케스트레이터가 로그의 Node 버전이 `mise.toml`과 같은지 확인한다.
 
 SK는 스타일 없는 시맨틱 마크업으로 14개 라우트를 끝까지 연결한다. 이후 웨이브의 에이전트가 실제 페이지를 대상으로 자기 게이트를 돌릴 수 있게 하기 위해서다.
 
@@ -298,9 +308,9 @@ S2.2는 기존과 같은 unified 계열(`@astrojs/markdown-remark` + remark-math
 
 → **CP3 (운영 전환 승인)**
 
-| 단계 | 내용                                                                                                                                                             | 게이트                                                                |
-| ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| S3.2 | ① `gh api -X PUT repos/bigsaigon333/bigsaigon333.github.io/pages -f build_type=workflow` ② 릴리스 PR 병합 ③ `gh run watch --exit-status` ④ `npm run verify:live` | 실제 URL 13개 + 자산 + sitemap이 200, 리다이렉트 없음, `<title>` 일치 |
+| 단계 | 내용                                                                                                                                                                                            | 게이트                                                                |
+| ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| S3.2 | ① `gh api -X PUT repos/bigsaigon333/bigsaigon333.github.io/pages -f build_type=workflow` ② 릴리스 PR squash 병합 ③ `gh run watch --exit-status`(checks → deploy → live) ④ `npm run verify:live` | 실제 URL 13개 + 자산 + sitemap이 200, 리다이렉트 없음, `<title>` 일치 |
 
 롤백: `gh api -X PUT …/pages -f build_type=legacy -f 'source[branch]=gh-pages' -f 'source[path]=/'` 후 기준선 복귀 확인: `npm run verify:live -- --base-url=<url> --only=status,head,content,sitemap`은 통과하고 `--only=migrated`는 실패해야 한다(예전 배포본은 `migrated` 검사를 통과할 수 없다). `github-pages` 환경의 배포 브랜치 제한으로 deploy가 막히면 환경 정책에 `main`을 추가한다.
 
@@ -311,6 +321,7 @@ S2.2는 기존과 같은 unified 계열(`@astrojs/markdown-remark` + remark-math
 **S4.0 기준선 교체** (오케스트레이터)
 
 - `.verify/baseline/`을 전환 커밋의 `dist/`로 바꾼다. 이후 원칙은 "의도한 차이만 허용"이다. 각 단계가 바뀌어도 되는 영역을 선언하고, 나머지는 기준선과 같아야 한다.
+- CI의 기준선 출처도 함께 바꾼다. 지금 `verify:setup`은 얼어 있는 `gh-pages` 브랜치를 기준선으로 쓰기 때문에, 전환 뒤 새 글을 쓰거나 Part 2 변경을 넣으면 CI와 배포가 막힌다(막히는 쪽으로 실패한다). 기준선을 "직전 운영본"으로 바꾼다. PR에서는 base 커밋의 빌드이고, 배포에서는 직전 main 커밋의 빌드다. 의도한 차이는 저장소 안의 선언 파일로 허용한다. 그래서 S4.0은 전환 직후, 다음 글보다 먼저 한다.
 - Lighthouse 4개 점수와 axe 위반 수를 측정해 "회귀 금지" 기준으로 고정한다.
 - 스카우트가 공식 문서 사이드바의 기능 목록을 가져오면 아래 표와 대조해 빠진 기능을 W5~W9에 추가한다.
 
@@ -378,10 +389,10 @@ S7.2는 사이트의 모든 인라인 스크립트를 알아야 하므로 마지
 
 **W9 마무리** — 병렬 2
 
-| 단계 | 내용                                                                                                                                                           |
-| ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| S9.1 | 작업 도구는 처음부터 main에 없으므로 제거할 것은 없다. 제품에 오래 남길 검사가 있는지(예: 링크, 접근성) 정하고, 남긴다면 작업 도구와 무관한 제품 코드로 옮긴다 |
-| S9.2 | 최종 독립 리뷰, 기능 커버리지 표 확정, 노트 인덱스 정리                                                                                                        |
+| 단계 | 내용                                                                                                                                                    |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| S9.1 | 검증 장치 중 이전에만 뜻이 있던 것(`migrated` 검사, 옛 배포본 전용 allowlist 항목)을 정리한다. 상시 검사(비교·기능·시각·링크·예산·접근성)는 CI에 남긴다 |
+| S9.2 | 최종 독립 리뷰, 기능 커버리지 표 확정, 노트 인덱스 정리                                                                                                 |
 
 → **CP6**
 
