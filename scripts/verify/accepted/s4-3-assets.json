@@ -1,0 +1,47 @@
+{
+  "baseline": "fe19427f9446e285e8c524f3f089854e00c3af1b42f908ad59bf03f8b6adb2d0",
+  "reason": "S4.3: 프로필과 본문 이미지를 astro:assets 로 최적화했다",
+  "entries": [
+    {
+      "check": "content",
+      "routes": [
+        "/",
+        "/404",
+        "/posts/css-masters-2-week1",
+        "/posts/css-masters-2-week2",
+        "/posts/css-masters-2-week3",
+        "/posts/css-masters-2-week4",
+        "/posts/date-time-string-format-in-js",
+        "/posts/how-to-check-two-types-are-equal-in-ts",
+        "/posts/js-the-new-toys-study-01",
+        "/posts/proxy-to-built-in-objects",
+        "/posts/react-programming-ch09",
+        "/posts/react-scripts-react-app-polyfill-promise-any",
+        "/posts/regular-expression-1",
+        "/posts/ts-ambient-type-declaration"
+      ],
+      "reason": "모든 라우트의 사이트 헤더 프로필이 <Picture /> 로 바뀌어 source·srcset 이 달라졌다(/profile.webp 한 장 → /_astro/ 의 너비 3개). 본문의 이미지는 week1·week2·week3·react-scripts 에서 원격 주소가 /_astro/ 의 webp 로 바뀌었다(alt·크기는 같다)"
+    },
+    {
+      "check": "visual",
+      "routes": [
+        "/",
+        "/404",
+        "/posts/css-masters-2-week1",
+        "/posts/css-masters-2-week2",
+        "/posts/css-masters-2-week3",
+        "/posts/css-masters-2-week4",
+        "/posts/date-time-string-format-in-js",
+        "/posts/how-to-check-two-types-are-equal-in-ts",
+        "/posts/js-the-new-toys-study-01",
+        "/posts/proxy-to-built-in-objects",
+        "/posts/react-programming-ch09",
+        "/posts/react-scripts-react-app-polyfill-promise-any",
+        "/posts/regular-expression-1",
+        "/posts/ts-ambient-type-declaration"
+      ],
+      "mask": ["img"],
+      "reason": "이미지 픽셀은 다시 인코딩(avif·webp, 1x·2x)되어 달라진다. img 상자만 가리고 나머지(상자 위치·크기 포함)는 같아야 한다"
+    }
+  ]
+}

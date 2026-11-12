@@ -15,7 +15,7 @@ date: "2022-05-22"
 
 핀터레스트에서 볼 수 있는 타일 형태의 레이아웃(cascading grid layout)은 자바스크립트 없이 css로만 구현할 수 없습니다. Masonry 와 같은 라이브러리를 사용하면 쉽게 만들 수 있습니다.
 
-![image](https://user-images.githubusercontent.com/31029000/169675017-bcfb2ea9-3566-4262-9f82-4868e4b9da6c.png)
+![image](./images/169675017-bcfb2ea9-3566-4262-9f82-4868e4b9da6c.png)
 
 ### Reference
 

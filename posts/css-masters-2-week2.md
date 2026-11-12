@@ -15,7 +15,7 @@ date: "2022-05-15"
 
 CSS2 에서는 `:` 가 표준이었는데 CSS3부터 `::` 가 표준으로 변경되었습니다.
 
-![](https://user-images.githubusercontent.com/31029000/167833289-c20314dc-7e12-4682-9ddd-5d27dc2c6dde.png)
+![](./images/167833289-c20314dc-7e12-4682-9ddd-5d27dc2c6dde.png)
 
 웹 기술에서는 일반적으로 [하위 호환성](https://www.w3.org/People/Bos/DesignGuide/compatibility.html)을 중요시 여기기 때문에, 표준은 바뀌더라도 기존 문법은 그대로 지원한다고 이해하면 좋습니다.
 
@@ -114,7 +114,7 @@ box-shadow: 10px 5px 5px -5px red;
 
 ## inline vs inline-block
 
-![image](https://user-images.githubusercontent.com/31029000/169675449-547eb42b-59be-4c6e-a026-ddf60021a76c.png)
+![image](./images/169675449-547eb42b-59be-4c6e-a026-ddf60021a76c.png)
 
 ### display: inline
 
