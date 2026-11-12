@@ -23,6 +23,8 @@ jobs:
     uses: ./.github/workflows/checks.yml
     with:
       pages-artifact: true
+      # 기준선은 직전 운영본: push 는 push 전의 main, 수동 실행은 지금 커밋(이미 배포된 것을 다시 올린다).
+      baseline-ref: ${{ github.event_name == 'push' && github.event.before || github.sha }}
 
   deploy:
     needs: checks
@@ -36,7 +38,7 @@ jobs:
       - id: deployment
         uses: actions/deploy-pages@v5
 
-  # 배포 뒤 실제 주소가 200 으로, 리다이렉트 없이, 검사한 것과 같은 내용으로 응답하는지 본다.
+  # 배포 뒤 실제 주소가 200 으로, 리다이렉트 없이, 방금 배포한 커밋의 빌드와 같은 내용으로 응답하는지 본다.
   live:
     needs: deploy
     runs-on: ubuntu-latest
@@ -47,7 +49,8 @@ jobs:
           node-version-file: mise.toml
           package-manager-cache: false
       - run: npm ci
-      - run: npm run verify:setup
+      # 실제 사이트는 방금 배포한 커밋의 빌드와 같아야 한다.
+      - run: npm run verify:setup -- --baseline-ref=${{ github.sha }}
       # CDN 이 새 배포를 내보내기까지 잠깐 걸릴 수 있어 30초 간격으로 다섯 번까지 본다.
       - env:
           BASE_URL: ${{ needs.deploy.outputs.page_url }}

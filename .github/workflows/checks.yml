@@ -4,6 +4,10 @@ name: Checks
 on:
   workflow_call:
     inputs:
+      baseline-ref:
+        description: 기준선(직전 운영본)으로 빌드할 커밋. PR 은 base 커밋, 배포는 직전 main 커밋
+        type: string
+        required: true
       pages-artifact:
         description: 검사를 통과한 dist/ 를 GitHub Pages 아티팩트로 올린다
         type: boolean
@@ -35,15 +39,20 @@ jobs:
     name: verify
     runs-on: ubuntu-latest
     steps:
+      # 기준선 커밋을 worktree 로 꺼내려면 이력이 있어야 한다.
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v7
         with:
           node-version-file: mise.toml
           package-manager-cache: false
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      - run: npm run verify:setup
-      # check → build → 기준선 비교 검사 → 기능 검사 → 시각 검사
+      - run: npm run verify:setup -- --baseline-ref="$BASELINE_REF"
+        env:
+          BASELINE_REF: ${{ inputs.baseline-ref }}
+      # check → build → 기준선 비교 검사(accepted/ 의 선언은 허용) → 기능 검사 → 시각 검사
       - run: npm run verify
       - if: failure()
         uses: actions/upload-artifact@v7
@@ -62,13 +71,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v7
         with:
           node-version-file: mise.toml
           package-manager-cache: false
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      - run: npm run verify:setup
+      - run: npm run verify:setup -- --baseline-ref="$BASELINE_REF"
+        env:
+          BASELINE_REF: ${{ inputs.baseline-ref }}
       # 기능 검사와 명령 사례는 새 빌드(dist/)를 대상으로 자체 검증한다.
       - run: npm run build
       # 검사기가 차이를 실제로 잡는지(변이본은 실패해야 한다) 확인한다.
