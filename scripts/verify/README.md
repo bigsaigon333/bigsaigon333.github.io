@@ -30,7 +30,7 @@ npm run verify:live -- --serve=<dir>      # 위 검사를 로컬에서 예행연
 `check`(astro check)나 `build` 단계가 실패하면 그 줄은 로그의 끝이 아니라 **첫 오류**를 보인다. 색 코드와 시각을 지우고, 세 가지를 저마다 한 항목으로 싣는다(결과 줄은 항목마다 110자에서 자르는데, Astro 내용 오류의 첫 줄만 90자쯤이다): "error"라고 말하는 첫 줄, 그 아래 들여 쓴 설명 줄(Astro 오류라면 `Hint:`·`Location:`·`Stack trace:` 앞까지), 전체 로그의 위치. 실패 수는 그대로 1이고 종료 코드도 같다.
 
 ```text
-FAIL  build     0/1  -: [InvalidContentEntryDataError] posts → foo data does not match collection schema. | -: Unrecognized key: "desciption" | -: see .verify/report/build.log  → .verify/report/build.json
+FAIL  build     0/1  -: [InvalidContentEntryDataError] posts → foo data does not match collection schema. | -: Unrecognized key: "desciption" | -: see .verify/report/build.log
 ```
 
 예전에는 마지막 여섯 줄을 보였다. Astro 오류는 문서 URL(색 코드 포함)·위치·스택으로 끝나서, 문제를 말하는 줄은 `.verify/report/build.log`에만 있었다.
@@ -38,7 +38,7 @@ FAIL  build     0/1  -: [InvalidContentEntryDataError] posts → foo data does n
 - Astro는 문제를 `**<키>**: <설명>`으로 쓰는데, 스키마가 모르는 키는 객체 자체의 문제라서 키 자리가 비어 `****: Unrecognized key: …`가 된다. 별표와 빈 키는 뗀다.
 - 설명은 코드 프레임(vite의 `╭─[`), 스택 프레임, 빈 줄 뒤의 들여 쓰지 않은 줄(astro check가 소스 줄을 찍는 자리)에서도 끝난다. astro check 오류는 `src/x.astro:6:7 - error ts(6133): …` 한 줄이 된다.
 - "error"라는 줄이 없는 로그(설정을 읽지 못한 경우 등)는 첫 스택 앞의 마지막 줄들을 보인다: `[astro] Unable to load your Astro config ⏎ Tsconfig not found …`.
-- 끝의 `→ .verify/report/build.json`은 검사 줄과 같은 꼴이라 붙는다. 단계의 상세는 `.log`에 있다.
+- 단계 줄에는 검사 줄 끝의 `→ .verify/report/<검사>.json`이 붙지 않는다. 단계는 JSON 리포트가 없고 상세는 `.log`에 있다.
 
 ## 통과가 통과이려면
 

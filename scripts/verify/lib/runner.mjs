@@ -355,7 +355,10 @@ const clip = (text, max = 110) => {
   return flat.length > max ? `${flat.slice(0, max - 1)}…` : flat;
 };
 
-/** One line per check. Details live in .verify/report/<check>.json. */
+/** Steps run by run.mjs before the checks. They write a log, not a JSON report. */
+const STEPS = new Set(["check", "build"]);
+
+/** One line per check. Details live in .verify/report/<check>.json (a step's in .verify/report/<step>.log). */
 export function formatResults(results) {
   return results.map((result) => {
     const head = `${result.ok ? "PASS" : "FAIL"}  ${result.check.padEnd(9)} ${result.pass}/${result.pass + result.fail}`;
@@ -365,7 +368,11 @@ export function formatResults(results) {
       .map((item) => `${item.route}: ${clip(item.detail)}`);
     const more =
       result.failed.length > 3 ? ` (+${result.failed.length - 3} more)` : "";
-    return `${head}  ${shown.join(" | ")}${more}  → .verify/report/${result.check}.json`;
+    // A step's items already end with "see .verify/report/<step>.log".
+    const pointer = STEPS.has(result.check)
+      ? ""
+      : `  → .verify/report/${result.check}.json`;
+    return `${head}  ${shown.join(" | ")}${more}${pointer}`;
   });
 }
 
