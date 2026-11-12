@@ -5,13 +5,15 @@ import { z } from "astro/zod";
 const posts = defineCollection({
   loader: glob({
     // 최상위 *.md 만 읽는다. posts/draft/ 는 걸리지 않는다.
+    // 최상위에 놓인 초안(이름이 "draft:" 로 시작하거나 draft: true)은 읽히고, lib/posts.ts 의 getPublishedPosts 가 걸러낸다.
     pattern: "*.md",
     base: "./posts",
     // id = 파일 이름에서 .md 를 뗀 것. 기본 구현(github-slugger)은 대소문자와 기호를 바꾼다.
     generateId: ({ entry }) => entry.replace(/\.md$/, ""),
   }),
   schema: z
-    .object({
+    // 아는 키만 받는다. "desciption" 처럼 잘못 쓴 키가 조용히 버려지지 않고 빌드가 멈춘다.
+    .strictObject({
       title: z.string(),
       // "2022-05-08" → UTC 자정의 Date. 시간대 표기가 없는 날짜 문자열만 받아서 빌드 환경의 시간대를 타지 않는다.
       // 따옴표 없는 날짜는 받지 않는다. YAML 이 Date 로 바꾸면서 2022-02-30 같은 없는 날짜를 조용히 2022-03-02 로 넘기기 때문이다.
@@ -33,6 +35,8 @@ const posts = defineCollection({
               .filter(Boolean) ?? [],
         ),
       summary: z.string().optional(),
+      // true 면 초안이다. 빌드에 나가지 않는다(lib/posts.ts 의 getPublishedPosts).
+      draft: z.boolean().optional(),
     })
     // description 이 없으면 summary 를 쓴다(예전 글 일부는 summary 만 갖고 있다).
     .transform((data) => ({
