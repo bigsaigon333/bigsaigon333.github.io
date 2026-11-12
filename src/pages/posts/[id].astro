@@ -1,0 +1,39 @@
+---
+import type { GetStaticPaths, InferGetStaticPropsType } from "astro";
+import { render } from "astro:content";
+
+import Comments from "../../components/Comments.astro";
+import PostHeader from "../../components/PostHeader.astro";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { getPublishedPosts, postUrl } from "../../lib/posts";
+
+export const getStaticPaths = (async () => {
+  const posts = await getPublishedPosts();
+
+  return posts.map((post) => ({ params: { id: post.id }, props: { post } }));
+}) satisfies GetStaticPaths;
+
+type Props = InferGetStaticPropsType<typeof getStaticPaths>;
+
+const { post } = Astro.props;
+const { title, date, description, keywords } = post.data;
+const { Content } = await render(post);
+---
+
+<BaseLayout
+  seo={{
+    // 제목 뒤에 아무것도 붙이지 않는다. utterances 가 문서 제목으로 댓글 이슈를 찾는다.
+    title,
+    description,
+    // build.format "file" 에서는 Astro.url.pathname 이 ".html" 로 끝난다. canonical 은 id 로 조립한다.
+    url: postUrl(post.id),
+    type: "article",
+    keywords,
+  }}
+>
+  <PostHeader title={title} date={date} />
+  <main>
+    <Content />
+  </main>
+  <Comments />
+</BaseLayout>

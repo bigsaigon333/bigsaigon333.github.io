@@ -1,0 +1,15 @@
+---
+import { formatDate } from "../lib/posts";
+
+interface Props {
+  title: string;
+  date: Date;
+}
+
+const { title, date } = Astro.props;
+---
+
+<article>
+  <h2>{title}</h2>
+  <time datetime={date.toISOString()}>{formatDate(date)}</time>
+</article>
