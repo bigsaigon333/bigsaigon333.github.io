@@ -53,7 +53,10 @@ export default {
   syntaxHighlight: { type: "shiki", excludeLangs: ["math"] },
   shikiConfig: {
     // 색은 style="--shiki-light:…;--shiki-dark:…" 로만 싣는다. 어느 쪽을 쓸지는 src/styles/code.css 가 정한다.
-    themes: { light: "github-light", dark: "github-dark" },
+    themes: {
+      light: "github-light-high-contrast",
+      dark: "github-dark-high-contrast",
+    },
     defaultColor: false,
     transformers: [languageClass],
   },

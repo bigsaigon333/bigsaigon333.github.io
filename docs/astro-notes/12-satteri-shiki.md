@@ -2,7 +2,7 @@
 
 ## 한 줄 요약
 
-`config/markdown.mjs`를 `unified()` + rehype-highlight에서 Astro 7의 기본 엔진 `satteri()` + Shiki(github-light·github-dark 듀얼 테마, CSS 변수)로 바꿨다. 수식은 Sätteri의 `math` 기능과 작은 mdast 플러그인(KaTeX)으로, 각주 문구는 `features.gfm.footnotes`로 되살렸고, 코드 블록 바깥의 화면은 배포본과 픽셀까지 같다.
+`config/markdown.mjs`를 `unified()` + rehype-highlight에서 Astro 7의 기본 엔진 `satteri()` + Shiki(github-light-high-contrast·github-dark-high-contrast 듀얼 테마, CSS 변수)로 바꿨다. 수식은 Sätteri의 `math` 기능과 작은 mdast 플러그인(KaTeX)으로, 각주 문구는 `features.gfm.footnotes`로 되살렸고, 코드 블록 바깥의 화면은 배포본과 픽셀까지 같다.
 
 ## 개념
 
@@ -14,19 +14,19 @@
 
 ## Next.js 대응
 
-| 예전 (배포본, S2.2까지)                                                      | 지금 (S4.1)                                                                  |
-| ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| `unified({ gfm, smartypants: false, remarkPlugins: [remarkMath] })`          | `satteri({ features: { gfm, math: true, smartPunctuation: false } })`        |
-| `rehypeKatex`                                                                | mdast 플러그인 `katex`(`inlineMath`, `math` → `katex.renderToString`)        |
-| `remarkRehype: { footnoteBackLabel: "Back to content" }`                     | `features.gfm.footnotes.backLabel: "Back to content"`                        |
-| `rehypeHighlight` + highlight.js 11.5.1 문법 35개, `detect: true`            | `syntaxHighlight: "shiki"`, `shikiConfig.themes`(github-light / github-dark) |
-| `import "highlight.js/styles/base16/monokai.css"`(글 페이지)                 | `import "../../styles/code.css"`(CSS 변수 고르기 + 예전과 같은 상자)         |
-| `pre code.hljs { display:block; overflow-x:auto; padding:1em }`              | `.astro-code > code`에 같은 값                                               |
-| 의존성 `@astrojs/markdown-remark`, `rehype-*`, `remark-math`, `highlight.js` | `@astrojs/markdown-satteri`, `katex`                                         |
+| 예전 (배포본, S2.2까지)                                                      | 지금 (S4.1)                                                                                              |
+| ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `unified({ gfm, smartypants: false, remarkPlugins: [remarkMath] })`          | `satteri({ features: { gfm, math: true, smartPunctuation: false } })`                                    |
+| `rehypeKatex`                                                                | mdast 플러그인 `katex`(`inlineMath`, `math` → `katex.renderToString`)                                    |
+| `remarkRehype: { footnoteBackLabel: "Back to content" }`                     | `features.gfm.footnotes.backLabel: "Back to content"`                                                    |
+| `rehypeHighlight` + highlight.js 11.5.1 문법 35개, `detect: true`            | `syntaxHighlight: "shiki"`, `shikiConfig.themes`(github-light-high-contrast / github-dark-high-contrast) |
+| `import "highlight.js/styles/base16/monokai.css"`(글 페이지)                 | `import "../../styles/code.css"`(CSS 변수 고르기 + 예전과 같은 상자)                                     |
+| `pre code.hljs { display:block; overflow-x:auto; padding:1em }`              | `.astro-code > code`에 같은 값                                                                           |
+| 의존성 `@astrojs/markdown-remark`, `rehype-*`, `remark-math`, `highlight.js` | `@astrojs/markdown-satteri`, `katex`                                                                     |
 
 ## 빌드 결과물에서 확인하기
 
-- `dist/posts/ts-ambient-type-declaration.html`: `<pre class="astro-code astro-code-themes github-light github-dark" style="--shiki-light:#24292e;…" data-language="ts"><code class="language-ts"><span class="line">…`.
+- `dist/posts/ts-ambient-type-declaration.html`: `<pre class="astro-code astro-code-themes github-light-high-contrast github-dark-high-contrast" style="--shiki-light:…;--shiki-dark:…" data-language="ts"><code class="language-ts"><span class="line">…`.
 - `grep -o 'class="astro-code' dist/posts/*.html | wc -l` → 71(예전 `hljs` 블록 수와 같다).
 - `grep -o 'class="katex"' dist/posts/*.html | wc -l` → 121(배포본과 같다).
 - `dist/posts/proxy-to-built-in-objects.html`: 언어 없는 블록이 `data-language="plaintext"`, `<code class="language-plaintext">`, 토큰 색 없이 글자만 있다.
@@ -41,6 +41,8 @@
 - **언어 없는 블록**: 예전에는 rehype-highlight가 자동 감지해 `language-javascript`를 붙여 같은 글꼴을 받았다. 이제는 `language-plaintext`가 되어 글꼴과 상자는 같고 색만 없다.
 - `content`는 처음부터 14/14였다: Sätteri가 내는 각주·표·raw HTML의 텍스트가 unified와 같았다.
 
+- 통합 때 접근성 회귀 검사(`a11y`)가 `github-light` 테마의 토큰 색 대비 부족(color-contrast, 글 5개)을 새 위반으로 잡았다 → 테마를 `github-light-high-contrast`·`github-dark-high-contrast`로 바꿔 새 위반 0.
+
 ## 직접 해볼 실험
 
 끝나면 `git checkout config/markdown.mjs src/styles/code.css`로 되돌린다.
@@ -50,7 +52,7 @@
 2. `math: true,`를 지우고 `npm run -s verify -- --only=content --no-check --route=/posts/how-to-check-two-types-are-equal-in-ts`.
    <details><summary>예상 결과</summary>`FAIL content`. `$A$`가 글자 그대로 남고 `grep -o 'class="katex"' dist/posts/*.html | wc -l`은 0이다.</details>
 3. `src/styles/code.css`에서 `--shiki-light`를 모두 `--shiki-dark`로 바꾸고(`-bg` 등 포함) 개발 서버에서 글 하나를 연다.
-   <details><summary>예상 결과</summary>코드 블록만 github-dark(배경 #24292e)로 바뀐다. HTML은 그대로이므로 다크 모드는 CSS 규칙 하나로 켤 수 있다.</details>
+   <details><summary>예상 결과</summary>코드 블록만 github-dark-high-contrast로 바뀐다. HTML은 그대로이므로 다크 모드는 CSS 규칙 하나로 켤 수 있다.</details>
 
 ## 문서 근거
 

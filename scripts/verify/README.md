@@ -118,21 +118,22 @@ FAIL  build     0/1  -: [InvalidContentEntryDataError] posts → foo data does n
 
 "범위"는 자기 검사가 그 검사를 어디에 시험하는지다: parity는 기준선 ↔ 기준선과 기준선 사본의 변이로, feature는 `dist/`와 `dist/` 사본의 변이로. "기준선"이 "안 읽음"인 검사만 `npm run verify -- --feature`에서 돈다. 이 검사들은 **후보의 라우트**(`lib/html.mjs`의 `candidateRoutes`)를 돌므로, 기준선에 없는 새 글의 페이지도 본다.
 
-| 검사      | 종류    | 범위    | 기준선  | 보는 것                                                                                                                                                                                    |
-| --------- | ------- | ------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `routes`  | static  | parity  | 비교    | HTML 라우트 집합, 기준선의 모든 자산(sha256)                                                                                                                                               |
-| `head`    | static  | parity  | 비교    | `<head>`의 제목·메타·canonical·og·twitter·파비콘. **후보에만 있는 태그**도 본다: robots 계열 메타의 `noindex`/`nofollow`/`none`, `<meta http-equiv="refresh">`, `<base>`(문서 어디에 있든) |
-| `content` | static  | parity  | 비교    | 본문 텍스트와 구조, 글 머리, 푸터. **모든 라우트의 사이트 헤더**: 링크마다 href·aria-label·target·rel·referrerpolicy·텍스트, img·source 마다 src·srcset·alt·type, 헤더 텍스트              |
-| `links`   | static  | parity  | 안 읽음 | 후보의 모든 페이지에서 내부 참조가 모두 200. 기준선을 읽지 않아 `candidateOnly: true`를 적었다                                                                                             |
-| `sitemap` | static  | parity  | 비교    | `sitemap.xml`이 **well-formed XML**(선언, 짝 맞는 요소, 맨 `&` 없음)이고 루트 요소·네임스페이스가 같으며 `<loc>` 집합이 같다. `robots.txt`는 바이트 동일                                   |
-| `budget`  | static  | parity  | 비교    | 라우트별 JS 바이트가 기준선을 넘지 않는다                                                                                                                                                  |
-| `drafts`  | static  | feature | 안 읽음 | 초안(`posts/draft/`, `draft:` 이름, `draft: true`)이 페이지·홈 목록(링크와 제목)·sitemap 어디에도 없다. 무엇이 초안인지는 이 체크아웃의 `posts/`가 정한다                                  |
-| `listed`  | static  | feature | 안 읽음 | 후보의 `sitemap.xml`이 후보의 모든 페이지를 한 번씩 싣고(404 제외), 실린 URL이 모두 200이다                                                                                                |
-| `seo`     | static  | feature | 안 읽음 | 후보의 모든 페이지에서 검색 엔진·링크 미리보기가 읽는 태그: canonical·description·robots, og·twitter 가 제목·설명·canonical 과 같은지, og:image 크기, sitemap 링크, JSON-LD                |
-| `embeds`  | browser | parity  | 비교    | GA 로더·측정 ID와 **`dataLayer` 항목 전체**(순서, 인자, `Date`는 `<Date>`로), utterances 스크립트의 속성과 **자리**(부모·앞·뒤 요소의 태그 이름)                                           |
-| `hover`   | browser | parity  | 비교    | 링크와 `<summary>`에 포인터를 올렸을 때의 계산된 스타일                                                                                                                                    |
-| `visual`  | browser | parity  | 비교    | 전체 페이지 스크린샷, 라우트 × 뷰포트                                                                                                                                                      |
-| `a11y`    | browser | parity  | 비교    | axe-core(WCAG 2.1 A·AA)로 1280 뷰포트에서 라우트마다 위반(규칙 id + 대상 선택자)을 모아, 기준선에 없는 위반이 후보에 있으면 실패                                                           |
+| 검사       | 종류    | 범위    | 기준선  | 보는 것                                                                                                                                                                                    |
+| ---------- | ------- | ------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `routes`   | static  | parity  | 비교    | HTML 라우트 집합, 기준선의 모든 자산(sha256)                                                                                                                                               |
+| `head`     | static  | parity  | 비교    | `<head>`의 제목·메타·canonical·og·twitter·파비콘. **후보에만 있는 태그**도 본다: robots 계열 메타의 `noindex`/`nofollow`/`none`, `<meta http-equiv="refresh">`, `<base>`(문서 어디에 있든) |
+| `content`  | static  | parity  | 비교    | 본문 텍스트와 구조, 글 머리, 푸터. **모든 라우트의 사이트 헤더**: 링크마다 href·aria-label·target·rel·referrerpolicy·텍스트, img·source 마다 src·srcset·alt·type, 헤더 텍스트              |
+| `links`    | static  | parity  | 안 읽음 | 후보의 모든 페이지에서 내부 참조가 모두 200. 기준선을 읽지 않아 `candidateOnly: true`를 적었다                                                                                             |
+| `sitemap`  | static  | parity  | 비교    | `sitemap.xml`이 **well-formed XML**(선언, 짝 맞는 요소, 맨 `&` 없음)이고 루트 요소·네임스페이스가 같으며 `<loc>` 집합이 같다. `robots.txt`는 바이트 동일                                   |
+| `budget`   | static  | parity  | 비교    | 라우트별 JS 바이트가 기준선을 넘지 않는다                                                                                                                                                  |
+| `drafts`   | static  | feature | 안 읽음 | 초안(`posts/draft/`, `draft:` 이름, `draft: true`)이 페이지·홈 목록(링크와 제목)·sitemap 어디에도 없다. 무엇이 초안인지는 이 체크아웃의 `posts/`가 정한다                                  |
+| `listed`   | static  | feature | 안 읽음 | 후보의 `sitemap.xml`이 후보의 모든 페이지를 한 번씩 싣고(404 제외), 실린 URL이 모두 200이다                                                                                                |
+| `external` | static  | feature | 안 읽음 | 페이지가 요청·참조하는 외부 출처가 허용 목록(GA, utterances, 글 속 이미지 호스트)에 있다                                                                                                   |
+| `seo`      | static  | feature | 안 읽음 | 후보의 모든 페이지에서 검색 엔진·링크 미리보기가 읽는 태그: canonical·description·robots, og·twitter 가 제목·설명·canonical 과 같은지, og:image 크기, sitemap 링크, JSON-LD                |
+| `embeds`   | browser | parity  | 비교    | GA 로더·측정 ID와 **`dataLayer` 항목 전체**(순서, 인자, `Date`는 `<Date>`로), utterances 스크립트의 속성과 **자리**(부모·앞·뒤 요소의 태그 이름)                                           |
+| `hover`    | browser | parity  | 비교    | 링크와 `<summary>`에 포인터를 올렸을 때의 계산된 스타일                                                                                                                                    |
+| `visual`   | browser | parity  | 비교    | 전체 페이지 스크린샷, 라우트 × 뷰포트                                                                                                                                                      |
+| `a11y`     | browser | parity  | 비교    | axe-core(WCAG 2.1 A·AA)로 1280 뷰포트에서 라우트마다 위반(규칙 id + 대상 선택자)을 모아, 기준선에 없는 위반이 후보에 있으면 실패                                                           |
 
 `a11y`가 있는 이유: 접근성은 "회귀 금지"다. 기준선에 이미 있는 위반은 출발점으로 두고, 새로 생긴 위반만 실패로 친다. `.verify/report/a11y.json`의 `extra.baselineRules`에 기준선의 규칙별 위반 수(절대값)를, `extra.routes`에 라우트별 양쪽 위반 목록과 새 위반을 남긴다. 외부 요청은 `visual`과 같이 막거나 기록본으로 답한다. Lighthouse는 쓰지 않는다: 점수가 실행마다 흔들려 기준선과의 결정적 비교가 안 되고, 접근성 항목은 같은 axe-core 규칙의 부분집합이다.
 

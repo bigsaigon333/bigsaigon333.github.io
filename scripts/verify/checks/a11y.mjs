@@ -142,7 +142,11 @@ export default {
         routes: ["/"],
         apply(dir) {
           // The profile picture on the home page: an image without alt is axe's `image-alt` violation.
-          editPages(dir, /(<img src="\/profile\.jpg") alt="[^"]*"/, "$1");
+          editPages(
+            dir,
+            /(<img\b[^>]*\bsrc="\/profile\.jpg"[^>]*?) alt="[^"]*"/,
+            "$1",
+          );
         },
       },
     ],
