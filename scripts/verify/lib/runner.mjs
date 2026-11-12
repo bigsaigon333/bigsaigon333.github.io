@@ -8,6 +8,14 @@ import { load } from "cheerio";
 
 import { startServer } from "../serve.mjs";
 import {
+  applyAccepts,
+  cachedBaselineHash,
+  loadAccepts,
+  masksFor,
+  unusedNotices,
+} from "./accept.mjs";
+import {
+  acceptedDir,
   allowlistFile,
   baselineDir,
   cacheDir,
@@ -38,6 +46,8 @@ export const FLAGS = {
     candidate: "value",
     "candidate-url": "value",
     selector: "value",
+    "write-accept": "value",
+    reason: "value",
   },
   selftest: { ...SHARED_FLAGS, static: "flag", calibrate: "flag" },
   live: { ...SHARED_FLAGS, "base-url": "value", serve: "value" },
@@ -175,12 +185,17 @@ function loadAllowlist() {
  * @param {string|null} [options.baseline] reference site (default: .verify/baseline). null: a run without one
  *                                         (--feature): the routes are the candidate's and reading the baseline throws
  * @param {object} [options.args]          parsed CLI args
+ * @param {object[]} [options.allowlist]  entries added to allowlist.json (a self-test variant declares its own)
+ * @param {boolean} [options.accept]       apply the accept files (scripts/verify/accepted, or $VERIFY_ACCEPTED_DIR)
+ *                                         that were written for this baseline. The self-test's mutations run without.
  */
 export function createContext({
   candidateDir = distDir,
   candidateUrl = null,
   baseline = baselineDir,
   args = {},
+  accept = true,
+  allowlist: extraAllowlist = [],
 } = {}) {
   if (baseline === null && candidateUrl)
     throw new Error(
@@ -193,7 +208,14 @@ export function createContext({
         ? listRoutes(candidateDir)
         : [];
   const wanted = args.route ?? [];
-  const allowlist = loadAllowlist();
+  const allowlist = [...loadAllowlist(), ...extraAllowlist];
+  const accepts =
+    accept && baseline !== null
+      ? loadAccepts(
+          cachedBaselineHash(baseline),
+          process.env.VERIFY_ACCEPTED_DIR || acceptedDir,
+        )
+      : { entries: [], notices: [] };
   const dirs = { baseline, candidate: candidateDir };
   const htmlCache = new Map();
   const servers = new Map();
@@ -230,6 +252,22 @@ export function createContext({
               item.startsWith(entry.item.slice(0, -2)))),
       );
       return hit ? hit.reason : null;
+    },
+
+    /** Entries of the accept files that apply to this baseline, and a line for each file that does not. */
+    accepts,
+
+    /** CSS selectors an accept entry masks for `check` on `route` (visual and hover). */
+    masks(check, route) {
+      return masksFor(accepts.entries, check, route).flatMap(
+        (entry) => entry.mask,
+      );
+    },
+
+    /** A mask of `check` covered something on `route`: its entries are not unused. */
+    masked(check, route) {
+      for (const entry of masksFor(accepts.entries, check, route))
+        entry.used = true;
     },
 
     /** Absolute path of the file a route resolves to on `side` ("baseline" | "candidate"), or null. */
@@ -380,6 +418,8 @@ export async function runChecks(ctx, checks) {
       cells: result.cells ?? null,
       durationMs: Math.round(performance.now() - started),
     };
+    // Failures an accept file declares as intended become accepted ones (ACCEPT, not PASS).
+    if (ctx.accepts) applyAccepts(ctx.accepts.entries, normalized);
     ctx.report(check.name, { ...normalized, extra: result.extra ?? null });
     results.push(normalized);
   }
@@ -397,7 +437,10 @@ const STEPS = new Set(["check", "build"]);
 /** One line per check. Details live in .verify/report/<check>.json (a step's in .verify/report/<step>.log). */
 export function formatResults(results) {
   return results.map((result) => {
-    const head = `${result.ok ? "PASS" : "FAIL"}  ${result.check.padEnd(9)} ${result.pass}/${result.pass + result.fail}`;
+    const accepted = result.accepted?.length ?? 0;
+    const state = !result.ok ? "FAIL" : accepted ? "ACCEPT" : "PASS";
+    const total = result.pass + result.fail + accepted;
+    const head = `${state}  ${result.check.padEnd(9)} ${result.pass}/${total}${accepted ? `  ${accepted} accepted` : ""}`;
     if (result.ok) return head;
     const shown = result.failed
       .slice(0, 3)
@@ -493,4 +536,20 @@ export async function report({
       `verify: reporter ${file ?? process.env.VERIFY_REPORTER} failed: ${message}`,
     );
   }
+}
+
+/** Lines to print after a run: accept files written for another baseline, and entries that accepted nothing. */
+export const acceptNotices = (ctx) =>
+  ctx.accepts
+    ? [...ctx.accepts.notices, ...unusedNotices(ctx.accepts.entries)]
+    : [];
+
+/** The summary line: ALL PASS (with how many failures were accepted) or FAILED. */
+export function summaryLine(results, durationMs) {
+  const ok = results.length > 0 && results.every((result) => result.ok);
+  const accepted = results.reduce(
+    (sum, result) => sum + (result.accepted?.length ?? 0),
+    0,
+  );
+  return `${ok ? "ALL PASS" : "FAILED"}  ${results.filter((r) => r.ok).length}/${results.length} checks${accepted ? `  ${accepted} accepted` : ""}  ${(durationMs / 1000).toFixed(1)}s`;
 }

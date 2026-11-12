@@ -4,14 +4,16 @@
 //   1. baseline vs baseline            → every parity check must PASS
 //   2. baseline vs a mutated copy      → the check that declared the mutation must FAIL
 //
-// Feature checks (scope: "feature") assert things the old site never had, so the baseline cannot pass them.
-// They are tested against the current build instead:
+// Feature checks (scope: "feature") assert things about the build alone. They are tested against the current
+// build instead:
 //   1. dist/ as it is                  → the check must PASS
 //   2. a mutated copy of dist/         → the check must FAIL
 //
 // And that the commands themselves cannot be talked into a pass (lib/cli-cases.mjs, selected as "cli"):
-//   3. command lines that ask for something that does not exist, a build from leftovers, a rehearsal against
-//      the site being replaced         → refused or FAIL, as each case says
+//   3. command lines that ask for something that does not exist, a build from leftovers, accept files
+//      (applied, stale, masked, unused, refused without a reason)   → refused, FAIL or ACCEPT, as each case says
+//
+// Accept files (scripts/verify/accepted) never apply here: the mutations must fail whatever they declare.
 //
 // A summary of the cases goes to the reporter module, if there is one (VERIFY_REPORTER, see lib/runner.mjs report()).
 import fs from "node:fs";
@@ -90,7 +92,8 @@ for (const [group, candidateDir, name] of [
   [featureChecks, distDir, "build passes"],
 ]) {
   if (!group.length) continue;
-  const ctx = createContext({ candidateDir, args });
+  // Without accept files: an accepted difference is not the absence of one.
+  const ctx = createContext({ candidateDir, args, accept: false });
   try {
     const results = await runChecks(ctx, group);
     for (const [index, result] of results.entries()) {
@@ -149,6 +152,8 @@ for (const check of checks) {
         candidateDir: mutant,
         baseline: reference ?? undefined,
         args: { ...args, route },
+        accept: false,
+        allowlist: mutation.allowlist,
       });
       try {
         const [result] = await runChecks(ctx, [check]);

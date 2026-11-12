@@ -294,7 +294,7 @@ export default {
         name: "글 머리 제목 변경",
         apply(dir) {
           mutateFirst(dir, postFiles(dir), (html) =>
-            html.replace(/(<article[^>]*><h2>)/, "$1!"),
+            html.replace(/(<article[^>]*><h2[^>]*>)/, "$1!"),
           );
         },
       },
@@ -376,7 +376,7 @@ export default {
         name: "헤더 사이트 제목 링크의 목적지 변경",
         apply(dir) {
           mutateFirst(dir, postFiles(dir), (html) =>
-            replaceInHeader(html, /<a href="\/"/, '<a href="/posts"'),
+            replaceInHeader(html, /(<a\b[^>]*? href=")\/"/, '$1/posts"'),
           );
         },
       },

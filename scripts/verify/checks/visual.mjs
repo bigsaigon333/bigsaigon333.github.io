@@ -9,6 +9,9 @@
 //
 // visual.config.json holds the viewports and the two tolerances (colorThreshold, maxDiffRatio), both 0:
 // two screenshots match when no pixel differs at all. See the comments on the constants below.
+//
+// An accept entry with "mask" (lib/accept.mjs) paints the elements it selects an opaque fixed colour on both
+// sides before the screenshot: the rest of the page must still match.
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -16,6 +19,7 @@ import { fileURLToPath } from "node:url";
 import pixelmatch from "pixelmatch";
 import { PNG } from "pngjs";
 
+import { paintMasks } from "../lib/accept.mjs";
 import { mapLimit, MAX_PAGES, openBrowser } from "../lib/browser.mjs";
 import { editPages, postRoutesWith } from "../lib/html.mjs";
 import { repoRoot } from "../lib/paths.mjs";
@@ -100,8 +104,11 @@ const oneLine = (error) => String(error?.message ?? error).split("\n")[0];
 
 // ── capturing ───────────────────────────────────────────────────────────────────────────────────
 
-/** PNG of the whole page, or of the first element matching `selector`. Throws when the page is not comparable. */
-function capture(browser, url, viewport, { route, selector }) {
+/**
+ * PNG of the whole page, or of the first element matching `selector`, with the elements `masks` selects painted
+ * over (lib/accept.mjs paintMasks). Throws when the page is not comparable. `onMasked` hears of a mask that painted.
+ */
+function capture(browser, url, viewport, { route, selector, masks, onMasked }) {
   return browser.withPage(viewport, async (tab) => {
     const status = await tab.open(url);
     if (status >= 400 && route !== "/404") throw new Error(`HTTP ${status}`);
@@ -109,6 +116,7 @@ function capture(browser, url, viewport, { route, selector }) {
       throw new Error(`third-party request failed: ${tab.failures[0]}`);
 
     await tab.page.addStyleTag({ content: FREEZE_CSS });
+    if ((await paintMasks(tab.page, masks)) > 0) onMasked();
 
     const options = { animations: "disabled", caret: "hide", scale: "css" };
     if (!selector) return tab.page.screenshot({ ...options, fullPage: true });
@@ -367,6 +375,8 @@ async function run(ctx) {
           capture(browser, urls[side] + route, viewport, {
             route,
             selector,
+            masks: ctx.masks(NAME, route),
+            onMasked: () => ctx.masked(NAME, route),
           }).catch((error) => new Error(`${side}: ${oneLine(error)}`)),
         ),
       );
@@ -488,24 +498,14 @@ export default {
         name: "스타일시트의 CSS 값 변경",
         routes: (dir) => postRoutesWith(dir, /<pre>/),
         apply(dir) {
-          const cssDir = path.join(dir, "_next", "static", "css");
-          const [stylesheet] = fs
-            .readdirSync(cssDir)
-            .filter((file) => file.endsWith(".css"));
           // The background of code blocks. Same layout, different pixels: only the pixel comparison can notice.
-          edit(
-            path.join(cssDir, stylesheet),
-            "background:#272822",
-            "background:#14506e",
-          );
+          editPages(dir, /background:#272822/g, "background:#14506e");
         },
       },
       {
         name: "글에서 문단 하나 삭제",
         routes: ["/posts/proxy-to-built-in-objects"],
         apply(dir) {
-          // Inside the post body, which React leaves alone when it hydrates. Anywhere else the baseline's own
-          // JavaScript would put the paragraph back from __NEXT_DATA__ before the screenshot is taken.
           const post = path.join(
             dir,
             "posts",
@@ -515,16 +515,14 @@ export default {
         },
       },
 
-      // Faint colours. Both were "equal" at pixelmatch's default colour threshold of 0.1. The rules belong to
-      // a styled component, so hydration keeps the edit (confirmed in the browser: the computed background
-      // goes from rgba(255, 229, 100, 0.2) and rgb(246, 248, 250) to transparent).
+      // Faint colours. Both were "equal" at pixelmatch's default colour threshold of 0.1.
       {
         name: "문장 안 code 의 옅은 배경색 끄기",
         routes: (dir) => postRoutesWith(dir, /<p>[^<]*<code>/),
         apply(dir) {
           editPages(
             dir,
-            /(:not\(pre\) > code\{[^}]*?)background:rgb\(255 229 100 \/ 20%\)/,
+            /(:not\(pre\)>code\{[^}]*?)background:#ffe56433/,
             "$1background:transparent",
           );
         },
@@ -549,7 +547,7 @@ export default {
         apply(dir) {
           editPages(
             dir,
-            /(@media \(max-width:600px\)\{\.\w+ h2\{font-size:)2rem/,
+            /(@media \(max-width:600px\)\{article\[[^\]]*\] h2\[[^\]]*\]\{font-size:)2rem/,
             "$15rem",
           );
         },

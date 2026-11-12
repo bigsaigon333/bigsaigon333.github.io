@@ -14,6 +14,7 @@
 // inside them is paired by tag path, e.g. div[2] > span: the first <span> of the second <div>.
 //
 // Allowlist item: route:<route> skips the route.
+// An accept entry with "mask" (lib/accept.mjs) leaves out every link inside an element the mask selects, on both sides.
 import { mapLimit, MAX_PAGES, openBrowser } from "../lib/browser.mjs";
 import { editPages, postRoutesWith } from "../lib/html.mjs";
 
@@ -48,7 +49,7 @@ const shorten = (text, max) =>
  *                no point of the element can be reached), and where to park it afterwards
  *   read(index)  the values of the element now that the pointer is on it
  */
-function survey({ selector, properties, patience }) {
+function survey({ selector, properties, patience, mask }) {
   const family = (element) => [element, ...element.querySelectorAll("*")];
   const boxes = (node) =>
     Array.from(node.getClientRects()).filter(
@@ -58,8 +59,12 @@ function survey({ selector, properties, patience }) {
     element.checkVisibility({ visibilityProperty: true }) &&
     family(element).some((node) => boxes(node).length > 0);
 
+  const masked = (element) => mask !== "" && element.closest(mask) !== null;
+  window.__verifyMasked = Array.from(
+    document.querySelectorAll(selector),
+  ).filter(masked).length;
   const targets = Array.from(document.querySelectorAll(selector)).filter(
-    visible,
+    (element) => visible(element) && !masked(element),
   );
 
   /**
@@ -200,8 +205,11 @@ function survey({ selector, properties, patience }) {
 
 // ── measuring ───────────────────────────────────────────────────────────────────────────────────
 
-/** Every visible link and <summary> of one page: { tag, href, text, parts, rest, hover }. */
-function measure(browser, url, route) {
+/**
+ * Every visible link and <summary> of one page outside the elements `mask` selects:
+ * { elements: [{ tag, href, text, parts, rest, hover }], masked: <number of links left out> }.
+ */
+function measure(browser, url, route, mask) {
   return browser.withPage(VIEWPORT, async (tab) => {
     const status = await tab.open(url);
     if (status >= 400 && route !== "/404") throw new Error(`HTTP ${status}`);
@@ -213,7 +221,9 @@ function measure(browser, url, route) {
       selector: SELECTOR,
       properties: PROPERTIES,
       patience: POINTER_WAIT_MS,
+      mask,
     });
+    const masked = await page.evaluate(() => window.__verifyMasked);
 
     for (const [index, element] of elements.entries()) {
       const { point, neutral } = await page.evaluate(
@@ -232,7 +242,7 @@ function measure(browser, url, route) {
       );
       await page.mouse.move(neutral.x, neutral.y);
     }
-    return elements;
+    return { elements, masked };
   });
 }
 
@@ -424,7 +434,15 @@ async function run(ctx) {
     ]);
     measured = await mapLimit(pages, MAX_PAGES, async ({ route, side }) => {
       try {
-        return { elements: await measure(browser, urls[side] + route, route) };
+        const mask = ctx.masks(NAME, route).join(",");
+        const { elements, masked } = await measure(
+          browser,
+          urls[side] + route,
+          route,
+          mask,
+        );
+        if (masked > 0) ctx.masked(NAME, route);
+        return { elements };
       } catch (error) {
         return { error };
       }
@@ -456,8 +474,8 @@ async function run(ctx) {
 
 // ── selftest ────────────────────────────────────────────────────────────────────────────────────
 
-// The mutations edit the styled-components rules inlined in every page (editPages in lib/html.mjs says which
-// of those survive hydration). `routes` names a page the mutated rule shows on, so that one is measured, not all.
+// The mutations edit the rules inlined in every page (editPages in lib/html.mjs). `routes` names a page the
+// mutated rule shows on, so that one is measured, not all.
 export default {
   name: NAME,
   kind: "browser",
@@ -469,29 +487,25 @@ export default {
         name: "홈 목록 링크의 hover 밑줄 제거",
         routes: ["/"],
         apply(dir) {
-          editPages(
-            dir,
-            /a:hover\{-webkit-text-decoration:underline;text-decoration:underline;\}/,
-            "a:hover{}",
-          );
+          editPages(dir, /a:hover\{text-decoration:underline\}/, "a:hover{}");
         },
       },
       {
         name: "헤더 아이콘 링크의 hover 투명도 변경",
         routes: ["/"],
         apply(dir) {
-          editPages(dir, /(?<=li a:hover\{opacity:)0\.4/, "0.8");
+          editPages(
+            dir,
+            /(?<=li\[[^\]]*\] a\[[^\]]*\]:hover\{opacity:)\.4/,
+            "0.8",
+          );
         },
       },
       {
         name: "글 본문 링크의 hover box-shadow 제거",
         routes: (dir) => postRoutesWith(dir, /<main[\s\S]*?<a href=/),
         apply(dir) {
-          editPages(
-            dir,
-            /a:hover\{box-shadow:0 0\.125rem 0 0 black;\}/,
-            "a:hover{}",
-          );
+          editPages(dir, /a:hover\{box-shadow:0 \.125rem #000\}/, "a:hover{}");
         },
       },
       {
@@ -500,7 +514,7 @@ export default {
         name: "헤더 제목 링크 안쪽 요소의 hover box-shadow 추가",
         routes: ["/"],
         apply(dir) {
-          editPages(dir, /:hover p span\{/, ":hover div span{");
+          editPages(dir, /:hover p(\[[^\]]*\]) span/, ":hover div$1 span");
         },
       },
     ],

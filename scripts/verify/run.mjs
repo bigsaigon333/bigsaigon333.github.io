@@ -1,14 +1,16 @@
 // npm run verify -- [--only=head,content] [--route=/posts/x] [--static] [--no-build] [--no-check]
 //                    [--candidate=<dir> | --candidate-url=<url>] [--selector=<css>]
+//                    [--write-accept=<name> --reason=<text>]
 // npm run verify -- --feature [--only=seo,links] [--route=/posts/x] [--no-build] [--no-check] [--candidate=<dir>]
 //
 // astro check → astro build --force → checks in scripts/verify/checks/*.mjs.
 // Without --feature every check runs, and the parity checks compare the build with the baseline
-// (.verify/baseline, the deployed site extracted from origin/gh-pages by `npm run verify:setup`).
+// (.verify/baseline, the build of the previous production made by `npm run verify:setup`). Differences declared in
+// scripts/verify/accepted/*.json for this baseline are accepted (lib/accept.mjs); --write-accept=<name> writes
+// scripts/verify/accepted/<name>.json from the parity failures of this run.
 // With --feature there is no baseline: only the checks that never read it run (scope "feature", and links), on the
-// routes of the build. That is the gate of pull requests and of the deploy workflow; a post they add is a route
-// the baseline does not have.
-// Prints one line per check; details go to .verify/report/. Exit code 0 only if everything passed,
+// routes of the build.
+// Prints one line per check; details go to .verify/report/. Exit code 0 only if everything passed or was accepted,
 // 1 when a check failed, 2 when the command line asks for something that does not exist.
 // A summary of the run goes to the reporter module, if there is one (VERIFY_REPORTER, see lib/runner.mjs report()).
 import { spawnSync } from "node:child_process";
@@ -16,9 +18,21 @@ import fs from "node:fs";
 import path from "node:path";
 import { stripVTControlCharacters } from "node:util";
 
-import { baselineDir, distDir, repoRoot, reportDir } from "./lib/paths.mjs";
+import {
+  acceptFileFor,
+  applyAccepts,
+  cachedBaselineHash,
+} from "./lib/accept.mjs";
+import {
+  acceptedDir,
+  baselineDir,
+  distDir,
+  repoRoot,
+  reportDir,
+} from "./lib/paths.mjs";
 import { listRoutes } from "./lib/resolve.mjs";
 import {
+  acceptNotices,
   createContext,
   exitWithUsage,
   formatResults,
@@ -28,6 +42,7 @@ import {
   report,
   runChecks,
   selectChecks,
+  summaryLine,
   toMatrix,
   UsageError,
   validateRoutes,
@@ -37,6 +52,7 @@ import {
 const USAGE =
   "usage: npm run verify -- [--only=<check,…>] [--route=<route,…>] [--static] [--no-build] [--no-check]\n" +
   "                         [--candidate=<dir> | --candidate-url=<url>] [--selector=<css>]\n" +
+  '                         [--write-accept=<name> --reason="<why the difference is intended>"]\n' +
   "       npm run verify -- --feature [--only=<check,…>] [--route=<route,…>] [--no-build] [--no-check]\n" +
   "                         [--candidate=<dir>]   (no baseline)";
 
@@ -50,7 +66,11 @@ const PARITY_FLAGS = {
     "--selector",
     "it narrows visual, which compares screenshots with the baseline",
   ],
+  writeAccept: ["--write-accept", "it accepts differences from the baseline"],
 };
+
+/** Where accept files are read and written. VERIFY_ACCEPTED_DIR is for the self-test. */
+const acceptDir = process.env.VERIFY_ACCEPTED_DIR || acceptedDir;
 
 const args = parseArgsOrExit("run", USAGE);
 const started = performance.now();
@@ -69,6 +89,19 @@ let checks;
 try {
   if (args.candidate && args.candidateUrl)
     throw new UsageError("give at most one of --candidate and --candidate-url");
+  if (args.writeAccept !== undefined && !args.reason?.trim())
+    throw new UsageError(
+      '--write-accept needs --reason="<why the difference is intended>"',
+    );
+  if (args.reason !== undefined && args.writeAccept === undefined)
+    throw new UsageError("--reason goes with --write-accept=<name>");
+  if (
+    args.writeAccept !== undefined &&
+    !/^[a-z0-9][a-z0-9._-]*$/i.test(args.writeAccept)
+  )
+    throw new UsageError(
+      `--write-accept=${args.writeAccept}: a file name of letters, digits, ".", "_" and "-"`,
+    );
 
   const available = await loadChecks();
   if (args.feature) {
@@ -262,13 +295,56 @@ try {
   await ctx.close();
 }
 
+/**
+ * --write-accept: scripts/verify/accepted/<name>.json with one entry per parity check that failed, for the routes it
+ * failed on, then those failures are accepted in this run too. A failed step (check, build) is never accepted.
+ */
+function writeAccept() {
+  const failedStep = results.find(
+    (result) =>
+      (result.check === "check" || result.check === "build") && !result.ok,
+  );
+  if (failedStep) {
+    console.error(
+      `not written: ${failedStep.check} failed, and only differences of a build that went through can be accepted`,
+    );
+    return;
+  }
+  const parity = new Set(
+    checks.filter(readsBaseline).map((check) => check.name),
+  );
+  let data;
+  try {
+    data = acceptFileFor(
+      results.filter((result) => parity.has(result.check)),
+      { hash: cachedBaselineHash(baselineDir), reason: args.reason.trim() },
+    );
+  } catch (error) {
+    console.log(`not written: ${error.message}`);
+    return;
+  }
+  const name = `${args.writeAccept}.json`;
+  const file = path.join(acceptDir, name);
+  fs.mkdirSync(acceptDir, { recursive: true });
+  fs.writeFileSync(file, `${JSON.stringify(data, null, 2)}\n`);
+  const entries = data.entries.map((entry) => ({
+    ...entry,
+    file: name,
+    used: false,
+  }));
+  for (const result of results) applyAccepts(entries, result);
+  console.log(
+    `wrote ${file.startsWith(repoRoot + path.sep) ? path.relative(repoRoot, file) : file}:${data.entries.map((entry) => `${entry.check} ${entry.routes.join(",")}`).join("; ")}`,
+  );
+}
+if (args.writeAccept !== undefined) writeAccept();
+
 for (const line of formatResults(results)) console.log(line);
+for (const line of acceptNotices(ctx)) console.log(`WARN  ${line}`);
 
 const ok = results.length > 0 && results.every((result) => result.ok);
 const durationMs = Math.round(performance.now() - started);
-console.log(
-  `${ok ? "ALL PASS" : "FAILED"}  ${results.filter((r) => r.ok).length}/${results.length} checks  ${(durationMs / 1000).toFixed(1)}s`,
-);
+console.log(summaryLine(results, durationMs));
 
 await report({
   command: "verify",

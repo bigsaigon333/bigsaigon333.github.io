@@ -1,14 +1,15 @@
 // Command-level cases of the self-test (`npm run verify:selftest -- --only=cli`).
 //
 // The mutations of a check prove that the check notices a difference. These prove that the commands around
-// the checks cannot be made to pass by asking for nothing, by building from leftovers or by looking at the
-// site that is being replaced, that the build refuses front matter the schema does not describe, and that the gate
+// the checks cannot be made to pass by asking for nothing or by building from leftovers, that accept files accept
+// only what they declare and only for the baseline they were written for, that the build refuses front matter the
+// schema does not describe, and that the gate
 // of pull requests and deploys (`verify --feature`) needs no baseline (both on a copy of the project, so that no
 // fixture is ever written into posts/), and that a reporter module (VERIFY_REPORTER) gets one summary of a run and
 // cannot change its exit status. Each case runs a command the way it is typed and returns null, or what went wrong.
 //
 // None of them asks whether the current build still equals the baseline: that is what the parity run answers, and
-// CI runs these cases on pull requests whose build differs from the frozen baseline by design (a new post).
+// CI runs these cases on pull requests whose build differs from the baseline by design (a new post).
 import { spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import fs from "node:fs";
@@ -23,6 +24,7 @@ import {
   reportDir,
   repoRoot,
 } from "./paths.mjs";
+import { baselineHash } from "./accept.mjs";
 import { listRoutes } from "./resolve.mjs";
 import { loadChecks, readsBaseline, runChecks } from "./runner.mjs";
 
@@ -111,7 +113,7 @@ function staleStore() {
 
     const { status, output } = command("run.mjs", [
       "--feature",
-      "--only=migrated",
+      "--only=listed",
       "--no-check",
     ]);
     const stale = pagesWithMarker();
@@ -131,13 +133,11 @@ function staleStore() {
   return problem;
 }
 
-// ── the deployed site is not the new site ───────────────────────────────────────────────────────
+// ── the deployed site is the baseline ───────────────────────────────────────────────────────────
 
 /**
- * `verify:live --serve=<dir> <flags>`: exit status and failing checks. The baseline is the site that is being
- * replaced, so it passes every check but migrated. The build is tested with migrated alone: it is the one check
- * that does not compare with the baseline, and whether this build still equals the deployed site is what the parity
- * run (`npm run verify`) answers. Here it would fail every pull request that adds a post.
+ * `verify:live --serve=<dir> <flags>`: exit status and failing checks. After a deploy the baseline is the commit
+ * just deployed, so the site served must answer like the baseline in every respect.
  */
 function rehearsal(dir, expected, flags = []) {
   const { status, output, lines } = command("live.mjs", [
@@ -667,8 +667,8 @@ function reported(dir, module, script, flags, reporter, expected) {
 
 /**
  * The cheapest real runs, one of each outcome: the gate (`--feature`) with a check that only reads the build, which
- * passes on any build that went through, and the rehearsal against the baseline with migrated, which fails by design.
- * The second names its reporter relative to the main checkout.
+ * passes on any build that went through, and a rehearsal of status against a directory without the site, which
+ * fails. The second names its reporter relative to the main checkout.
  */
 function reporterGetsOneSummary() {
   return withReporters(
@@ -677,23 +677,24 @@ function reporterGetsOneSummary() {
         dir,
         module,
         "run.mjs",
-        ["--feature", "--no-build", "--no-check", "--only=migrated"],
+        ["--feature", "--no-build", "--no-check", "--only=listed"],
         path.join(dir, "verify.mjs"),
         {
           status: 0,
           command: "verify",
           ok: true,
-          checks: ["migrated"],
+          checks: ["listed"],
           feature: true,
         },
       ) ??
+      // A directory without the site: nothing of the baseline answers 200.
       reported(
         dir,
         module,
         "live.mjs",
-        [`--serve=${baselineDir}`, "--only=migrated"],
+        [`--serve=${dir}`, "--only=status"],
         path.relative(mainRoot, path.join(dir, "live.mjs")),
-        { status: 1, command: "live", ok: false, checks: ["migrated"] },
+        { status: 1, command: "live", ok: false, checks: ["status"] },
       ),
   );
 }
@@ -701,7 +702,7 @@ function reporterGetsOneSummary() {
 /** A reporter that throws, or that cannot be loaded, costs one line on stderr and leaves the exit status alone. */
 function brokenReporterKeepsTheStatus() {
   return withReporters((dir, module) => {
-    const flags = ["--feature", "--no-build", "--no-check", "--only=migrated"];
+    const flags = ["--feature", "--no-build", "--no-check", "--only=listed"];
     const reason = `reporter-failure-${randomBytes(4).toString("hex")}`;
     for (const [reporter, says] of [
       [
@@ -728,6 +729,262 @@ function brokenReporterKeepsTheStatus() {
         return `${name}: expected one line "verify: reporter ${reporter} failed: …${says}…", got ${complaint.length}`;
     }
     return null;
+  });
+}
+
+// ── accept files ────────────────────────────────────────────────────────────────────────────────
+//
+// Each case writes its accept files to a fresh directory named by VERIFY_ACCEPTED_DIR, never to
+// scripts/verify/accepted, and verifies a mutated copy of the baseline as --candidate (nothing is built).
+
+/** Run `use(dir)` on a fresh copy of the baseline mutated by `mutate(dir)`; the copy is removed afterwards. */
+function withMutant(mutate, use) {
+  const dir = fs.realpathSync(
+    fs.mkdtempSync(path.join(os.tmpdir(), "verify-mutant-")),
+  );
+  try {
+    fs.cpSync(baselineDir, dir, { recursive: true });
+    mutate(dir);
+    return use(dir);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+/** Replace the text of <dir>/<rel> by `edit(text)`; throws when that changes nothing. */
+function editFile(dir, rel, edit) {
+  const file = path.join(dir, rel);
+  const before = fs.readFileSync(file, "utf8");
+  const after = edit(before);
+  if (after === before) throw new Error(`the edit changed nothing in ${rel}`);
+  fs.writeFileSync(file, after);
+}
+
+/** Run `use(acceptDir)` with a fresh directory for accept files; removed afterwards. */
+function withAcceptDir(use) {
+  const dir = fs.realpathSync(
+    fs.mkdtempSync(path.join(os.tmpdir(), "verify-accepted-")),
+  );
+  try {
+    return use(dir);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+const writeJson = (file, data) =>
+  fs.writeFileSync(file, `${JSON.stringify(data, null, 2)}\n`);
+
+/** `run.mjs --candidate=<dir> <flags>` with the accept files of `acceptDir`. */
+const verifyCandidate = (dir, acceptDir, flags) =>
+  command("run.mjs", [`--candidate=${dir}`, ...flags], {
+    VERIFY_ACCEPTED_DIR: acceptDir,
+  });
+
+/** The result line of `check` ("ACCEPT  content   13/14  1 accepted"), or undefined. */
+const lineOf = (lines, check) =>
+  lines.find((line) => new RegExp(`^\\S+\\s+${check}\\s+\\d+/\\d+`).test(line));
+
+/** A post of the baseline whose body has a paragraph, and the mutation that drops it. */
+function dropParagraph(dir) {
+  const route = aPost();
+  editFile(dir, `${route.slice(1)}.html`, (html) =>
+    html.replace(/(<main[^>]*>[\s\S]*?)<p>[\s\S]*?<\/p>/, "$1"),
+  );
+  return route;
+}
+
+function writeAcceptNeedsReason() {
+  return withAcceptDir((acceptDir) => {
+    for (const [flags, reason] of [
+      [["--write-accept=x"], /--write-accept needs --reason/],
+      [["--write-accept=x", "--reason="], /--reason needs a value/],
+      [["--reason=why"], /--reason goes with --write-accept/],
+      [
+        ["--feature", "--write-accept=x", "--reason=why"],
+        /not with --feature: --write-accept/,
+      ],
+    ]) {
+      const before = stepLogs();
+      const { status, output, lines } = command("run.mjs", flags, {
+        VERIFY_ACCEPTED_DIR: acceptDir,
+      });
+      const said = flags.join(" ");
+      if (status !== 2)
+        return `${said}: exit status ${status}, expected 2: ${firstLine(output)}`;
+      if (!reason.test(output))
+        return `${said}: the message does not say ${reason}: ${firstLine(output)}`;
+      if (lines.some((line) => RESULT_LINE.test(line)))
+        return `${said}: something ran before the command line was refused`;
+      if (stepLogs().some((stamp, index) => stamp !== before[index]))
+        return `${said}: a step ran before the command line was refused`;
+      if (fs.readdirSync(acceptDir).length)
+        return `${said}: wrote ${fs.readdirSync(acceptDir).join(", ")}`;
+    }
+    return null;
+  });
+}
+
+function acceptFileApplies() {
+  let route;
+  return withMutant(
+    (dir) => {
+      route = dropParagraph(dir);
+    },
+    (dir) =>
+      withAcceptDir((acceptDir) => {
+        // Without an accept file the difference fails.
+        const plain = verifyCandidate(dir, acceptDir, ["--only=content"]);
+        if (
+          plain.status !== 1 ||
+          !/^FAIL\s/.test(lineOf(plain.lines, "content") ?? "")
+        )
+          return `without an accept file: exit status ${plain.status}, expected 1 and FAIL content: ${plain.lines.at(-1)}`;
+
+        const written = verifyCandidate(dir, acceptDir, [
+          "--only=content",
+          "--write-accept=dropped",
+          "--reason=self-test",
+        ]);
+        const file = path.join(acceptDir, "dropped.json");
+        if (!fs.existsSync(file))
+          return `--write-accept wrote nothing: ${written.lines.at(-1)}`;
+        const data = JSON.parse(fs.readFileSync(file, "utf8"));
+        const hash = baselineHash(baselineDir);
+        if (data.baseline !== hash)
+          return `the file was written for baseline ${data.baseline}, not ${hash}`;
+        const entries = JSON.stringify(data.entries);
+        const wanted = JSON.stringify([
+          { check: "content", routes: [route], reason: "self-test" },
+        ]);
+        if (entries !== wanted) return `entries ${entries}, expected ${wanted}`;
+
+        const accepted = verifyCandidate(dir, acceptDir, ["--only=content"]);
+        const line = lineOf(accepted.lines, "content") ?? "";
+        if (accepted.status !== 0)
+          return `with the accept file: exit status ${accepted.status}, expected 0: ${line}`;
+        if (!/^ACCEPT\s+content\s+\d+\/\d+\s+1 accepted/.test(line))
+          return `with the accept file the line is not ACCEPT with its count: ${line}`;
+        if (
+          accepted.lines.some((text) =>
+            /unused accept entry|stale accept file/.test(text),
+          )
+        )
+          return "the applied file was reported as unused or stale";
+
+        // It accepts that route only: another difference still fails.
+        editFile(dir, "index.html", (html) =>
+          html.replace(/(<\/header>[\s\S]*?<h2[^>]*>)/, "$1!"),
+        );
+        const more = verifyCandidate(dir, acceptDir, ["--only=content"]);
+        if (more.status !== 1)
+          return `a difference on / was accepted too: exit status ${more.status}: ${lineOf(more.lines, "content")}`;
+        return null;
+      }),
+  );
+}
+
+function staleAcceptFileIgnored() {
+  let route;
+  return withMutant(
+    (dir) => {
+      route = dropParagraph(dir);
+    },
+    (dir) =>
+      withAcceptDir((acceptDir) => {
+        writeJson(path.join(acceptDir, "old.json"), {
+          baseline: "0".repeat(64),
+          reason: "written for another baseline",
+          entries: [{ check: "content", routes: [route], reason: "old" }],
+        });
+        const { status, lines } = verifyCandidate(dir, acceptDir, [
+          "--only=content",
+        ]);
+        if (status !== 1)
+          return `exit status ${status}, expected 1: the stale file was applied: ${lineOf(lines, "content")}`;
+        const notices = lines.filter((line) =>
+          line.includes("stale accept file ignored: old.json"),
+        );
+        if (notices.length !== 1)
+          return `expected one line "stale accept file ignored: old.json …", got ${notices.length}`;
+        return null;
+      }),
+  );
+}
+
+function unusedAcceptEntry() {
+  return withAcceptDir((acceptDir) => {
+    writeJson(path.join(acceptDir, "unused.json"), {
+      baseline: baselineHash(baselineDir),
+      reason: "accepts a difference that is not there",
+      entries: [{ check: "content", routes: ["/"], reason: "nothing differs" }],
+    });
+    const { status, lines } = verifyCandidate(baselineDir, acceptDir, [
+      "--only=content",
+      "--route=/",
+    ]);
+    if (status !== 0)
+      return `exit status ${status}, expected 0: an unused entry is a warning: ${lines.at(-1)}`;
+    if (!/^PASS\s/.test(lineOf(lines, "content") ?? ""))
+      return `content is not PASS: ${lineOf(lines, "content")}`;
+    if (
+      !lines.some((line) =>
+        /^WARN\s+unused accept entry: unused\.json content \//.test(line),
+      )
+    )
+      return 'no line "WARN  unused accept entry: unused.json content /"';
+    return null;
+  });
+}
+
+/**
+ * The same mask over the site header, once with a change inside the header (hidden: PASS, the entry used) and
+ * once with a change in the post list below it (caught: FAIL).
+ */
+function maskHidesOnlyInside() {
+  const color = (pattern) => (dir) =>
+    editFile(dir, "index.html", (html) =>
+      html.replace(pattern, '$1 style="color:#d00"'),
+    );
+  const mask = {
+    baseline: baselineHash(baselineDir),
+    reason: "self-test",
+    entries: [
+      { check: "visual", routes: ["/"], reason: "header", mask: ["header"] },
+    ],
+  };
+  const flags = ["--only=visual", "--route=/"];
+  return withAcceptDir((acceptDir) => {
+    writeJson(path.join(acceptDir, "mask.json"), mask);
+    const inside = withMutant(
+      color(/(<header[^>]*>[\s\S]*?<span\b)/),
+      (dir) => {
+        const plain = command("run.mjs", [`--candidate=${dir}`, ...flags], {
+          VERIFY_ACCEPTED_DIR: path.join(acceptDir, "none"),
+        });
+        if (plain.status !== 1)
+          return `inside, without the mask: exit status ${plain.status}, expected 1 (the change is not visible): ${lineOf(plain.lines, "visual")}`;
+        const masked = verifyCandidate(dir, acceptDir, flags);
+        if (
+          masked.status !== 0 ||
+          !/^PASS\s/.test(lineOf(masked.lines, "visual") ?? "")
+        )
+          return `inside the mask: exit status ${masked.status}, expected 0 and PASS: ${lineOf(masked.lines, "visual")}`;
+        if (masked.lines.some((line) => line.includes("unused accept entry")))
+          return "inside the mask: the mask was reported unused";
+        return null;
+      },
+    );
+    if (inside) return inside;
+    return withMutant(color(/(<\/header>[\s\S]*?<h2\b)/), (dir) => {
+      const outside = verifyCandidate(dir, acceptDir, flags);
+      if (
+        outside.status !== 1 ||
+        !/^FAIL\s/.test(lineOf(outside.lines, "visual") ?? "")
+      )
+        return `outside the mask: exit status ${outside.status}, expected 1 and FAIL: ${lineOf(outside.lines, "visual")}`;
+      return null;
+    });
   });
 }
 
@@ -887,13 +1144,39 @@ export const cliCases = [
       ),
   },
   {
-    name: "verify:live: 예전 배포본(기준선)을 새 사이트로 통과시키지 않는다",
-    run: () => rehearsal(baselineDir, { status: 1, failing: ["migrated"] }),
+    name: "verify:live: 기준선을 서빙하면 모든 검사를 통과한다",
+    run: () => rehearsal(baselineDir, { status: 0, failing: [] }),
   },
   {
-    name: "verify:live: 새 빌드(dist)는 migrated 를 통과한다",
+    name: "verify:live: 기준선과 <title> 이 다른 사이트는 통과시키지 않는다",
     run: () =>
-      rehearsal(distDir, { status: 0, failing: [] }, ["--only=migrated"]),
+      withMutant(
+        (dir) =>
+          editFile(dir, "index.html", (html) =>
+            html.replace(/<title>/, "<title>!"),
+          ),
+        (dir) => rehearsal(dir, { status: 1, failing: ["head"] }),
+      ),
+  },
+  {
+    name: "verify --write-accept: --reason 이 없거나 --feature 와 함께면 빌드 전에 거부하고 아무것도 쓰지 않는다",
+    run: writeAcceptNeedsReason,
+  },
+  {
+    name: "verify --write-accept: 실패를 accept 파일로 쓰고, 기준선 해시가 맞는 파일은 그 실패를 ACCEPT 로 바꾼다",
+    run: acceptFileApplies,
+  },
+  {
+    name: "verify: 기준선 해시가 다른 accept 파일은 한 줄 알리고 무시한다",
+    run: staleAcceptFileIgnored,
+  },
+  {
+    name: "verify: 실패와 맞지 않는 accept 항목은 unused 경고만 낸다",
+    run: unusedAcceptEntry,
+  },
+  {
+    name: "verify: visual 의 mask 는 가린 요소 안의 변화만 숨기고 밖의 변화는 잡는다",
+    run: maskHidesOnlyInside,
   },
   {
     name: "build: (대조군) 프로젝트 사본에 더한 올바른 글은 빌드되어 페이지·홈 목록·sitemap 에 나온다",

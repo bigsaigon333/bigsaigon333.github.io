@@ -1,11 +1,10 @@
-// npm run verify:live -- --base-url=<url> [--only=status,migrated,head,content,sitemap] [--route=/posts/x]
+// npm run verify:live -- --base-url=<url> [--only=status,head,content,sitemap] [--route=/posts/x]
 // npm run verify:live -- --serve=<dir>      rehearsal: serve <dir> locally (GitHub Pages resolution) and verify that
 //
-// After a deploy: the real URLs answer like the baseline (.verify/baseline) and are the new build.
+// After a deploy: the real URLs answer like the baseline (.verify/baseline). In the deploy workflow the baseline is
+// the build of the commit just deployed (`npm run verify:setup -- --baseline-ref=<that sha>`).
 //   status                   every route, /sitemap.xml, /robots.txt and every public asset of the baseline answers
 //                            200 to a GET that does not follow redirects
-//   migrated                 the pages are not the Next.js export: the deployment that is being replaced answers
-//                            like the baseline in every other respect, because it is the baseline
 //   head, content, sitemap   the same checks as `npm run verify`, reading the candidate over HTTP
 // Prints one line per check; details go to .verify/report/. Exit code 0 only if everything passed,
 // 1 when a check failed, 2 when the command line asks for something that does not exist.
@@ -17,6 +16,7 @@ import { listAssets, probe, urlPathOf } from "./lib/html.mjs";
 import { baselineDir } from "./lib/paths.mjs";
 import { listRoutes } from "./lib/resolve.mjs";
 import {
+  acceptNotices,
   createContext,
   exitWithUsage,
   formatResults,
@@ -24,6 +24,7 @@ import {
   parseArgsOrExit,
   report,
   runChecks,
+  summaryLine,
   toMatrix,
   UsageError,
   validateSelection,
@@ -31,7 +32,7 @@ import {
 import { startServer } from "./serve.mjs";
 
 /** Checks of `npm run verify` that also run here, all of them unless --only says otherwise. */
-const REUSED = ["migrated", "head", "content", "sitemap"];
+const REUSED = ["head", "content", "sitemap"];
 const USAGE =
   "usage: npm run verify:live -- --base-url=<url> | --serve=<dir>\n" +
   `                              [--only=status,${REUSED.join(",")}] [--route=<route,…>]`;
@@ -167,12 +168,11 @@ try {
 }
 
 for (const line of formatResults(results)) console.log(line);
+for (const line of acceptNotices(ctx)) console.log(`WARN  ${line}`);
 
 const ok = results.length > 0 && results.every((result) => result.ok);
 const durationMs = Math.round(performance.now() - started);
-console.log(
-  `${ok ? "ALL PASS" : "FAILED"}  ${results.filter((r) => r.ok).length}/${results.length} checks  ${(durationMs / 1000).toFixed(1)}s`,
-);
+console.log(summaryLine(results, durationMs));
 
 await report({
   command: "live",

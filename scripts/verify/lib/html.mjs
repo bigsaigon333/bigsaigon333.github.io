@@ -380,10 +380,7 @@ export function postRoutesWith(dir, pattern, limit = 1) {
 
 /**
  * Self-test: apply `pattern → replacement` to every page of a site copy. Throws when nothing matched.
- *
- * In a Next.js build the styled-components rules are inlined in the HTML. Hydration takes the rules of a
- * component over from there as they are, so an edit to one of those is what the browser ends up with. It writes
- * the global rules (a, h1, …) anew from JavaScript: an edit to one of those is undone and proves nothing.
+ * The site inlines its stylesheets and scripts, so an edit to a page is what the browser runs.
  */
 export function editPages(dir, pattern, replacement) {
   let edited = 0;
