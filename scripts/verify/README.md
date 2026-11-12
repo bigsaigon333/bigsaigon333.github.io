@@ -4,22 +4,82 @@
 
 ```sh
 npm run verify:setup                      # node_modules, .verify/baseline, .verify/cache 준비
-npm run verify                            # astro check → astro build → 모든 검사
+npm run verify                            # astro check → astro build --force → 모든 검사
 npm run verify -- --only=head,content     # 검사 고르기
 npm run verify -- --route=/posts/foo      # 라우트 고르기(쉼표로 여러 개)
 npm run verify -- --static                # 브라우저가 필요 없는 검사만
 npm run verify -- --no-build              # 이미 있는 dist/ 를 그대로 검사
-npm run verify -- --candidate=<dir>       # dist/ 대신 다른 디렉터리를 검사
+npm run verify -- --no-check              # astro check 를 건너뛴다
+npm run verify -- --candidate=<dir>       # dist/ 대신 다른 디렉터리를 검사(빌드하지 않는다)
+npm run verify -- --candidate-url=<url>   # 디렉터리 대신 서빙 중인 사이트를 검사(빌드하지 않는다)
+npm run verify -- --scope=integration     # 대시보드의 통합 결과로 기록(아래 "기록되는 곳")
 npm run verify:selftest                   # 검사기가 차이를 실제로 잡는지 확인
+npm run verify:selftest -- --only=cli     # 명령 수준 시험만(아래 "자기 검사")
 npm run verify -- --only=visual --selector=header   # 전체 페이지 대신 요소 하나만 화면 비교
 npm run verify:selftest -- --only=visual --calibrate # 화면 비교의 노이즈를 재서 visual.config.json 갱신
-npm run verify:live -- --base-url=<url>   # 배포된 사이트를 검사(상태 코드, 리다이렉트, head, content, sitemap)
+npm run verify:live -- --base-url=<url>   # 배포된 사이트를 검사(상태 코드, 새 빌드인지, head, content, sitemap)
 npm run verify:live -- --serve=<dir>      # 위 검사를 로컬에서 예행연습(<dir>를 GitHub Pages 방식으로 서빙)
 ```
 
 화면 비교가 실패하면 `.verify/report/visual/<라우트>-<너비>/`에 `baseline.png`, `candidate.png`, `diff.png`, 차이 영역만 자른 `crop.png`가 남는다.
 
 출력은 검사당 한 줄이다. 상세는 `.verify/report/<검사>.json`에 있다.
+
+## 통과가 통과이려면
+
+- **종료 코드**: 모두 통과 0, 검사 실패 1, 명령줄이 없는 것을 가리키면 2.
+- **없는 것을 고르면 거부한다.** 모르는 플래그, `--only`의 없는 검사 이름, `--route`의 기준선에 없는 라우트(`posts/foo`처럼 앞 슬래시를 빠뜨린 것 포함), 없는 `--scope`, 값이 빠진 `--only=`, `--only`로 이름을 준 브라우저 검사가 `--static`에 걸러지는 경우. 무엇이 틀렸는지 말하고 **아무것도 빌드하기 전에** 2로 끝난다. 세 명령 모두 같다.
+- **0개를 본 검사는 실패다.** 통과한 항목이 하나도 없으면 `0/0 PASS`가 아니라 `nothing was examined` 로 실패한다. 고른 라우트가 그 검사에서 모두 허용 목록에 있을 때도 그렇다(예: `--route=/404 --only=visual`). `--route`를 넓히거나 `--only`로 그 검사를 빼면 된다.
+- **빌드는 처음부터 렌더한다.** 게이트는 `astro build --force`로 빌드한다. 그냥 `astro build`는 원본이 그대로인 글의 HTML을 `node_modules/.astro/data-store.json`에서 꺼내 쓰는데, 이 저장소는 렌더하는 패키지가 바뀐 것을 알아채지 못한다. 배포 워크플로는 늘 빈 상태에서 렌더하므로, 게이트만 예전 HTML로 통과할 수 있었다.
+
+### 기록되는 곳 (`--scope`)
+
+`npm run verify`의 결과는 진행 대시보드에 `scope`와 함께 기록된다.
+
+| scope         | 언제                                                                   |
+| ------------- | ---------------------------------------------------------------------- |
+| `local`       | 기본값. 아무 표시 없이 돌린 실행                                       |
+| `agent`       | `--agent=<id>`(또는 환경 변수 `PROGRESS_AGENT`)를 준 실행              |
+| `integration` | `--scope=integration`을 명시한 실행만. 대시보드의 통합 결과를 덮어쓴다 |
+
+`verify:selftest`는 `selftest`, `verify:live`는 `live`로 기록된다. 환경 변수 `VERIFY_EMIT=0`이면 기록하지 않는다(자기 검사가 명령을 직접 돌려 볼 때 쓴다).
+
+## 검사 목록
+
+`scripts/verify/checks/`의 파일 하나가 검사 하나다. 각 파일 머리의 주석이 정확한 정의다.
+
+| 검사       | 종류    | 범위    | 보는 것                                                                                                                                                                                    |
+| ---------- | ------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `routes`   | static  | parity  | HTML 라우트 집합, 기준선의 모든 자산(sha256)                                                                                                                                               |
+| `head`     | static  | parity  | `<head>`의 제목·메타·canonical·og·twitter·파비콘. **후보에만 있는 태그**도 본다: robots 계열 메타의 `noindex`/`nofollow`/`none`, `<meta http-equiv="refresh">`, `<base>`(문서 어디에 있든) |
+| `content`  | static  | parity  | 본문 텍스트와 구조, 글 머리, 푸터. **모든 라우트의 사이트 헤더**: 링크마다 href·aria-label·target·rel·referrerpolicy·텍스트, img·source 마다 src·srcset·alt·type, 헤더 텍스트              |
+| `links`    | static  | parity  | 후보의 내부 참조가 모두 200                                                                                                                                                                |
+| `sitemap`  | static  | parity  | `sitemap.xml`이 **well-formed XML**(선언, 짝 맞는 요소, 맨 `&` 없음)이고 루트 요소·네임스페이스가 같으며 `<loc>` 집합이 같다. `robots.txt`는 바이트 동일                                   |
+| `budget`   | static  | parity  | 라우트별 JS 바이트가 기준선을 넘지 않는다                                                                                                                                                  |
+| `listed`   | static  | feature | 후보의 `sitemap.xml`이 후보의 모든 페이지를 한 번씩 싣고(404 제외), 실린 URL이 모두 200이다                                                                                                |
+| `migrated` | static  | feature | 후보가 Next.js 산출물이 아니다: id `__next`·`__NEXT_DATA__` 요소가 없고 `/_next/` 참조가 없다                                                                                              |
+| `embeds`   | browser | parity  | GA 로더·측정 ID와 **`dataLayer` 항목 전체**(순서, 인자, `Date`는 `<Date>`로), utterances 스크립트의 속성과 **자리**(부모·앞·뒤 요소의 태그 이름)                                           |
+| `hover`    | browser | parity  | 링크와 `<summary>`에 포인터를 올렸을 때의 계산된 스타일                                                                                                                                    |
+| `visual`   | browser | parity  | 전체 페이지 스크린샷, 라우트 × 뷰포트                                                                                                                                                      |
+
+`listed`가 있는 이유: `sitemap`은 기준선과 비교하는데, 기준선의 sitemap에는 가장 최근 글이 없다. 그래서 후보의 sitemap에서 그 글을 지워도 두 집합이 같아져 `sitemap`은 통과한다. 새 sitemap이 모든 글을 싣는다는 것은 후보만 보고 따로 단언한다.
+
+`migrated`가 있는 이유: 나머지는 모두 기준선과의 비교라서 기준선 자신은 전부 통과한다. `verify:live`를 예전 배포본에 돌려도 통과였다. 이 검사만은 예전 배포본이 만족할 수 없다.
+
+### 화면 비교 설정 (`visual.config.json`)
+
+| 값               | 뜻                                                                                                                                                                                                                 |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `colorThreshold` | 두 픽셀의 색이 얼마나 달라도 같은 픽셀로 칠지(pixelmatch의 `threshold`, 0–1). **0 = 한 채널이라도 다르면 다른 픽셀.** 안티에일리어싱된 픽셀도 똑같이 센다                                                          |
+| `maxDiffRatio`   | 다른 픽셀이 전체에서 차지해도 되는 비율. 0 = 하나도 안 된다                                                                                                                                                        |
+| `measuredNoise`  | `--calibrate`가 잰, 기준선↔기준선의 다른 픽셀 비율                                                                                                                                                                 |
+| `viewports`      | 찍는 화면 크기. 사이트의 미디어 규칙(375·600·767px)이 나누는 구간마다 하나, 600px 경계에 하나: 375, 414(376–600 구간, 대부분의 휴대폰), 600(`max-width: 600px`가 걸리는 마지막 너비), 700(601–767 구간), 768, 1280 |
+
+`colorThreshold`가 0인 근거: 이 기기에서 기준선↔기준선 스크린샷은 세 번 연속 바이트까지 같다(다른 픽셀 0개). 라이브러리 기본값 0.1에서는 회색 22–28단계 차이가 "같은 색"이어서, 문장 안 코드의 옅은 배경(0.055에서야 잡힘)과 표의 줄무늬(0.025)를 꺼도 통과했다. 렌더링 노이즈가 실제로 측정될 때만 올린다. `--calibrate`는 `colorThreshold`를 건드리지 않고 그 값에서 노이즈를 잰다.
+
+600 뷰포트가 따로 있는 이유: `max-width:600px` 규칙을 `420px`로 좁힌 변화는 421–600px에서만 보인다. 414에서는 두 쪽 모두 규칙이 걸려 같다.
+
+실패 한 줄에는 비율과 함께 픽셀 수와 채널 최대 차이가 나온다: `diff 0.03% (506 px, max channel Δ31)`.
 
 ## 검사 모듈 계약
 
@@ -34,11 +94,11 @@ export default {
   async run(ctx) {
     return {
       ok: true, // 통과 여부
-      pass: 14, // 통과한 항목 수
+      pass: 14, // 통과한 항목 수. 0 이면 ok 여도 실패로 센다
       fail: 0, // 실패한 항목 수
       failed: [], // [{ route, detail }]  detail 은 한 줄로 읽히는 설명
       cells: undefined, // 선택: { "<route>": "pass" | "fail" | "skip" } (대시보드 격자)
-      extra: undefined, // 선택: 리포트 JSON에만 남길 부가 정보
+      extra: undefined, // 선택: 리포트 JSON에만 남길 부가 정보. extra.allowed 는 허용 목록으로 넘긴 항목
     };
   },
 
@@ -51,13 +111,32 @@ export default {
         apply(dir) {
           /* dir 안의 파일을 고친다 */
         },
+        // 선택: 변이가 드러나는 라우트. 배열이거나 (dir) => 배열. 주면 그 라우트만 검사해 시간을 줄인다.
+        // 명령줄의 --route 가 있으면 그쪽이 우선이다.
+        routes: ["/"],
+        // 선택: 비교 대상(기준선)의 사본도 고친다. 실제 기준선으로는 만들 수 없는 방향의 차이를 시험할 때 쓴다.
+        baseline(dir) {},
       },
     ],
+    // 선택: 차이가 아닌 변화. 변이본을 검사했을 때 이 검사가 PASS 여야 한다(지나치게 잡지 않는지).
+    accepted: [{ name: "색인을 허용하는 robots meta", apply(dir) {} }],
     // 선택: 기준선 ↔ 기준선 실행 직후에 불린다(노이즈 측정 등).
     async afterIdentical(ctx, result) {},
   },
 };
 ```
+
+## 자기 검사 (`verify:selftest`)
+
+1. 기준선 ↔ 기준선: 모든 parity 검사가 PASS. `dist/` 그대로: 모든 feature 검사가 PASS.
+2. 변이본: 변이를 선언한 검사가 FAIL(`mutation: …`), 차이가 아닌 변화에는 PASS(`accepted: …`). 아무것도 보지 않아서 난 실패는 변이를 잡은 것으로 치지 않는다.
+3. 명령 수준 시험(`cli`, `lib/cli-cases.mjs`): 명령을 실제로 돌려 본다.
+   - 없는 라우트·검사 이름·플래그·scope 는 빌드 전에 2로 거부된다(세 명령 모두).
+   - 0개를 본 검사는 통과가 아니다. 기본 scope 는 `local`이다.
+   - 내용 저장소(`data-store.json`)의 렌더 결과 하나를 고쳐 놓고 게이트를 돌려도 고친 내용이 `dist/`에 나오지 않는다. 먼저 그냥 `astro build`로는 나온다는 것을 확인하므로, 저장소 재사용이 사라지면 이 시험이 알려 준다. 끝나면 저장소와 `dist/`를 되돌린다.
+   - `verify:live --serve=.verify/baseline`은 `migrated` 하나로 실패하고, `--serve=dist`는 통과한다.
+
+`--only=cli`로 3만, `--only=<검사>`로 그 검사의 1·2만 돌린다. 브라우저 검사의 변이를 실제 브라우저에서 확인할 때는 기준선이 하이드레이션하면서 전역 규칙을 다시 쓴다는 점에 주의한다(`lib/html.mjs`의 `editPages` 주석).
 
 ## ctx
 
@@ -82,9 +161,20 @@ export default {
 
 검사를 약하게 만들지 않는다. 받아들이는 차이는 `allowlist.json`에 `{ check, item, reason }`으로 적고 `ctx.allowed()`로 확인한다. `item`이 `**`로 끝나면 접두사 일치다. 허용한 항목은 실패로 세지 않되 리포트의 `extra.allowed`에 남긴다.
 
-| 검사                                            | `item` 형식                           |
-| ----------------------------------------------- | ------------------------------------- |
-| `routes`                                        | `route:<라우트>`, `asset:<상대 경로>` |
-| `head`, `content`, `budget`, `visual`, `embeds` | `route:<라우트>`                      |
-| `links`                                         | `ref:<경로>`                          |
-| `sitemap`                                       | `loc:<URL>`, `file:/robots.txt`       |
+| 검사                                                     | `item` 형식                           |
+| -------------------------------------------------------- | ------------------------------------- |
+| `routes`                                                 | `route:<라우트>`, `asset:<상대 경로>` |
+| `head`, `content`, `budget`, `visual`, `embeds`, `hover` | `route:<라우트>`                      |
+| `links`                                                  | `ref:<경로>`                          |
+| `sitemap`                                                | `loc:<URL>`, `file:/robots.txt`       |
+| `listed`, `migrated`                                     | 허용 목록 없음                        |
+
+항목은 사유가 말하는 만큼만 받아들인다.
+
+- `sitemap`의 `loc:<URL>`은 **후보에만 있는** URL을 받아들인다. 기준선에 있던 URL이 후보에서 빠진 것은 같은 항목이 있어도 실패다.
+- `head`의 `route:<라우트>`는 그 라우트를 기준선의 같은 페이지와 비교하지 않을 뿐, head 가 없어도 된다는 뜻이 아니다. `<title>`이 비어 있지 않아야 하고, `html lang`·charset·viewport·파비콘·google-site-verification 이 기준선 **홈**의 값과 같아야 하며, `<meta http-equiv="refresh">`와 `<base>`가 없어야 한다. 후보에 라우트가 아예 없는 것은 허용되지 않는다. robots 의 `noindex`는 이 예외에 들어간다(404 페이지는 색인하지 않는다).
+- 라우트를 통째로 건너뛰는 검사(`content`, `hover`, `visual`)에서 고른 라우트가 모두 허용 목록에 있으면 그 실행은 실패다(위 "0개를 본 검사").
+
+## 배포 후 검사 (`verify:live`)
+
+`status`(기준선의 모든 라우트·자산·`sitemap.xml`·`robots.txt`가 리다이렉트 없이 200), `migrated`, `head`, `content`, `sitemap`을 HTTP로 읽어 돌린다. `--only`로 고를 수 있고 `migrated`도 기본으로 켜져 있다. 예전 배포본은 `migrated`에서만 실패한다: 새 배포가 실제로 나갔는지 이 검사가 가른다.
