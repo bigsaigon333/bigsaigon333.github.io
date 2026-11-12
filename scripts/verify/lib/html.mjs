@@ -329,6 +329,47 @@ export const mutateFile = (dir, rel, edit) => mutateFirst(dir, [rel], edit);
 export const postFiles = (dir) =>
   listFiles(dir).filter((rel) => /^posts\/[^/]+\.html$/.test(rel));
 
+/** Self-test: route of a page file of a site copy ("index.html" → "/", "posts/a.html" → "/posts/a"). */
+export const routeOfPage = (rel) =>
+  rel === "index.html" ? "/" : `/${rel.replace(/\.html$/, "")}`;
+
+/**
+ * Self-test: the routes of the first post pages of a site copy whose HTML matches `pattern`, for a mutation
+ * that only shows on such a page (`routes` of a mutation). Throws when no post matches.
+ */
+export function postRoutesWith(dir, pattern, limit = 1) {
+  const routes = postFiles(dir)
+    .filter((rel) => pattern.test(fs.readFileSync(path.join(dir, rel), "utf8")))
+    .slice(0, limit)
+    .map(routeOfPage);
+  if (routes.length === 0) throw new Error(`no post page matches ${pattern}`);
+  return routes;
+}
+
+/**
+ * Self-test: apply `pattern → replacement` to every page of a site copy. Throws when nothing matched.
+ *
+ * In a Next.js build the styled-components rules are inlined in the HTML. Hydration takes the rules of a
+ * component over from there as they are, so an edit to one of those is what the browser ends up with. It writes
+ * the global rules (a, h1, …) anew from JavaScript: an edit to one of those is undone and proves nothing.
+ */
+export function editPages(dir, pattern, replacement) {
+  let edited = 0;
+  for (const rel of listFiles(dir)) {
+    if (!rel.endsWith(".html")) continue;
+    const file = path.join(dir, rel);
+    const before = fs.readFileSync(file, "utf8");
+    const after = before.replace(pattern, replacement);
+    if (after === before) continue;
+    fs.writeFileSync(file, after);
+    edited += 1;
+  }
+  if (edited === 0)
+    throw new Error(
+      `mutation did not apply: ${pattern} not found in any page under ${dir}`,
+    );
+}
+
 /** Self-test: replace the first match of `pattern` inside <main>…</main> only. Returns the input when nothing matches. */
 export function replaceInMain(html, pattern, replacement) {
   const start = html.indexOf("<main");

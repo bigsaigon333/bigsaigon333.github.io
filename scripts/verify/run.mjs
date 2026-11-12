@@ -1,29 +1,71 @@
 // npm run verify -- [--only=head,content] [--route=/posts/x] [--static] [--no-build] [--no-check]
-//                    [--candidate=<dir>] [--stage=S1.3 --agent=SK] [--scope=integration]
+//                    [--candidate=<dir> | --candidate-url=<url>] [--selector=<css>]
+//                    [--stage=S1.3 --agent=SK] [--scope=integration]
 //
-// astro check → astro build → checks in scripts/verify/checks/*.mjs.
-// Prints one line per check; details go to .verify/report/. Exit code 0 only if everything passed.
+// astro check → astro build --force → checks in scripts/verify/checks/*.mjs.
+// Prints one line per check; details go to .verify/report/. Exit code 0 only if everything passed,
+// 1 when a check failed, 2 when the command line asks for something that does not exist.
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
 import { baselineDir, distDir, repoRoot, reportDir } from "./lib/paths.mjs";
+import { listRoutes } from "./lib/resolve.mjs";
 import {
   createContext,
   emitVerify,
+  exitWithUsage,
   formatResults,
   loadChecks,
-  parseArgs,
+  parseArgsOrExit,
   runChecks,
+  scopeOf,
+  selectChecks,
   toMatrix,
+  UsageError,
+  validateSelection,
 } from "./lib/runner.mjs";
 
-const args = parseArgs(process.argv.slice(2));
+const USAGE =
+  "usage: npm run verify -- [--only=<check,…>] [--route=<route,…>] [--static] [--no-build] [--no-check]\n" +
+  "                         [--candidate=<dir> | --candidate-url=<url>] [--selector=<css>]\n" +
+  "                         [--stage=<id>] [--agent=<id>] [--scope=local|agent|integration]";
+const args = parseArgsOrExit("run", USAGE);
 const started = performance.now();
 
 if (!fs.existsSync(path.join(baselineDir, "index.html"))) {
   console.error("baseline missing — run `npm run verify:setup` first");
   process.exit(2);
+}
+
+// Everything the command line names has to exist before anything is built: a filter that matches nothing
+// would otherwise end in a run with nothing to fail.
+let checks;
+let scope;
+try {
+  scope = scopeOf(args);
+  if (args.candidate && args.candidateUrl)
+    throw new UsageError("give at most one of --candidate and --candidate-url");
+
+  const available = await loadChecks();
+  validateSelection(args, {
+    checkNames: available.map((check) => check.name),
+    routes: listRoutes(baselineDir),
+  });
+  checks = selectChecks(available, {
+    only: args.only,
+    staticOnly: args.static,
+  });
+  // A check that was asked for by name and then left out would be one line less to read, not a failure.
+  const dropped = args.only.filter(
+    (name) => !checks.some((check) => check.name === name),
+  );
+  if (dropped.length || checks.length === 0)
+    throw new UsageError(
+      `nothing to run for ${dropped.join(", ") || "this selection"}: --static leaves out browser checks`,
+    );
+} catch (error) {
+  exitWithUsage(error, USAGE);
 }
 
 fs.mkdirSync(reportDir, { recursive: true });
@@ -58,7 +100,10 @@ const builds = !args.candidate && !args.candidateUrl && !args.noBuild;
 
 if (builds) {
   if (!args.noCheck) results.push(step("check", ["npx", "astro", "check"]));
-  results.push(step("build", ["npx", "astro", "build"]));
+  // --force: render every page from its source. A plain build takes the HTML of unchanged posts from
+  // node_modules/.astro/data-store.json, and that store does not notice a changed renderer package, so the
+  // gate could pass on pages the deploy workflow (a clean checkout, nothing stored) would render differently.
+  results.push(step("build", ["npx", "astro", "build", "--force"]));
 }
 
 const buildFailed = results.some(
@@ -71,14 +116,7 @@ const ctx = createContext({
 });
 
 try {
-  if (!buildFailed) {
-    const checks = await loadChecks({
-      only: args.only,
-      staticOnly: args.static,
-    });
-    if (checks.length === 0) console.log("(no checks matched)");
-    results.push(...(await runChecks(ctx, checks)));
-  }
+  if (!buildFailed) results.push(...(await runChecks(ctx, checks)));
 } finally {
   await ctx.close();
 }
@@ -92,9 +130,8 @@ console.log(
 );
 
 await emitVerify({
-  scope:
-    args.scope ??
-    (args.agent || process.env.PROGRESS_AGENT ? "agent" : "integration"),
+  // An ad-hoc run is "local". Only an explicit --scope=integration reaches the dashboard's integration view.
+  scope,
   args,
   results,
   matrix: toMatrix(

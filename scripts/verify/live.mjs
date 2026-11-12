@@ -1,39 +1,45 @@
-// npm run verify:live -- --base-url=<url> [--only=status,head,content,sitemap] [--route=/posts/x]
+// npm run verify:live -- --base-url=<url> [--only=status,migrated,head,content,sitemap] [--route=/posts/x]
 //                        [--stage=S3.2 --agent=…]
 // npm run verify:live -- --serve=<dir>      rehearsal: serve <dir> locally (GitHub Pages resolution) and verify that
 //
-// After a deploy: the real URLs answer like the baseline (.verify/baseline).
+// After a deploy: the real URLs answer like the baseline (.verify/baseline) and are the new build.
 //   status                   every route, /sitemap.xml, /robots.txt and every public asset of the baseline answers
 //                            200 to a GET that does not follow redirects
+//   migrated                 the pages are not the Next.js export: the deployment that is being replaced answers
+//                            like the baseline in every other respect, because it is the baseline
 //   head, content, sitemap   the same checks as `npm run verify`, reading the candidate over HTTP
-// Prints one line per check; details go to .verify/report/. Exit code 0 only if everything passed.
+// Prints one line per check; details go to .verify/report/. Exit code 0 only if everything passed,
+// 1 when a check failed, 2 when the command line asks for something that does not exist.
 import fs from "node:fs";
 import path from "node:path";
 
 import { listAssets, probe, urlPathOf } from "./lib/html.mjs";
 import { baselineDir } from "./lib/paths.mjs";
+import { listRoutes } from "./lib/resolve.mjs";
 import {
   createContext,
   emitVerify,
+  exitWithUsage,
   formatResults,
   loadChecks,
-  parseArgs,
+  parseArgsOrExit,
   runChecks,
   toMatrix,
+  UsageError,
+  validateSelection,
 } from "./lib/runner.mjs";
 import { startServer } from "./serve.mjs";
 
-const REUSED = ["head", "content", "sitemap"];
+/** Checks of `npm run verify` that also run here, all of them unless --only says otherwise. */
+const REUSED = ["migrated", "head", "content", "sitemap"];
+const USAGE =
+  "usage: npm run verify:live -- --base-url=<url> | --serve=<dir>\n" +
+  `                              [--only=status,${REUSED.join(",")}] [--route=<route,…>] [--stage=<id>] [--agent=<id>]`;
 
-const args = parseArgs(process.argv.slice(2));
+const args = parseArgsOrExit("live", USAGE);
 const started = performance.now();
 
-const usage = (message) => {
-  console.error(
-    `${message}\nusage: npm run verify:live -- --base-url=<url> | --serve=<dir>`,
-  );
-  process.exit(2);
-};
+const usage = (message) => exitWithUsage(new UsageError(message), USAGE);
 
 if (!fs.existsSync(path.join(baselineDir, "index.html"))) {
   console.error("baseline missing — run `npm run verify:setup` first");
@@ -43,6 +49,14 @@ if (!fs.existsSync(path.join(baselineDir, "index.html"))) {
 const hasValue = (value) => typeof value === "string" && value !== "";
 if (hasValue(args.baseUrl) === hasValue(args.serve))
   usage("give exactly one of --base-url=<url> and --serve=<dir>");
+try {
+  validateSelection(args, {
+    checkNames: ["status", ...REUSED],
+    routes: listRoutes(baselineDir),
+  });
+} catch (error) {
+  exitWithUsage(error, USAGE);
+}
 
 let server = null;
 let baseUrl;
@@ -123,19 +137,29 @@ ctx.html = async (side, route) => {
   }
 };
 
-const wanted = args.only ?? [];
+const wanted = args.only;
 const reused = wanted.length
   ? REUSED.filter((name) => wanted.includes(name))
   : REUSED;
+const loaded = reused.length ? await loadChecks({ only: reused }) : []; // an empty `only` would mean "every check"
+const missing = reused.filter(
+  (name) => !loaded.some((check) => check.name === name),
+);
+if (missing.length) {
+  // A check that has gone missing must not turn into a shorter list of passes.
+  console.error(
+    `no such check module: ${missing.join(", ")} (scripts/verify/checks)`,
+  );
+  process.exit(2);
+}
 const checks = [
   ...(wanted.length === 0 || wanted.includes("status") ? [status] : []),
-  // An empty `only` would mean "every check" to loadChecks.
-  ...(reused.length ? await loadChecks({ only: reused }) : []),
+  // In the order of REUSED, not of the file names.
+  ...reused.map((name) => loaded.find((check) => check.name === name)),
 ];
 
 let results = [];
 try {
-  if (checks.length === 0) console.log("(no checks matched)");
   results = await runChecks(ctx, checks);
 } finally {
   await ctx.close();

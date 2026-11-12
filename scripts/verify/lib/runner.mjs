@@ -18,27 +18,130 @@ import {
 } from "./paths.mjs";
 import { listRoutes, resolve } from "./resolve.mjs";
 
-export function parseArgs(argv) {
-  const args = {
-    only: [],
-    route: [],
-    static: false,
-    noBuild: false,
-    noCheck: false,
-  };
+/** A command line that cannot be run as written. The scripts print the message and exit with status 2. */
+export class UsageError extends Error {}
+
+// "flag": present or not, no value. "value": --name=<text>. "list": --name=a,b (may be repeated).
+const SHARED_FLAGS = {
+  only: "list",
+  route: "list",
+  stage: "value",
+  agent: "value",
+};
+
+/** Every flag each command understands. Anything else is a mistake, not something to ignore. */
+export const FLAGS = {
+  run: {
+    ...SHARED_FLAGS,
+    static: "flag",
+    "no-build": "flag",
+    "no-check": "flag",
+    candidate: "value",
+    "candidate-url": "value",
+    scope: "value",
+    selector: "value",
+  },
+  selftest: { ...SHARED_FLAGS, static: "flag", calibrate: "flag" },
+  live: { ...SHARED_FLAGS, "base-url": "value", serve: "value" },
+};
+
+const camel = (name) => name.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+
+/**
+ * `--no-build` → args.noBuild, `--only=a,b` → args.only = ["a", "b"]. Throws a UsageError for an argument that is
+ * not one of `flags`, for a flag given a value and for a value flag given none.
+ */
+export function parseArgs(argv, flags = FLAGS.run) {
+  const args = {};
+  for (const [name, kind] of Object.entries(flags)) {
+    if (kind === "flag") args[camel(name)] = false;
+    if (kind === "list") args[camel(name)] = [];
+  }
+
+  const known = Object.keys(flags)
+    .map((name) => `--${name}`)
+    .join(" ");
   for (const raw of argv) {
-    const [key, ...rest] = raw.replace(/^--/, "").split("=");
-    const value = rest.join("=");
-    if (key === "only" || key === "route")
-      args[key] = value.split(",").filter(Boolean);
-    else if (key === "static") args.static = true;
-    else if (key === "no-build") args.noBuild = true;
-    else if (key === "no-check") args.noCheck = true;
-    else
-      args[key.replace(/-([a-z])/g, (_, c) => c.toUpperCase())] =
-        value === "" ? true : value;
+    const at = raw.indexOf("=");
+    const name = raw.slice(2, at === -1 ? undefined : at);
+    const value = at === -1 ? null : raw.slice(at + 1);
+    const kind = raw.startsWith("--") ? flags[name] : undefined;
+
+    if (!kind)
+      throw new UsageError(`unknown argument: ${raw}\nknown flags: ${known}`);
+    if (kind === "flag") {
+      if (value !== null) throw new UsageError(`--${name} takes no value`);
+      args[camel(name)] = true;
+    } else if (value === null || value.trim() === "") {
+      throw new UsageError(`--${name} needs a value: --${name}=<…>`);
+    } else if (kind === "list") {
+      args[camel(name)].push(
+        ...value
+          .split(",")
+          .map((item) => item.trim())
+          .filter(Boolean),
+      );
+    } else args[camel(name)] = value;
   }
   return args;
+}
+
+/**
+ * A filter that matches nothing would leave nothing to fail. Throws a UsageError when --only names a check that
+ * does not exist or --route a route the baseline does not have.
+ */
+export function validateSelection(args, { checkNames, routes }) {
+  const unknownChecks = args.only.filter((name) => !checkNames.includes(name));
+  if (unknownChecks.length)
+    throw new UsageError(
+      `no such check: ${unknownChecks.join(", ")}\navailable: ${checkNames.join(", ")}`,
+    );
+
+  const unknownRoutes = args.route.filter((route) => !routes.includes(route));
+  if (unknownRoutes.length) {
+    const spelled = unknownRoutes.map((route) => {
+      const guess = `/${route}`
+        .replace(/\/{2,}/g, "/")
+        .replace(/\.html$/, "")
+        .replace(/(?<=.)\/$/, "");
+      return routes.includes(guess)
+        ? `${route} (did you mean ${guess}?)`
+        : route;
+    });
+    throw new UsageError(
+      `no such route: ${spelled.join(", ")}\nroutes are written as the baseline serves them: ${routes.slice(0, 3).join(", ")}, …`,
+    );
+  }
+}
+
+/** Where the dashboard files a run of `npm run verify`. "integration" is the view everybody reads: it is never a default. */
+export const SCOPES = ["local", "agent", "integration"];
+
+export function scopeOf(args, env = process.env) {
+  if (args.scope !== undefined) {
+    if (!SCOPES.includes(args.scope))
+      throw new UsageError(
+        `no such scope: ${args.scope}\navailable: ${SCOPES.join(", ")}`,
+      );
+    return args.scope;
+  }
+  return args.agent || env.PROGRESS_AGENT ? "agent" : "local";
+}
+
+/** Parse the command line of `command` or print what is wrong with it, followed by `usage`, and exit with 2. */
+export function parseArgsOrExit(command, usage) {
+  try {
+    return parseArgs(process.argv.slice(2), FLAGS[command]);
+  } catch (error) {
+    exitWithUsage(error, usage);
+  }
+}
+
+/** Print a UsageError and `usage` and exit with 2. Any other error is rethrown. */
+export function exitWithUsage(error, usage) {
+  if (!(error instanceof UsageError)) throw error;
+  console.error(`${error.message}\n${usage}`);
+  process.exit(2);
 }
 
 function loadAllowlist() {
@@ -159,6 +262,15 @@ export function createContext({
   return ctx;
 }
 
+/** `checks` narrowed by --only and --static. */
+export const selectChecks = (checks, { only = [], staticOnly = false } = {}) =>
+  checks.filter(
+    (check) =>
+      (only.length === 0 || only.includes(check.name)) &&
+      (!staticOnly || check.kind === "static"),
+  );
+
+/** Every check module of scripts/verify/checks, narrowed by `only` and `staticOnly`. */
 export async function loadChecks({ only = [], staticOnly = false } = {}) {
   if (!fs.existsSync(checksDir)) return [];
   const files = fs
@@ -175,11 +287,21 @@ export async function loadChecks({ only = [], staticOnly = false } = {}) {
         `${file}: default export must be { name, kind, run(ctx) }`,
       );
     }
-    if (only.length && !only.includes(check.name)) continue;
-    if (staticOnly && check.kind !== "static") continue;
     checks.push(check);
   }
-  return checks;
+  return selectChecks(checks, { only, staticOnly });
+}
+
+/** Why a check that reported success is not one: it had nothing to look at. Short: it has to fit a result line. */
+function nothingExamined(ctx, result) {
+  const allowed = (result.extra?.allowed ?? []).map((entry) => entry.item);
+  const why =
+    ctx.routes.length === 0
+      ? "no route is selected"
+      : allowed.length
+        ? `all it was given is allowlisted (${allowed.slice(0, 3).join(", ")}${allowed.length > 3 ? ", …" : ""}) — widen --route or narrow --only`
+        : "the check found nothing to compare";
+  return `nothing was examined: ${why}`;
 }
 
 export async function runChecks(ctx, checks) {
@@ -199,14 +321,26 @@ export async function runChecks(ctx, checks) {
         ],
       };
     }
-    const failed = result.failed ?? [];
+    const failed = [...(result.failed ?? [])];
+    let ok = Boolean(result.ok);
+    let fail = result.fail ?? failed.length;
+    const pass = result.pass ?? 0;
+    // "0 of 0" is a filter that matched nothing or a route that is exempt, not a verified page.
+    const vacuous = ok && pass === 0;
+    if (vacuous) {
+      ok = false;
+      fail += 1;
+      failed.push({ route: "-", detail: nothingExamined(ctx, result) });
+    }
     const normalized = {
       check: check.name,
       kind: check.kind,
-      ok: Boolean(result.ok),
-      pass: result.pass ?? 0,
-      fail: result.fail ?? failed.length,
+      ok,
+      pass,
+      fail,
       failed,
+      // Failed for having looked at nothing. The self-test must not take this for a noticed mutation.
+      vacuous,
       cells: result.cells ?? null,
       durationMs: Math.round(performance.now() - started),
     };
@@ -257,6 +391,8 @@ export function toMatrix(ctx, results) {
 
 /** Record a verify event for the progress dashboard. Never throws. */
 export async function emitVerify({ scope, args, results, matrix, durationMs }) {
+  // The self-test runs these commands itself to test them; those runs are not news for the dashboard.
+  if (process.env.VERIFY_EMIT === "0") return;
   try {
     // Always the main checkout's emitter, so every worktree writes to the same log.
     const { emit } = await import(
