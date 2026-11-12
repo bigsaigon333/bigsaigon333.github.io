@@ -132,6 +132,9 @@ FAIL  build     0/1  -: [InvalidContentEntryDataError] posts → foo data does n
 | `embeds`  | browser | parity  | 비교    | GA 로더·측정 ID와 **`dataLayer` 항목 전체**(순서, 인자, `Date`는 `<Date>`로), utterances 스크립트의 속성과 **자리**(부모·앞·뒤 요소의 태그 이름)                                           |
 | `hover`   | browser | parity  | 비교    | 링크와 `<summary>`에 포인터를 올렸을 때의 계산된 스타일                                                                                                                                    |
 | `visual`  | browser | parity  | 비교    | 전체 페이지 스크린샷, 라우트 × 뷰포트                                                                                                                                                      |
+| `a11y`    | browser | parity  | 비교    | axe-core(WCAG 2.1 A·AA)로 1280 뷰포트에서 라우트마다 위반(규칙 id + 대상 선택자)을 모아, 기준선에 없는 위반이 후보에 있으면 실패                                                           |
+
+`a11y`가 있는 이유: 접근성은 "회귀 금지"다. 기준선에 이미 있는 위반은 출발점으로 두고, 새로 생긴 위반만 실패로 친다. `.verify/report/a11y.json`의 `extra.baselineRules`에 기준선의 규칙별 위반 수(절대값)를, `extra.routes`에 라우트별 양쪽 위반 목록과 새 위반을 남긴다. 외부 요청은 `visual`과 같이 막거나 기록본으로 답한다. Lighthouse는 쓰지 않는다: 점수가 실행마다 흔들려 기준선과의 결정적 비교가 안 되고, 접근성 항목은 같은 axe-core 규칙의 부분집합이다.
 
 `listed`가 있는 이유: `sitemap`은 기준선과 비교할 뿐이라, 기준선의 sitemap이 글 하나를 빠뜨렸다면 후보도 빠뜨려야 통과한다. 새 sitemap이 모든 글을 싣는다는 것은 후보만 보고 따로 단언한다.
 
