@@ -1,5 +1,5 @@
-import { defineCollection } from "astro:content";
-import { glob } from "astro/loaders";
+import { defineCollection, reference } from "astro:content";
+import { file, glob } from "astro/loaders";
 import { z } from "astro/zod";
 
 // id = 파일 이름에서 .md(또는 .mdx) 를 뗀 것. 기본 구현(github-slugger)은 대소문자와 기호를 바꾼다.
@@ -78,4 +78,18 @@ const drafts = defineCollection({
     })),
 });
 
-export const collections = { posts, drafts };
+/**
+ * 연재 글 묶음. src/content/series.json 의 배열 항목 하나가 시리즈 하나다(file() 로더는 id 를 만들지 않아 항목마다 id 가 있다).
+ * posts 는 읽는 순서대로 적은 글 id 이고, reference("posts") 가 { collection: "posts", id } 로 바꾼다.
+ * reference() 는 대상 글이 있는지 보지 않는다. 없는 글을 적으면 lib/series.ts 가 빌드를 멈춘다.
+ */
+const series = defineCollection({
+  loader: file("src/content/series.json"),
+  schema: z.strictObject({
+    id: z.string(),
+    name: z.string(),
+    posts: z.array(reference("posts")).min(2),
+  }),
+});
+
+export const collections = { posts, drafts, series };

@@ -1,0 +1,37 @@
+{
+  "baseline": "fe19427f9446e285e8c524f3f089854e00c3af1b42f908ad59bf03f8b6adb2d0",
+  "reason": "S5.2: css-masters-2 1~4주차 글의 본문 아래에 시리즈 탐색(시리즈: css-masters-2 (n/4), 이전/다음 글)을 더한다",
+  "entries": [
+    {
+      "check": "embeds",
+      "routes": [
+        "/posts/css-masters-2-week1",
+        "/posts/css-masters-2-week2",
+        "/posts/css-masters-2-week3",
+        "/posts/css-masters-2-week4"
+      ],
+      "reason": "utterances <script> 의 속성·부모·다음 요소는 같고 앞 요소만 main → nav(시리즈 탐색)로 바뀐다. 이음매 커밋이 SeriesNav 를 main 과 Comments 사이에 두었다"
+    },
+    {
+      "check": "hover",
+      "routes": [
+        "/posts/css-masters-2-week1",
+        "/posts/css-masters-2-week2",
+        "/posts/css-masters-2-week3",
+        "/posts/css-masters-2-week4"
+      ],
+      "reason": "시리즈 탐색의 이전/다음 링크(새 링크)만 뺀다. 나머지 링크의 hover 스타일은 같아야 한다",
+      "mask": ["nav.series"]
+    },
+    {
+      "check": "visual",
+      "routes": [
+        "/posts/css-masters-2-week1",
+        "/posts/css-masters-2-week2",
+        "/posts/css-masters-2-week3",
+        "/posts/css-masters-2-week4"
+      ],
+      "reason": "본문 아래에 시리즈 탐색이 더해져 페이지 높이가 늘어난다(+178px 안팎). 높이가 달라 mask 로는 비교할 수 없다. 다른 10개 라우트는 그대로 같아야 한다"
+    }
+  ]
+}
