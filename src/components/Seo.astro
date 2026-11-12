@@ -1,0 +1,14 @@
+---
+// 스텁: <title> 만 낸다. S1.2 에서 description, canonical, og:*, twitter:* 를 채운다.
+export interface Props {
+  title: string;
+  description: string;
+  url: string;
+  type: "website" | "article";
+  keywords: string[];
+}
+
+const { title } = Astro.props;
+---
+
+<title>{title}</title>

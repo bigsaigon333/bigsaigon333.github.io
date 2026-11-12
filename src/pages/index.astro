@@ -1,0 +1,19 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { SITE } from "../lib/site";
+---
+
+<BaseLayout
+  seo={{
+    title: SITE.title,
+    description: SITE.description,
+    url: SITE.url,
+    type: "website",
+    keywords: SITE.keywords,
+  }}
+  home
+>
+  <section>
+    <p>{SITE.description}</p>
+  </section>
+</BaseLayout>
