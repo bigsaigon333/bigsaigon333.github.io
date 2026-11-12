@@ -22,3 +22,34 @@ const { title, date, href } = Astro.props;
   )}
   <time datetime={date.toISOString()}>{formatDate(date)}</time>
 </article>
+
+<style>
+  /* pages/index.style.ts 의 Article */
+  article h2 {
+    font-size: 2.5rem;
+    margin: 0 0 0.5rem;
+    font-weight: 800;
+  }
+
+  @media (max-width: 600px) {
+    article h2 {
+      font-size: 2rem;
+    }
+  }
+
+  @media (max-width: 375px) {
+    article h2 {
+      font-size: 1.5rem;
+    }
+  }
+
+  article time {
+    font-size: 1rem;
+  }
+
+  /* 배포본에서도 맞는 요소가 없는 규칙이다(article 안에 p 가 없다). 그대로 옮겼다. */
+  article p {
+    font-size: 1.25rem;
+    line-height: 1.75rem;
+  }
+</style>

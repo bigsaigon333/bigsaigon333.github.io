@@ -23,3 +23,19 @@ const posts = await getPublishedPosts();
     ))}
   </section>
 </BaseLayout>
+
+<style>
+  /* pages/index.style.ts 의 Section */
+  section {
+    width: 100%;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    row-gap: 2rem;
+  }
+
+  /* 링크는 PostHeader 가 그린다. 자식 컴포넌트 안의 요소에는 스코프가 닿지 않아 :global() 로 연다. */
+  section :global(a:hover) {
+    text-decoration: underline;
+  }
+</style>

@@ -1,4 +1,8 @@
 ---
+// 전역 스타일. import 한 CSS 는 스코프가 붙지 않고, 이 레이아웃을 쓰는 모든 페이지에 실린다.
+// 맨 먼저 import 해서 묶음 안에서 Header·Footer 의 스타일보다 앞에 오게 한다.
+import "../styles/global.css";
+
 import Analytics from "../components/Analytics.astro";
 import Footer from "../components/Footer.astro";
 import HeadAssets from "../components/HeadAssets.astro";
@@ -36,3 +40,25 @@ const { seo, home = false } = Astro.props;
     </div>
   </body>
 </html>
+
+<style>
+  /* components/layout.style.ts 의 Body */
+  .layout {
+    min-height: 100vh;
+    padding: 3rem 2rem 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    row-gap: 2rem;
+    max-width: 768px;
+    margin: auto;
+  }
+
+  @media (max-width: 600px) {
+    .layout {
+      padding: 2rem 1rem 0;
+    }
+  }
+</style>
