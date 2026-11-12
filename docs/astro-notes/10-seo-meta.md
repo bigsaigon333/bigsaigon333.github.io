@@ -2,7 +2,7 @@
 
 ## 한 줄 요약
 
-배포본과 같은 head 태그 18개(05)는 값 하나 건드리지 않고, `src/components/Seo.astro`에 robots, Open Graph 보강, `article:*`, sitemap 링크, generator, JSON-LD를 더했다. 홈의 head 태그는 18 → 28개에 JSON-LD 하나가 붙었고, 새 기능 검사 `seo`가 14개 라우트에서 이 태그들이 서로 어긋나지 않는지 본다(`seo 14/14`, `head 13/13` 그대로).
+배포본과 같은 head 태그 18개(05)는 값 하나 건드리지 않고, `src/components/Seo.astro`에 robots, Open Graph 보강, `article:*`, sitemap 링크, generator, JSON-LD를 더했다. 홈의 head 태그는 18 → 28개에 JSON-LD 하나가 붙었고, 새 기능 검사 `seo`가 14개 라우트에서 이 태그들이 서로 어긋나지 않는지 본다(`seo 14/14`. 배포본과 대조하는 `head`는 그대로 통과하고, 지금은 `/404`의 필수 태그까지 세어 `14/14`다).
 
 ## 개념
 
@@ -22,13 +22,13 @@
 - **없는 값은 키째로 뺀다.** 템플릿에서는 `{isArticle && published && (<meta … />)}`와 `keywords.map(…)`, JSON-LD에서는 `description: description || undefined`(`JSON.stringify`가 `undefined`인 키를 버린다).
 - **`set:html`은 이스케이프하지 않는다.** `<script is:inline type="application/ld+json" set:html={jsonLd} />`의 `jsonLd`는 `JSON.stringify(…).replace(/</g, "\\u003c")`다. 제목에 `</script>`가 있어도 스크립트가 거기서 끝나지 않고, `JSON.parse` 하면 원래 문자로 돌아온다.
 - **`Astro.generator`** 는 `"Astro v7.4.11"` 같은 문자열이다. 템플릿의 `<!-- -->` 주석은 출력에 실리므로 설명은 펜스 안에 적는다.
-- **대조 검사와 기능 검사.** `head`(대조)는 기준선에 있는 필드를 새 빌드의 같은 필드와 비교한다. 기준선에 없던 태그는 보지 않으므로 새 태그에 무엇을 적어도 통과한다. `seo`(`scope: "feature"`)는 기준선을 읽지 않고 **새 빌드 안의 두 값을 서로** 비교한다: `og:title` = `<title>`, `og:url` = canonical, `article:published_time` = `<time datetime>`, JSON-LD `headline` = `<title>`, `og:image:width` = 이미지 파일 헤더에서 읽은 폭. 자체 검증도 다르다. 대조 검사는 "기준선 ↔ 기준선은 통과, 변이한 기준선은 실패", 기능 검사는 "`dist/`는 통과, 변이한 `dist/` 사본은 실패"다.
+- **대조 검사와 기능 검사.** `head`(대조)는 기준선에 있는 필드를 새 빌드의 같은 필드와 비교한다. 기준선에 없던 태그는 거의 보지 않으므로 새 태그에 무엇을 적어도 대개 통과한다. 예외는 페이지를 검색에서 빼거나 다른 곳으로 보내는 태그뿐이다(robots의 `noindex`·`nofollow`·`none`, `<meta http-equiv="refresh">`, `<base>`. H1에서 더했다). `seo`(`scope: "feature"`)는 기준선을 읽지 않고 **새 빌드 안의 두 값을 서로** 비교한다: `og:title` = `<title>`, `og:url` = canonical, `article:published_time` = `<time datetime>`, JSON-LD `headline` = `<title>`, `og:image:width` = 이미지 파일 헤더에서 읽은 폭. 자체 검증도 다르다. 대조 검사는 "기준선 ↔ 기준선은 통과, 변이한 기준선은 실패", 기능 검사는 "`dist/`는 통과, 변이한 `dist/` 사본은 실패"다.
 
 ## Next.js 대응
 
 | 예전 (`git show main:<경로>`)                                                                     | 지금                                                                                       |
 | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `pages/index.page.tsx`, `pages/posts/[id].page.tsx`의 `<Head>` 메타 15줄. robots도 JSON-LD도 없다 | `src/components/Seo.astro`: 같은 15줄 + 새 태그. 페이지는 `seo={{ … }}`에 값만 넘긴다      |
+| `pages/index.page.tsx`, `pages/posts/[id].page.tsx`의 `<Head>` 태그 14개. robots도 JSON-LD도 없다 | `src/components/Seo.astro`: 같은 14개 + 새 태그. 페이지는 `seo={{ … }}`에 값만 넘긴다      |
 | 날짜는 `<time dateTime={date.toISOString()}>`에만 있었다                                          | `[id].astro`의 `publishedTime: date` → `article:published_time`, `datePublished`           |
 | Next 기본 404 화면: head에 robots 메타가 없다(`.verify/baseline/404.html`)                        | `src/pages/404.astro`의 `noindex: true` → `<meta name="robots" content="noindex, follow">` |
 | (썼다면) `<script type="application/ld+json" dangerouslySetInnerHTML={{ __html: … }} />`          | `<script is:inline type="application/ld+json" set:html={jsonLd} />`                        |
@@ -53,11 +53,11 @@
 ## 직접 해볼 실험
 
 1. `src/lib/site.ts`의 `ogImageWidth: 380`을 `1200`으로 바꾸고 `npm run -s verify -- --only=head,seo`.
-   <details><summary>예상 결과</summary>`PASS head 13/13`, `FAIL seo 0/14  /: og:image:width: 1200, but /main-og-image.jpg is 380x240 | …`. `head`는 기준선에 없던 태그를 보지 않고, `seo`는 `dist/main-og-image.jpg`의 헤더를 읽어 대조한다.</details>
+   <details><summary>예상 결과</summary>`PASS head 14/14`, `FAIL seo 0/14  /: og:image:width: 1200, but /main-og-image.jpg is 380x240 | …`. `head`는 기준선에 없던 `og:image:width`를 보지 않고, `seo`는 `dist/main-og-image.jpg`의 헤더를 읽어 대조한다.</details>
 2. `src/pages/posts/[id].astro`에서 `publishedTime: date,` 줄을 지우고 같은 명령.
-   <details><summary>예상 결과</summary>`check`, `build`, `head 13/13`은 PASS다(선택 prop이라 타입 오류가 아니다). `FAIL seo 2/14  /posts/css-masters-2-week1: article:published_time: missing | … (+9 more)`. JSON-LD에서도 키가 빠진다: `grep -c datePublished dist/posts/css-masters-2-week1.html` → 0.</details>
+   <details><summary>예상 결과</summary>`check`, `build`, `head 14/14`는 PASS다(선택 prop이라 타입 오류가 아니다). `FAIL seo 2/14  /posts/css-masters-2-week1: article:published_time: missing | … (+9 more)`. JSON-LD에서도 키가 빠진다: `grep -c datePublished dist/posts/css-masters-2-week1.html` → 0.</details>
 3. `src/lib/site.ts`의 `description`을 `"</script><b>프론트엔드</b>"`로 바꾸고 `npm run -s verify -- --only=seo --no-check`, `grep -o '"description":"[^"]*"' dist/index.html`. 이어서 `Seo.astro`의 `.replace(/</g, "\\u003c")`를 지우고 두 명령을 다시.
-   <details><summary>예상 결과</summary>처음에는 `PASS seo 14/14`이고 `"description":"\u003c/script>\u003cb>프론트엔드\u003c/b>"`다. 이스케이프를 지우면 `"description":"</script><b>프론트엔드</b>"`가 그대로 나가고 `FAIL seo 13/14  /: JSON-LD #1 does not parse: Unterminated string in JSON at position 125`다. HTML 파서가 첫 `</script>`에서 스크립트를 끝내고 나머지 `<b>프론트엔드</b>","inLanguage":…`를 HTML로 읽는다.</details>
+   <details><summary>예상 결과</summary>처음에는 `PASS seo 14/14`이고 `"description":"\u003c/script>\u003cb>프론트엔드\u003c/b>"`다. 이스케이프를 지우면 `"description":"</script><b>프론트엔드</b>"`가 그대로 나가고 `FAIL seo 13/14  /: JSON-LD #1 does not parse: Unterminated string in JSON at position 125 (line 1 column 126)`이다. HTML 파서가 첫 `</script>`에서 스크립트를 끝내고 나머지 `<b>프론트엔드</b>","inLanguage":…`를 HTML로 읽는다.</details>
 
 ## 문서 근거
 

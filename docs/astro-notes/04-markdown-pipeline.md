@@ -50,9 +50,9 @@
 끝나면 매번 `git checkout config/markdown.mjs`로 되돌린다.
 
 1. 기본 엔진(Sätteri)으로 빌드하기: `echo 'export default {};' > config/markdown.mjs` 후 `npm run -s verify -- --only=content --no-check`.
-   <details><summary>예상 결과</summary>`FAIL content 8/13`. 실패한 글은 `css-masters-2-week1`, `how-to-check-two-types-are-equal-in-ts`, `react-scripts-react-app-polyfill-promise-any`, `regular-expression-1`, `ts-ambient-type-declaration`. `grep -o astro-code dist/posts/*.html | wc -l` → 71(코드 블록이 전부 Shiki의 `<pre class="astro-code github-dark" style="background-color:#24292e;…">`), `grep -o 'class="katex"' dist/posts/*.html | wc -l` → 0, `hljs` 클래스도 0.</details>
+   <details><summary>예상 결과</summary>`FAIL content 8/13`. 실패한 글은 `css-masters-2-week1`, `how-to-check-two-types-are-equal-in-ts`, `react-scripts-react-app-polyfill-promise-any`, `regular-expression-1`, `ts-ambient-type-declaration`. `grep -o astro-code dist/posts/*.html | wc -l` → 71(코드 블록이 전부 Shiki의 `<pre class="astro-code github-dark" style="background-color:#24292e;…">`), `grep -o 'class="katex"' dist/posts/*.html | wc -l` → 0, `grep -o 'class="hljs' dist/posts/*.html | wc -l`도 0(그냥 `hljs`를 세면 글 페이지에 실린 monokai CSS의 선택자까지 센다).</details>
 2. `detect: true, `를 지우고 같은 명령을 돌린 뒤 `grep -c 'hljs language-javascript' dist/posts/proxy-to-built-in-objects.html`.
-   <details><summary>예상 결과</summary>`PASS content 13/13`인데 grep은 0이다(지금은 1). 그 블록은 `<pre><code>Uncaught TypeError…`로 나온다. 텍스트만 보는 검사로는 색이 빠진 것을 알 수 없다.</details>
+   <details><summary>예상 결과</summary>`PASS content 13/13`인데 grep은 0이다(지금은 1). 그 블록은 `<pre><code>Uncaught TypeError…`로 나온다. 텍스트만 보는 검사로는 색이 빠진 것을 알 수 없다. `--only=visual --route=/posts/proxy-to-built-in-objects`로 돌리면 `FAIL visual 0/6`(페이지 높이 -27)이다.</details>
 3. `{ detect: true, languages }`를 `{ detect: true }`로 바꾸고 같은 명령을 돌린 뒤 `grep -o 'hljs-title function_">assertIsString' dist/posts/react-programming-ch09.html | wc -l`.
    <details><summary>예상 결과</summary>`PASS content 13/13`, grep은 4(지금과 배포본은 3). 새 문법은 `const assertIsString (val: any) => …` 줄의 `assertIsString`을 함수 이름으로 더 잡고, `function assertIsString(val: any)`의 `val`과 `function yell(str: any)`의 `str`에 `hljs-attr`를 붙인다.</details>
 

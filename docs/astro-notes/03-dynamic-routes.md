@@ -12,7 +12,7 @@
 - **`render(post)`**: 엔트리의 Markdown을 컴포넌트로 돌려준다(`{ Content, headings }`). HTML은 이미 `Syncing content` 단계에서 만들어져 스토어에 있고, `<Content />`는 그것을 그 자리에 넣는다. `dangerouslySetInnerHTML`이 필요 없다.
 - **`build.format: "file"`의 함정**: 이 페이지 안에서 `Astro.url.pathname`은 `/posts/<id>.html`이다. 그래서 canonical로 쓸 주소는 `postUrl(post.id)`(`src/lib/posts.ts`)로 id에서 조립한다.
 - **`<title>`은 글 제목 그대로다.** utterances가 `issue-term="title"`로 댓글 이슈를 찾으므로 사이트 이름 같은 것을 붙이면 기존 댓글이 사라진다.
-- 지금 본문은 Astro 기본 엔진(Sätteri + Shiki)의 결과다. 배포본과 맞추는 것은 S2.2의 일이다.
+- 본문 HTML은 `config/markdown.mjs`가 설정한 unified 체인(remark-math, rehype-katex, rehype-highlight, 04)이 만든다. `render()`는 그 결과를 꺼내 줄 뿐이다.
 
 ## Next.js 대응
 
@@ -22,17 +22,17 @@
 | `getStaticPaths` → `{ paths: getAllPostIds(), fallback: false }`        | `getStaticPaths` → `posts.map((post) => ({ params: { id: post.id }, props: { post } }))` |
 | `getStaticProps({ params })` → `getPostData(params.id)`                 | 없다. `props`로 이미 받았다                                                              |
 | `getPostData`의 unified 체인(`remarkParse` … `rehypeStringify`)         | `render(post)` + `config/markdown.mjs`                                                   |
-| `<Main dangerouslySetInnerHTML={{ __html: contentHtml }} />`            | `<main><Content /></main>`                                                               |
+| `<Main dangerouslySetInnerHTML={{ __html: contentHtml }} />`            | `<main class="prose"><Content /></main>`                                                 |
 | `<Article><h2>…</h2><time …></Article>` (styled-components)             | `src/components/PostHeader.astro`                                                        |
-| `useEffect`로 `<div ref>`를 utterances 스크립트로 교체                  | 스텁 `src/components/Comments.astro` (S2.4)                                              |
+| `useEffect`로 `<div ref>`를 utterances 스크립트로 교체                  | `src/components/Comments.astro`의 정적 `<script is:inline>` (07)                         |
 | `` const url = `https://bigsaigon333.github.io/posts/${id}` ``          | `postUrl(post.id)`                                                                       |
 
 ## 빌드 결과물에서 확인하기
 
 - `ls dist/posts` → `.html` 12개. 빌드 로그의 `generating static routes`에 `/posts/<id>.html`이 날짜 내림차순(`getPublishedPosts()`의 순서)으로 찍힌다.
-- `dist/posts/ts-ambient-type-declaration.html`: `<body><article><h2>Ambient Type Declaration</h2><time datetime="2022-05-07T00:00:00.000Z">2022-05-07</time></article><main><p>…`. `<title>`, `article h2`, `time`이 배포본 `.verify/baseline/posts/` 12개와 모두 같다.
-- 배포본과 아직 다른 곳(본문): 제목에 `id`가 붙고(`<h2 id="i-앰비언트-타입-선언">`), 코드 블록이 `<pre class="astro-code github-dark" style="…">`다. 배포본은 `<h2>`와 `<pre>`다.
-- 이 단계에서도 `dist/`에 JS와 CSS 파일은 없다.
+- `dist/posts/ts-ambient-type-declaration.html`: `…</header><article …><h2 …>Ambient Type Declaration</h2><time datetime="2022-05-07T00:00:00.000Z" …>2022-05-07</time></article><main class="prose"><p>…`(`…`는 `data-astro-cid-…` 속성). `<title>`, `article h2`, `time`이 배포본 `.verify/baseline/posts/` 12개와 모두 같다.
+- 배포본과 다른 곳은 본문 제목의 `id`뿐이다(`<h2 id="i-앰비언트-타입-선언">`, 배포본은 `<h2>`). 코드 블록은 배포본과 같은 `<pre><code class="hljs language-ts">`다(04).
+- `dist/`에 Astro가 묶어 낸 JS·CSS 파일(`_astro/`)은 없다.
 
 ## 닫힌 고리가 잡아낸 것
 
@@ -43,13 +43,13 @@
 ## 직접 해볼 실험
 
 1. `[id].astro`의 `<Comments />` 위에 `<pre>{Astro.url.pathname} / {Astro.params.id}</pre>`를 넣고 빌드한 뒤 `dist/posts/regular-expression-1.html`의 끝부분을 본다.
-   <details><summary>예상 결과</summary>`/posts/regular-expression-1.html / regular-expression-1`. `astro.config.mjs`에서 `build.format`을 지우면 `/posts/regular-expression-1`로 바뀐다.</details>
+   <details><summary>예상 결과</summary>`/posts/regular-expression-1.html / regular-expression-1`. `astro.config.mjs`에서 `build.format`을 지우면 `/posts/regular-expression-1`로 바뀐다(파일은 `dist/posts/regular-expression-1/index.html`).</details>
 2. `getStaticPaths`의 `posts.map(`을 `posts.slice(0, 3).map(`으로 바꾸고 빌드한다.
-   <details><summary>예상 결과</summary>`5 page(s) built`. `dist/posts`에 최신 글 3개만 남는다. 홈은 여전히 12개를 링크하므로 나머지 9개는 깨진 링크가 된다. 경로 목록과 링크 목록은 따로 관리된다는 뜻이다.</details>
-3. `const { Content } = await render(post);`를 `const { Content, headings } = …`로 바꾸고 `<pre>{JSON.stringify(headings, null, 2)}</pre>`를 찍는다.
-   <details><summary>예상 결과</summary>`{ depth, slug, text }` 배열이 나온다. 예: `{"depth":2,"slug":"i-앰비언트-타입-선언","text":"I. 앰비언트 타입 선언"}`. S5.3의 목차가 이것으로 만들어진다.</details>
+   <details><summary>예상 결과</summary>`5 page(s) built`(엔드포인트 `/sitemap.xml`은 세지 않는다). `dist/posts`에 최신 글 3개만 남는다. 홈과 `sitemap.xml`은 여전히 12개를 실으므로 나머지 9개는 깨진 링크가 된다. 경로 목록과 링크 목록은 따로 관리된다는 뜻이다.</details>
+3. `const { Content } = await render(post);`를 `const { Content, headings } = …`로 바꾸고 `<Comments />` 위에 `<pre>{JSON.stringify(headings, null, 2)}</pre>`를 찍은 뒤 `dist/posts/ts-ambient-type-declaration.html`의 끝부분을 본다.
+   <details><summary>예상 결과</summary>`{ depth, slug, text }` 배열이 나온다. 예: `{"depth": 2, "slug": "i-앰비언트-타입-선언", "text": "I. 앰비언트 타입 선언"}`. 파일 안에서는 `"`가 `&quot;`로 이스케이프되어 있다(`{…}` 표현식은 HTML 이스케이프된다). S5.3(계획)의 목차를 이것으로 만든다.</details>
 4. `[id].astro`에서 `getStaticPaths`를 통째로 지우고 빌드한다.
-   <details><summary>예상 결과</summary>`[GetStaticPathsRequired] getStaticPaths() function is required for dynamic routes.`와 `Location: src/pages/posts/[id].astro:0:0`으로 실패한다.</details>
+   <details><summary>예상 결과</summary>`` [GetStaticPathsRequired] `getStaticPaths()` function is required for dynamic routes. ``와 `Location: src/pages/posts/[id].astro:0:0`으로 실패한다.</details>
 
 ## 문서 근거
 

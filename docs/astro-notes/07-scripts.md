@@ -27,21 +27,21 @@
 
 ## 빌드 결과물에서 확인하기
 
-- `dist/index.html`의 `<head>` 끝: `<script async src="https://www.googletagmanager.com/gtag/js?id=G-Y270VJN1Y2"></script><script>(function(){const gaId = "G-Y270VJN1Y2";` … `gtag("config", gaId);` `})();</script>`. `is:inline`, `define:vars`라는 속성은 사라졌고 `type="module"`이 없다. 본문의 들여쓰기와 빈 줄은 소스 그대로다(`compressHTML`은 스크립트 안을 건드리지 않는다).
+- `dist/index.html`의 `<head>` 뒷부분(묶음 `<style>` 바로 앞): `<script async src="https://www.googletagmanager.com/gtag/js?id=G-Y270VJN1Y2"></script><script>(function(){const gaId = "G-Y270VJN1Y2";` … `gtag("config", gaId);` `})();</script>`. `is:inline`, `define:vars`라는 속성은 사라졌고 `type="module"`이 없다. 본문의 들여쓰기와 빈 줄은 소스 그대로다(`compressHTML`은 스크립트 안을 건드리지 않는다).
 - `grep -c googletagmanager dist/404.html dist/posts/*.html` → 파일마다 1.
-- `dist/posts/<id>.html`: `</main><script src="https://utteranc.es/client.js" repo="bigsaigon333/bigsaigon333.github.io" issue-term="title" theme="boxy-light" crossorigin="anonymous" async></script><footer>`. `grep -c utteranc dist/index.html dist/404.html` → 0.
+- `dist/posts/<id>.html`: `</main><script src="https://utteranc.es/client.js" repo="bigsaigon333/bigsaigon333.github.io" issue-term="title" theme="boxy-light" crossorigin="anonymous" async></script><footer data-astro-cid-…>`. `grep -c utteranc dist/index.html dist/404.html` → 0.
 - 이 세 스크립트에서 나온 `dist/_astro/*.js`는 없다.
 - 브라우저에서(외부 요청은 막고) 배포본과 나란히 읽은 값이 같다: `typeof gtag` = `"function"`, `dataLayer` = `[["js", Date], ["config", "G-Y270VJN1Y2"]]`, utterances 태그의 앞뒤 = `main` / `footer`.
 
 ## 닫힌 고리가 잡아낸 것
 
 - **`astro check`가 `repo`를 막았다.** 증상: 게이트에서 build와 embeds 14/14는 PASS인데 check만 FAIL — `ts(2322) Property 'repo' does not exist on type 'ScriptHTMLAttributes & AstroScriptAttributes & AstroDefineVarsAttribute'`. 원인: `<script>` 속성도 JSX 타입으로 검사하고 `repo`, `theme`은 `node_modules/astro/astro-jsx.d.ts`의 목록에 없다(`issue-term`처럼 하이픈이 든 이름은 검사를 건너뛴다). 수정: `Comments.astro` 펜스의 `declare global { namespace astroHTML.JSX { interface ScriptHTMLAttributes { repo?: string; theme?: string } } }`. 속성을 객체에 담아 `{...attrs}`로 펼쳐도 통과하지만 검사를 피해 가는 길이라 고르지 않았다.
-- **게이트가 못 보는 차이: 전역 `gtag`.** 증상: 구글 스니펫을 그대로 `define:vars` 스크립트에 넣고 빌드하니 `dist/index.html`에 `(function(){`이 보였다. 브라우저로 확인하면 `typeof gtag`가 `"undefined"`인데(배포본은 `"function"`) embeds는 14/14 PASS다. 원인: IIFE 래퍼. embeds 검사는 `dataLayer`만 읽는다. 수정: `window.gtag = …`.
+- **게이트가 못 보는 차이: 전역 `gtag`.** 증상: 구글 스니펫을 그대로 `define:vars` 스크립트에 넣고 빌드하니 `dist/index.html`에 `(function(){`이 보였다. 브라우저로 확인하면 `typeof gtag`가 `"undefined"`인데(배포본은 `"function"`) embeds는 14/14 PASS다. 원인: IIFE 래퍼. embeds 검사는 `dataLayer`와 스크립트 태그만 읽는다(H1에서 `dataLayer` 항목 전체와 utterances의 자리까지 보게 됐지만 지금도 `typeof gtag`는 보지 않는다). 수정: `window.gtag = …`.
 
 ## 직접 해볼 실험
 
-1. `Analytics.astro`의 `window.gtag = function gtag() {…};`을 `function gtag() {…}`로 바꾸고 `npm run -s verify -- --only=embeds --no-check`. 이어서 `npm run preview`로 띄운 페이지의 콘솔에서 `typeof gtag`.
-   <details><summary>예상 결과</summary>`PASS embeds 14/14` 그대로다. `dataLayer`에는 여전히 config가 들어가기 때문이다. 하지만 `typeof gtag`는 `"undefined"`다. `dist/index.html`을 보면 `function gtag`가 `(function(){ … })();` 안에 있다.</details>
+1. `Analytics.astro`의 `window.gtag = function gtag() {…};`을 `function gtag() {…}`로 바꾸고 `npm run -s verify -- --only=embeds --no-check`. 이어서 외부 요청을 막은 브라우저로 `dist/index.html`을 열어 `typeof gtag`를 읽는다: `node -e 'const{chromium}=require("playwright");(async()=>{const b=await chromium.launch(),p=await b.newPage();await p.route(/^https?:/,r=>r.abort());await p.goto("file://"+process.cwd()+"/dist/index.html");console.log(await p.evaluate("typeof gtag"));await b.close()})()'`.
+   <details><summary>예상 결과</summary>`PASS embeds 14/14` 그대로다. `dataLayer`에는 여전히 config가 들어가기 때문이다. 하지만 `typeof gtag`는 `undefined`다(되돌리면 `function`). `dist/index.html`을 보면 `function gtag`가 `(function(){ … })();` 안에 있다.</details>
 2. `Analytics.astro`의 둘째 스크립트에서 `is:inline define:vars={{ gaId }}`를 지우고, 본문 첫 줄에 `import { SITE } from "../lib/site";`를 넣고, 마지막 줄을 `gtag("config", SITE.gaId);`로 바꾼다. `npm run build` 뒤 `grep -o '<script type="module">.*</script>' dist/index.html`, 그리고 `npm run check`.
    <details><summary>예상 결과</summary>압축된 `<script type="module">var e=…,t={url:e,title:…,keywords:[…],gaId:…,googleSiteVerification:…};window.dataLayer=…;</script>`가 쓴 자리(`<head>`)에 인라인된다. `SITE` 객체가 통째로 14개 페이지 모두에 실린다. embeds는 PASS지만 `npm run check`는 `Property 'dataLayer' does not exist on type 'Window & typeof globalThis'` 등 6 errors다. 처리되는 스크립트는 TypeScript로 검사되고 `is:inline`은 검사되지 않는다.</details>
 3. `Comments.astro`의 태그를 `<script src="https://utteranc.es/client.js"></script>`만 남기고 `npm run -s verify -- --only=embeds --no-check --route=/posts/proxy-to-built-in-objects`, 이어서 `cat dist/_astro/*.js`.

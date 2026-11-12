@@ -2,7 +2,7 @@
 
 ## 한 줄 요약
 
-루트의 `typescript`를 7.0.2(네이티브 컴파일러)로 올렸다. `.ts`는 `npm run typecheck`(`tsc --noEmit`, 86ms)가, `.astro`는 `npm run check`(`tools/astro-check/`에 따로 깔린 `@astrojs/check` + TypeScript 6, 1.0초)가 보고, 타입으로 못 잡는 것은 `npm run lint`(oxlint, 55ms)가 본다.
+루트의 `typescript`를 7.0.2(네이티브 컴파일러)로 올렸다. `.ts`는 `npm run typecheck`(`tsc --noEmit`)가, `.astro`는 `npm run check`(`tools/astro-check/`에 따로 깔린 `@astrojs/check` + TypeScript 6)가 보고, 타입으로 못 잡는 것은 `npm run lint`(oxlint)가 본다. 셋 다 1초 안팎에 끝난다.
 
 ## 개념
 
@@ -13,7 +13,7 @@
 - **그래서 TypeScript가 둘이다.** `@astrojs/check`의 peer는 `typescript@^5 || ^6`인데, npm은 루트 의존성의 peer를 루트의 `node_modules/typescript`(7)로 푼다. `@astrojs/check`를 `tools/astro-check` 워크스페이스의 의존성으로 옮기면 npm이 `tools/astro-check/node_modules/`에 `@astrojs/check`와 `typescript@6.0.3`을 함께 넣는다(언어 서버 아래에 6.0.3이 한 벌 더 깔려 24MB씩 두 벌이다).
 - **`astro check` 명령은 쓸 수 없다.** 루트의 TypeScript가 7 이상이면 시작하자마자 거부한다(astro 7.4.11). `check` 스크립트는 같은 검사기의 실행 파일을 직접 부른다: `astro sync && tools/astro-check/node_modules/.bin/astro-check`.
 - **oxlint**: Rust로 쓴 린터라 `typescript` 패키지가 필요 없다(ESLint + typescript-eslint + eslint-plugin-astro는 TypeScript 6 API로 파싱한다). `.oxlintrc.json`에서 `correctness` 범주만 `error`로 켰다. `.astro`에서는 펜스와 `<script>`만 본다.
-- **누가 무엇을 보나**: `.ts`의 타입 → `tsc`(7)와 `check`. `.astro`의 타입 → `check`만. `.mjs`는 `checkJs`가 꺼져 있어 타입 검사가 없다 → `.mjs`에만 켠 oxlint의 `no-undef`가 오타 난 이름을 잡는다.
+- **누가 무엇을 보나**: `.ts`의 타입 → `tsc`(7)와 `check`. `.astro`의 타입 → `check`만. `.mjs`는 `checkJs`가 꺼져 있어 타입 검사가 없다 → `.mjs`에만 켠 oxlint의 `no-undef`가 오타 난 이름을 잡는다. 안 쓰는 변수·매개변수는 `tsconfig.json`의 `noUnusedLocals`·`noUnusedParameters`가 타입 오류로 만든다(`typecheck`와 `check` 둘 다). oxlint는 `.astro` 펜스의 안 쓰는 변수를 보고하지 않아서 이 틈을 타입 검사가 막는다.
 
 ## Next.js 대응
 
@@ -28,22 +28,23 @@
 
 ## 빌드 결과물에서 확인하기
 
-타입 검사와 린트는 `dist/`를 바꾸지 않는다(`verify --static --no-check`의 7개 검사가 그대로 PASS). 설치 결과에서 확인한다.
+타입 검사와 린트는 `dist/`를 바꾸지 않는다(`npm run -s verify -- --static --no-check`의 정적 검사가 그대로 PASS). 설치 결과에서 확인한다.
 
 - `npx tsc -v` → `Version 7.0.2`, `tools/astro-check/node_modules/.bin/tsc -v` → `Version 6.0.3`.
 - `npm ls typescript` → 루트에 `typescript@7.0.2`, `astro-check-ts6` 아래에 `typescript@6.0.3`, exit 0.
 - `node -e 'console.log(Object.keys(require("typescript")))'` → `[ 'version', 'versionMajorMinor' ]`.
-- 시간(Apple M5, 7회 중앙값): `tsc --noEmit`이 TypeScript 7에서 **86ms**, 6에서 **521ms**(6배). `astro-check` **1,040ms**, `astro sync` 427ms, `oxlint` 55ms. 스크립트 전체는 `typecheck` 0.59초, `check` 1.55초, `lint` 0.13초다. 이 저장소에서 7이 버는 시간은 0.4초고, `typecheck`에서는 `astro sync`가 `tsc`보다 오래 걸린다.
-- `npx oxlint --debug=files | wc -l` → 41(`.mjs` 26, `.astro` 11, `.ts` 4).
+- 시간: `time npx tsc --noEmit`과 `time tools/astro-check/node_modules/.bin/tsc --noEmit`을 견주어 본다. 7이 6보다 몇 배 빠르지만 이 저장소에서 버는 시간은 1초가 안 되고, `typecheck`에서는 `astro sync`가 `tsc`보다 오래 걸린다(U1 때 Apple M5에서 `tsc` 7은 86ms, 6은 521ms, `astro sync` 427ms).
+- `npx oxlint --debug=files`: 검사하는 파일 목록. `.mjs`, `.astro`(11개), `.ts`(4개)가 나오고 `posts/`, `docs/`, `dist/`는 없다.
 
 ## 닫힌 고리가 잡아낸 것
 
 - **scoped `overrides`로는 안 된다.** `"overrides": {"@astrojs/check": {"typescript": "6.0.3"}}` → TypeScript 6은 `node_modules/@astrojs/language-server/node_modules/`에 깔렸지만 루트에 놓인 `@astrojs/check`의 `require.resolve("typescript")`가 루트의 7을 집었다 → `The TypeScript module loaded (found 7.0.2) does not expose the programmatic API`. `npm ls`도 `invalid`.
 - **별칭(`typescript-legacy`)도 안 된다.** 잠금 파일 없이 설치하면 `ERESOLVE`(peer `^5 || ^6` ↔ 루트 7)다. `astro-check`에는 다른 TypeScript를 가리키는 옵션이 없고 `@volar/kit`도 `require("typescript")`를 그대로 쓴다.
-- **검증 장치의 check 단계가 깨진다.** `scripts/verify/run.mjs`가 `npx astro check`를 부른다 → `astro check does not currently support TypeScript 7.0` → `FAIL check 0/1`(나머지 7개는 PASS). `npm run -s check`를 부르게 고쳐야 한다. 이 단계가 고칠 수 없는 파일이라 이 커밋에서는 깨진 채로 남겼다(`npm run -s check`와 `verify --static --no-check`를 따로 돌리면 둘 다 통과).
+- **검증 장치의 check 단계가 깨졌다.** 그때 `scripts/verify/run.mjs`는 `npx astro check`를 불렀다 → `astro check does not currently support TypeScript 7.0` → `FAIL check 0/1`(나머지 7개는 PASS). 이 단계가 고칠 수 없는 파일이라 그 커밋에서는 깨진 채로 남겼고, RV 통합에서 `run.mjs`가 `npm run -s check`를 부르게 고쳤다. 지금 `npm run verify`의 첫 줄은 `PASS check 1/1`이다.
 - **잠금 파일을 지우고 다시 만들면** 버전은 같아도 `parse5`, `entities`, `undici` 등 관계없는 13개의 설치 위치가 바뀐다 → `npm uninstall @astrojs/check typescript` 뒤에 새 `package.json`으로 설치해서 검사 도구 쪽만 움직이게 했다.
 - **`ignorePatterns: ["posts"]`가 `src/pages/posts/[id].astro`까지 뺐다.** `--debug=files`가 41 → 40 → `"/posts"`로 루트에 고정했다.
-- **oxlint가 찾은 것**: `scripts/progress/watch.mjs`의 안 쓰는 `WAVE_LABELS`(삭제), `state.mjs`의 `...(x ?? {})`(`--fix`가 고침)와 버리는 구조 분해 변수(`_ts`, `_type`으로). `scripts/verify/lib/browser.mjs:371`의 `new Array(n)`(`unicorn/no-new-array`)도 같은 이유로 남아서, 이 커밋에서 `npm run lint`는 그 한 건으로 exit 1이다.
+- **oxlint가 찾은 것**: `scripts/progress/watch.mjs`의 안 쓰는 `WAVE_LABELS`(삭제), `state.mjs`의 `...(x ?? {})`(`--fix`가 고침)와 버리는 구조 분해 변수(`_ts`, `_type`으로). `scripts/verify/lib/browser.mjs`의 `new Array(n)`(`unicorn/no-new-array`)도 같은 이유로 남아 그 커밋의 `npm run lint`는 exit 1이었다. RV 통합에서 `Array.from`으로 고쳐 지금은 exit 0이다.
+- **`.astro`의 안 쓰는 변수**: oxlint도 `check`도 막지 않았다(`ts(6133)`이 hint) → RV 통합에서 `tsconfig.json`에 `noUnusedLocals`, `noUnusedParameters`를 켜 오류로 만들었다(실험 3).
 
 ## 직접 해볼 실험
 
@@ -52,7 +53,7 @@
 2. `scripts/notes-lint.mjs` 맨 끝에 `consol.log(SECTIONS.lenght);`를 붙이고 `npm run -s typecheck`, `npm run -s check`, `npx oxlint scripts/notes-lint.mjs`.
    <details><summary>예상 결과</summary>앞의 둘은 통과한다(`.mjs`는 타입 검사를 하지 않는다). oxlint만 `eslint(no-undef): 'consol' is not defined.`로 실패한다. `.lenght`는 아무도 못 잡는다. 타입이 있어야 보이는 오타다.</details>
 3. `npx astro check; echo $?`. 그다음 `src/pages/404.astro`의 펜스에 `const unused = 1;`과 `debugger;`를 넣고 `npx oxlint src`와 `npm run -s check; echo $?`.
-   <details><summary>예상 결과</summary>`astro check`는 `astro check does not currently support TypeScript 7.0`을 내고 1이다. oxlint는 `eslint(no-debugger)`만 낸다(`.astro`에서는 안 쓰는 변수를 보고하지 않는다). `check`는 `ts(6133): 'unused' is declared but its value is never read.`를 hint로만 보여 주고 0이다. `.astro` 펜스의 안 쓰는 변수는 어느 게이트도 막지 않는다.</details>
+   <details><summary>예상 결과</summary>`astro check`는 `astro check does not currently support TypeScript 7.0`을 내고 1이다. oxlint는 `eslint(no-debugger)`만 낸다(`.astro`에서는 안 쓰는 변수를 보고하지 않는다). `check`는 `src/pages/404.astro:6:7 - error ts(6133): 'unused' is declared but its value is never read.`와 `1 error`를 내고 1이다. `noUnusedLocals`가 없던 U1 때는 같은 진단이 hint라 0이었다. 두 줄을 지운다.</details>
 
 ## 문서 근거
 

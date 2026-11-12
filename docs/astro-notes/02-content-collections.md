@@ -7,9 +7,9 @@
 ## 개념
 
 - **컬렉션 = 로더(어디서 읽나) + 스키마(어떤 모양이어야 하나).** `src/content.config.ts`가 `collections`를 export 하면 Astro가 빌드 맨 앞의 `Syncing content` 단계에서 한 번에 읽고 검증한다.
-- **로더** `glob({ pattern: "*.md", base: "./posts" })`: `base`는 프로젝트 루트 기준이고 `src/` 밖이어도 된다(문서에 예시가 없어 직접 확인했다). 패턴이 `*.md`라서 `posts/draft/`의 초안 21개는 읽지 않는다.
+- **로더** `glob({ pattern: "*.md", base: "./posts" })`: `base`는 프로젝트 루트 기준이고 `src/` 밖이어도 된다(문서에 예시가 없어 직접 확인했다). 패턴이 `*.md`라서 `posts/draft/`의 초안 21개는 읽지 않는다. 최상위에 둔 초안(이름이 `draft:`로 시작하거나 `draft: true`)은 읽히고 `getPublishedPosts()`가 거른다.
 - **id**: 기본 `generateId`는 경로를 github-slugger로 바꾼다(`Zz_Fixture Upper.md` → `zz_fixture-upper`). 이 블로그는 id가 곧 URL이라 `generateId`로 "파일 이름에서 `.md`만 뗀 것"으로 고정했다.
-- **스키마**는 Zod 4(`astro/zod`)다. `z.iso.date()`는 실제 달력 날짜인 `"YYYY-MM-DD"` 문자열만 통과시키고, `.transform`이 UTC 자정의 `Date`로 바꾼다. 따옴표 없는 날짜는 일부러 받지 않는다(아래 실험 2). `keywords`는 `"a, b"` → `["a", "b"]`, 없으면 `[]`. `description`이 없으면 `summary`를 쓴다. 스키마의 출력 타입이 `CollectionEntry<"posts">["data"]`의 타입이 된다(`.astro/content.d.ts`).
+- **스키마**는 Zod 4(`astro/zod`)의 `z.strictObject`다. 모르는 키(`desciption` 같은 오타)는 `Unrecognized key: "desciption"`으로 빌드를 멈춘다. `z.iso.date()`는 실제 달력 날짜인 `"YYYY-MM-DD"` 문자열만 통과시키고, `.transform`이 UTC 자정의 `Date`로 바꾼다. 따옴표 없는 날짜는 일부러 받지 않는다(아래 실험 2). `keywords`는 `"a, b"` → `["a", "b"]`, 없으면 `[]`. `description`은 선택이고, 객체 끝의 `.transform`이 `description ?? summary ?? ""`로 채운다. 스키마의 출력 타입이 `CollectionEntry<"posts">["data"]`의 타입이 된다(`.astro/content.d.ts`).
 - **데이터 스토어**: 검증된 데이터와 렌더된 HTML은 `node_modules/.astro/data-store.json`에 들어간다. 파일 내용의 digest가 같으면 다음 빌드에서 다시 파싱하지 않는다. `getCollection("posts")`는 파일 시스템이 아니라 이 스토어를 읽는다.
 - **순서는 보장되지 않는다.** 그래서 `getPublishedPosts()`가 날짜 내림차순으로 직접 정렬한다(같은 날짜면 id 순).
 - **날짜 표시**는 `formatDate()` = `toISOString().slice(0, 10)`. UTC 기준이라 빌드하는 곳의 시간대를 타지 않는다.
@@ -21,7 +21,7 @@
 | `readdirSync(postsDirectory).filter(/\.md$/)`                                       | `glob({ pattern: "*.md", base: "./posts" })`                                    |
 | `fileName.replace(/\.md$/, "")`                                                     | `generateId`                                                                    |
 | `matter.read(fullPath)`                                                             | 로더가 frontmatter와 본문을 나눈다                                              |
-| superstruct `MatterData` (`coerce(date(), string(), …)`, `defaulted(string(), "")`) | Zod 스키마 (`z.iso.date().transform(…)`, `.default("")`)                        |
+| superstruct `MatterData` (`coerce(date(), string(), …)`, `defaulted(string(), "")`) | Zod 스키마 (`z.iso.date().transform(…)`, `.optional()` + 끝의 `.transform`)     |
 | `getSortedPostsData()` + date-fns `compareDesc`                                     | `src/lib/posts.ts`의 `getPublishedPosts()`                                      |
 | date-fns `format(date, "yyyy-MM-dd")` (로컬 시간대)                                 | `formatDate()` (UTC)                                                            |
 | `pages/index.page.tsx`의 `getStaticProps` → props → JSX                             | `src/pages/index.astro` 펜스의 `await getPublishedPosts()` → 같은 파일의 템플릿 |
@@ -31,23 +31,23 @@
 
 ## 빌드 결과물에서 확인하기
 
-- `dist/index.html`: `<section>` 안에 `<article><a href="/posts/<id>"><h2>…</h2></a><time datetime="2023-06-25T00:00:00.000Z">2023-06-25</time></article>`가 12개, 최신 글부터 나온다. 배포본 `.verify/baseline/index.html`과 (href, 제목, datetime, 날짜) 목록이 순서까지 같다.
+- `dist/index.html`: `<section …>` 안에 `<article …><a href="/posts/<id>" …><h2 …>…</h2></a><time datetime="2023-06-25T00:00:00.000Z" …>2023-06-25</time></article>`가 12개, 최신 글부터 나온다(`…`는 scoped 스타일의 `data-astro-cid-…` 속성, 06). 배포본 `.verify/baseline/index.html`과 (href, 제목, datetime, 날짜) 목록이 순서까지 같다.
 - `grep -c draft: dist/index.html` → 0.
-- `.astro/collections/posts.schema.json`: 스키마에서 생성된 JSON Schema. `required`가 `title`, `date`뿐이다.
+- `.astro/collections/posts.schema.json`: 스키마에서 생성된 JSON Schema. `required`가 `title`, `date`뿐이고 `additionalProperties`가 `false`다.
 
 ## 닫힌 고리가 잡아낸 것
 
-- **잘못된 날짜**: `posts/zz-fixture-bad-date.md`에 `date: "not-a-date"`를 넣으면 빌드가 exit 1로 끝난다. 오류 한 줄: `[InvalidContentEntryDataError] posts → zz-fixture-bad-date data does not match collection schema.` 이어서 `date: Invalid ISO date`와 `Location: …/posts/zz-fixture-bad-date.md:0:0`이 나온다. `"2022-02-30"`도 같은 오류다.
+- **잘못된 날짜**: `posts/zz-fixture-bad-date.md`에 `date: "not-a-date"`를 넣으면 빌드가 exit 1로 끝난다. 오류 한 줄: `[InvalidContentEntryDataError] posts → zz-fixture-bad-date data does not match collection schema.` 이어서 스키마의 `error`에 적은 문구 `date: date 는 따옴표로 감싼 "YYYY-MM-DD" 형식의 실제 날짜여야 한다`와 `Location: …/posts/zz-fixture-bad-date.md:0:0`이 나온다. `"2022-02-30"`도, `date` 줄이 없을 때도 같은 문구다. `title`이 없으면 `title: Required`다.
 - **시간대 검사가 실제로 잡는지**: `formatDate`를 로컬 시간 getter(`getFullYear()` 등, 예전 date-fns `format`과 같은 방식)로 바꾸고 `TZ=America/Los_Angeles`로 빌드하면 홈의 첫 글이 `2023-06-24`로 하루 밀린다 → 두 시간대 비교가 FAIL. 지금 구현은 `TZ=Asia/Seoul`과 `TZ=America/Los_Angeles`에서 모든 `<time>`이 같다.
-- **스토어 캐시**: 시간대 비교는 빌드 사이에 `node_modules/.astro/data-store.json`을 지워야 의미가 있다. 안 지우면 두 번째 빌드는 첫 빌드가 파싱해 둔 `Date`를 재사용한다.
-- **배포본과 소스의 불일치**(이 단계의 게이트 밖, `head` 검사에서 드러날 것): 배포본의 `css-masters-2-week1` description·keywords와 `regular-expression-1` description은 `posts/`의 frontmatter에 없다.
+- **스토어 캐시**: 시간대 비교는 빌드 사이에 `node_modules/.astro/data-store.json`을 지우거나 `astro build --force`로 빌드해야 의미가 있다. 안 그러면 두 번째 빌드는 첫 빌드가 파싱해 둔 `Date`를 재사용한다.
+- **배포본과 소스의 불일치**(이 단계의 게이트 밖이었다): 배포본의 `css-masters-2-week1` description·keywords와 `regular-expression-1` description은 그때 `posts/`의 frontmatter에 없었다 → W2 이음매 커밋에서 앞의 것은 frontmatter를 되살렸고, 뒤의 것은 스키마가 `summary`를 description으로 쓰게 했다. 지금은 `head` 검사가 통과한다.
 
 ## 직접 해볼 실험
 
 1. `src/content.config.ts`의 패턴을 `"**/*.md"`로 바꾸고 `npm run build`.
-   <details><summary>예상 결과</summary>초안까지 읽다가 `posts → draft/draft:from-mathematics-to-generic-programming-ch07 data does not match collection schema`(`title: Required`, `date: Required`)로 실패한다. frontmatter가 없는 초안이다.</details>
-2. 아무 글이나 복사해 `posts/zz-test.md`를 만들고 `date: 2022-02-30`처럼 따옴표를 빼고 빌드한다. 다음에는 스키마의 `date`를 `z.date()`로 바꿔 다시 빌드한다. 끝나면 되돌리고 파일을 지운다.
-   <details><summary>예상 결과</summary>첫 번째는 `date 는 따옴표로 감싼 "YYYY-MM-DD" 형식의 실제 날짜여야 한다`로 실패한다. YAML이 따옴표 없는 날짜를 `Date` 객체로 넘기고 스키마는 문자열만 받기 때문이다. 두 번째는 빌드가 성공하고 날짜가 `2022-03-02`로 나온다. YAML이 없는 날짜를 조용히 넘겨 버려서, 스키마가 문자열만 받게 해 두었다.</details>
+   <details><summary>예상 결과</summary>초안까지 읽다가 `posts → draft/draft:from-mathematics-to-generic-programming-ch07 data does not match collection schema`로 실패한다. `title: Required`와 날짜 문구(`date: date 는 따옴표로 감싼 …`)가 나온다. frontmatter가 없는 초안이다. 패턴을 되돌린다.</details>
+2. 아무 글이나 복사해 `posts/zz-test.md`를 만들고 `date:` 줄을 따옴표 없이 `date: 2022-02-30`으로 바꿔 빌드한다. 다음에는 `src/content.config.ts`의 `date: z.iso.date({…}).transform(…)`(다섯 줄)를 `date: z.coerce.date(),`로 바꿔 다시 빌드하고 `grep -o '<time[^>]*>' dist/posts/zz-test.html`. 끝나면 되돌리고 파일을 지운다.
+   <details><summary>예상 결과</summary>첫 번째는 `posts → zz-test`와 `date: date 는 따옴표로 감싼 "YYYY-MM-DD" 형식의 실제 날짜여야 한다`로 실패한다. YAML이 따옴표 없는 날짜를 `Date` 객체로 넘기고 스키마는 문자열만 받기 때문이다. 두 번째(문자열도 `Date`도 받는 스키마)는 빌드가 성공하고 `datetime="2022-03-02T00:00:00.000Z"`가 나온다. YAML이 없는 날짜를 조용히 다음 달로 넘긴 것이다. 그래서 스키마가 문자열만 받게 해 두었다. (`z.date()`로 바꾸면 따옴표를 쓴 첫 글에서 `` date: Expected type `"date"`, received `"string"` ``으로 멈춘다.)</details>
 3. `src/content.config.ts`에서 `generateId` 줄을 지우고 `posts/Zz_Test Upper.md`를 만들어 빌드한 뒤 `grep -o 'href="/posts/[Zz][^"]*"' dist/index.html`. 끝나면 되돌린다.
    <details><summary>예상 결과</summary>`href="/posts/zz_test-upper"`. `generateId`가 있으면 `href="/posts/Zz_Test Upper"`다.</details>
 
