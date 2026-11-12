@@ -19,16 +19,16 @@ Astro가 예약한 폴더는 `src/pages/` 하나뿐이고, 지금 배포본과 �
 
 ## Next.js 대응
 
-| 예전 (`git show main:<경로>`) | 지금 |
-|---|---|
-| `next.config.js` (`pageExtensions`), `next build && next export` | `astro.config.mjs` + `config/markdown.mjs`, `astro build` |
-| `pages/_document.page.tsx`의 `<Html lang="ko">`, `pages/_app.page.tsx`의 viewport 메타, `components/layout.tsx` | `src/layouts/BaseLayout.astro` |
-| 페이지마다 복사해 둔 `<Head>` 메타 묶음 | `src/components/Seo.astro`의 `Props` (지금은 `<title>`만 낸다) |
-| `_document`의 폰트·KaTeX 링크, `_app`의 GA `<Script>` | 스텁 `src/components/HeadAssets.astro`, `Analytics.astro` |
-| 여러 파일에 문자열로 흩어진 제목·설명·GA ID | `src/lib/site.ts`의 `SITE` |
-| Next 기본 404 화면 | `src/pages/404.astro` |
-| `tsconfig.json` (`target: es5`, `jsx: preserve` 등 15줄) | `extends: "astro/tsconfigs/strict"` |
-| `out/` | `dist/` |
+| 예전 (`git show main:<경로>`)                                                                                   | 지금                                                           |
+| --------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| `next.config.js` (`pageExtensions`), `next build && next export`                                                | `astro.config.mjs` + `config/markdown.mjs`, `astro build`      |
+| `pages/_document.page.tsx`의 `<Html lang="ko">`, `pages/_app.page.tsx`의 viewport 메타, `components/layout.tsx` | `src/layouts/BaseLayout.astro`                                 |
+| 페이지마다 복사해 둔 `<Head>` 메타 묶음                                                                         | `src/components/Seo.astro`의 `Props` (지금은 `<title>`만 낸다) |
+| `_document`의 폰트·KaTeX 링크, `_app`의 GA `<Script>`                                                           | 스텁 `src/components/HeadAssets.astro`, `Analytics.astro`      |
+| 여러 파일에 문자열로 흩어진 제목·설명·GA ID                                                                     | `src/lib/site.ts`의 `SITE`                                     |
+| Next 기본 404 화면                                                                                              | `src/pages/404.astro`                                          |
+| `tsconfig.json` (`target: es5`, `jsx: preserve` 등 15줄)                                                        | `extends: "astro/tsconfigs/strict"`                            |
+| `out/`                                                                                                          | `dist/`                                                        |
 
 `{children}`은 `<slot />`이 되고 `<Layout home>`은 `<BaseLayout seo={…} home>`이 된다.
 

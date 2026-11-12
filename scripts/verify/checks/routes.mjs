@@ -9,7 +9,14 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { allowances, listAssets, listFiles, postFiles, readSiteFile, sha256 } from "../lib/html.mjs";
+import {
+  allowances,
+  listAssets,
+  listFiles,
+  postFiles,
+  readSiteFile,
+  sha256,
+} from "../lib/html.mjs";
 import { listRoutes } from "../lib/resolve.mjs";
 
 const short = (hash) => hash.slice(0, 12);
@@ -32,14 +39,20 @@ export default {
         ok: false,
         pass: 0,
         fail: 1,
-        failed: [{ route: "-", detail: `candidate directory does not exist: ${shown}` }],
+        failed: [
+          {
+            route: "-",
+            detail: `candidate directory does not exist: ${shown}`,
+          },
+        ],
       };
     }
 
     // 1. routes
     const present = new Set();
     if (remote) {
-      for (const route of ctx.allRoutes) if ((await ctx.html("candidate", route)) !== null) present.add(route);
+      for (const route of ctx.allRoutes)
+        if ((await ctx.html("candidate", route)) !== null) present.add(route);
     } else {
       for (const route of listRoutes(ctx.candidateDir)) present.add(route);
     }
@@ -75,12 +88,15 @@ export default {
       }
 
       if (problem === null) pass++;
-      else if (!skip(`asset:${rel}`, problem)) failed.push({ route: `/${rel}`, detail: problem });
+      else if (!skip(`asset:${rel}`, problem))
+        failed.push({ route: `/${rel}`, detail: problem });
     }
 
     const candidateOnly = remote
       ? null
-      : listFiles(ctx.candidateDir).filter((rel) => !rel.endsWith(".html") && !assets.includes(rel));
+      : listFiles(ctx.candidateDir).filter(
+          (rel) => !rel.endsWith(".html") && !assets.includes(rel),
+        );
 
     return {
       ok: failed.length === 0,
@@ -109,7 +125,8 @@ export default {
         name: "자산 내용 변경",
         apply(dir) {
           const file = path.join(dir, "favicon.ico");
-          if (!fs.existsSync(file)) throw new Error("favicon.ico missing in the baseline copy");
+          if (!fs.existsSync(file))
+            throw new Error("favicon.ico missing in the baseline copy");
           fs.appendFileSync(file, "x");
         },
       },

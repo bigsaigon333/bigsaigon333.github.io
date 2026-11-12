@@ -18,10 +18,15 @@ import { repoRoot } from "../lib/paths.mjs";
 
 const NAME = "visual";
 const SIDES = ["baseline", "candidate"];
-const configFile = fileURLToPath(new URL("../visual.config.json", import.meta.url));
+const configFile = fileURLToPath(
+  new URL("../visual.config.json", import.meta.url),
+);
 
 /** The smallest tolerance calibration will ever write: 0.05% of the pixels. */
-const MIN_DIFF_RATIO = 0.0005;
+// Baseline-vs-baseline captures are byte-identical on this machine (measured noise 0), so the floor is 0:
+// any pixel beyond pixelmatch's colour tolerance is a difference. A looser floor of 0.05% let a reworded
+// heading and recoloured code keywords through. Raise it only with evidence of irreducible rendering noise.
+const MIN_DIFF_RATIO = 0;
 const PIXEL_THRESHOLD = 0.1;
 const CROP_MAX_HEIGHT = 1200;
 const CROP_MARGIN = 16;
@@ -48,7 +53,8 @@ function readConfig() {
   try {
     stored = JSON.parse(fs.readFileSync(configFile, "utf8"));
   } catch (error) {
-    if (error.code !== "ENOENT") throw new Error(`visual.config.json is unreadable: ${error.message}`);
+    if (error.code !== "ENOENT")
+      throw new Error(`visual.config.json is unreadable: ${error.message}`);
   }
   return {
     maxDiffRatio: stored.maxDiffRatio ?? MIN_DIFF_RATIO,
@@ -56,7 +62,8 @@ function readConfig() {
   };
 }
 
-const slug = (route) => route.replace(/^\/+|\/+$/g, "").replace(/[^A-Za-z0-9._-]+/g, "-") || "index";
+const slug = (route) =>
+  route.replace(/^\/+|\/+$/g, "").replace(/[^A-Za-z0-9._-]+/g, "-") || "index";
 const percent = (ratio) => `${(ratio * 100).toFixed(2)}%`;
 const oneLine = (error) => String(error?.message ?? error).split("\n")[0];
 
@@ -67,7 +74,8 @@ function capture(browser, url, viewport, { route, selector }) {
   return browser.withPage(viewport, async (tab) => {
     const status = await tab.open(url);
     if (status >= 400 && route !== "/404") throw new Error(`HTTP ${status}`);
-    if (tab.failures.length) throw new Error(`third-party request failed: ${tab.failures[0]}`);
+    if (tab.failures.length)
+      throw new Error(`third-party request failed: ${tab.failures[0]}`);
 
     await tab.page.addStyleTag({ content: FREEZE_CSS });
 
@@ -75,7 +83,8 @@ function capture(browser, url, viewport, { route, selector }) {
     if (!selector) return tab.page.screenshot({ ...options, fullPage: true });
 
     const element = tab.page.locator(selector).first();
-    if ((await element.count()) === 0) throw new Error(`selector ${selector} not found`);
+    if ((await element.count()) === 0)
+      throw new Error(`selector ${selector} not found`);
     return element.screenshot(options);
   });
 }
@@ -86,7 +95,8 @@ function capture(browser, url, viewport, { route, selector }) {
 function onCanvas(image, width, height) {
   if (image.width === width && image.height === height) return image;
   const canvas = new PNG({ width, height });
-  for (let offset = 0; offset < canvas.data.length; offset += 4) canvas.data.writeUInt32BE(0xff00ffff, offset);
+  for (let offset = 0; offset < canvas.data.length; offset += 4)
+    canvas.data.writeUInt32BE(0xff00ffff, offset);
   PNG.bitblt(image, canvas, 0, 0, image.width, image.height, 0, 0);
   return canvas;
 }
@@ -100,7 +110,11 @@ function boundingBox(diff) {
   let bottom = -1;
   for (let y = 0, offset = 0; y < height; y += 1) {
     for (let x = 0; x < width; x += 1, offset += 4) {
-      if (data[offset] === 255 && data[offset + 1] === 0 && data[offset + 2] === 0) {
+      if (
+        data[offset] === 255 &&
+        data[offset + 1] === 0 &&
+        data[offset + 2] === 0
+      ) {
         if (x < left) left = x;
         if (x > right) right = x;
         if (y < top) top = y;
@@ -108,23 +122,36 @@ function boundingBox(diff) {
       }
     }
   }
-  return right < 0 ? null : { x: left, y: top, w: right - left + 1, h: bottom - top + 1 };
+  return right < 0
+    ? null
+    : { x: left, y: top, w: right - left + 1, h: bottom - top + 1 };
 }
 
 /**
  * @returns {{ ok: boolean, ratio: number, sizes: object[], sameSize: boolean, bbox: object|null, images: object|null }}
  */
 function compare(baselinePng, candidatePng, maxDiffRatio) {
-  const sizeOf = (png) => ({ width: png.readUInt32BE(16), height: png.readUInt32BE(20) });
+  const sizeOf = (png) => ({
+    width: png.readUInt32BE(16),
+    height: png.readUInt32BE(20),
+  });
 
   if (baselinePng.equals(candidatePng)) {
     const size = sizeOf(baselinePng);
-    return { ok: true, ratio: 0, sizes: [size, size], sameSize: true, bbox: null, images: null };
+    return {
+      ok: true,
+      ratio: 0,
+      sizes: [size, size],
+      sameSize: true,
+      bbox: null,
+      images: null,
+    };
   }
 
   const baseline = PNG.sync.read(baselinePng);
   const candidate = PNG.sync.read(candidatePng);
-  const sameSize = baseline.width === candidate.width && baseline.height === candidate.height;
+  const sameSize =
+    baseline.width === candidate.width && baseline.height === candidate.height;
   const width = Math.max(baseline.width, candidate.width);
   const height = Math.max(baseline.height, candidate.height);
 
@@ -178,12 +205,18 @@ function writeEvidence(dir, pngs, result) {
     x,
     y,
     w: Math.min(diff.width, box.x + box.w + CROP_MARGIN) - x,
-    h: Math.min(CROP_MAX_HEIGHT, Math.min(diff.height, box.y + box.h + CROP_MARGIN) - y),
+    h: Math.min(
+      CROP_MAX_HEIGHT,
+      Math.min(diff.height, box.y + box.h + CROP_MARGIN) - y,
+    ),
   };
 
   const cropFile = path.join(dir, "crop.png");
   fs.writeFileSync(cropFile, cropOf(diff, region));
-  for (const [name, image] of [["crop-baseline.png", baseline], ["crop-candidate.png", candidate]]) {
+  for (const [name, image] of [
+    ["crop-baseline.png", baseline],
+    ["crop-candidate.png", candidate],
+  ]) {
     const crop = cropOf(image, region);
     if (crop) fs.writeFileSync(path.join(dir, name), crop);
   }
@@ -192,7 +225,9 @@ function writeEvidence(dir, pngs, result) {
 
 function describe(result, selector) {
   const [baseline, candidate] = result.sizes;
-  const box = result.bbox ? ` bbox ${result.bbox.x},${result.bbox.y},${result.bbox.w},${result.bbox.h}` : "";
+  const box = result.bbox
+    ? ` bbox ${result.bbox.x},${result.bbox.y},${result.bbox.w},${result.bbox.h}`
+    : "";
   if (result.sameSize) return `diff ${percent(result.ratio)}${box}`;
   if (selector || baseline.width !== candidate.width) {
     return `size ${baseline.width}x${baseline.height} ≠ ${candidate.width}x${candidate.height}${box}`;
@@ -208,7 +243,8 @@ let lastRun = null;
 
 async function run(ctx) {
   const config = readConfig();
-  const selector = typeof ctx.args.selector === "string" ? ctx.args.selector : null;
+  const selector =
+    typeof ctx.args.selector === "string" ? ctx.args.selector : null;
   const reportRoot = path.join(ctx.reportDir, NAME);
   fs.rmSync(reportRoot, { recursive: true, force: true });
 
@@ -230,14 +266,18 @@ async function run(ctx) {
   const browser = await openBrowser(ctx);
   let outcomes;
   try {
-    const urls = { baseline: await ctx.serve("baseline"), candidate: await ctx.serve("candidate") };
+    const urls = {
+      baseline: await ctx.serve("baseline"),
+      candidate: await ctx.serve("candidate"),
+    };
 
     const attempt = async ({ route, viewport }, previous) => {
       const shots = await Promise.all(
         SIDES.map((side) =>
-          capture(browser, urls[side] + route, viewport, { route, selector }).catch(
-            (error) => new Error(`${side}: ${oneLine(error)}`),
-          ),
+          capture(browser, urls[side] + route, viewport, {
+            route,
+            selector,
+          }).catch((error) => new Error(`${side}: ${oneLine(error)}`)),
         ),
       );
       const broken = shots.find((shot) => shot instanceof Error);
@@ -245,7 +285,11 @@ async function run(ctx) {
 
       const [baseline, candidate] = shots;
       // The same two pictures as last time give the same answer: no need to decode and compare them again.
-      if (previous?.pngs?.baseline.equals(baseline) && previous.pngs.candidate.equals(candidate)) return previous;
+      if (
+        previous?.pngs?.baseline.equals(baseline) &&
+        previous.pngs.candidate.equals(candidate)
+      )
+        return previous;
 
       const result = compare(baseline, candidate, config.maxDiffRatio);
       if (result.sameSize) noise = Math.max(noise, result.ratio);
@@ -263,26 +307,47 @@ async function run(ctx) {
 
       const { route, viewport } = job;
       const outcome = { route, width: viewport.width, ok: result.ok, attempts };
-      if (result.error) return { ...outcome, detail: `${viewport.width}: ${result.error}` };
+      if (result.error)
+        return { ...outcome, detail: `${viewport.width}: ${result.error}` };
 
       const [baseline, candidate] = result.sizes;
-      Object.assign(outcome, { ratio: result.ratio, sameSize: result.sameSize, baseline, candidate });
+      Object.assign(outcome, {
+        ratio: result.ratio,
+        sameSize: result.sameSize,
+        baseline,
+        candidate,
+      });
       if (result.ok) return outcome;
 
-      const crop = writeEvidence(path.join(reportRoot, `${slug(route)}-${viewport.width}`), result.pngs, result);
-      return { ...outcome, bbox: result.bbox, detail: `${viewport.width}: ${describe(result, selector)} → ${crop}` };
+      const crop = writeEvidence(
+        path.join(reportRoot, `${slug(route)}-${viewport.width}`),
+        result.pngs,
+        result,
+      );
+      return {
+        ...outcome,
+        bbox: result.bbox,
+        detail: `${viewport.width}: ${describe(result, selector)} → ${crop}`,
+      };
     });
   } finally {
     await browser.close();
   }
 
-  const failed = outcomes.filter((outcome) => !outcome.ok).map(({ route, detail }) => ({ route, detail }));
+  const failed = outcomes
+    .filter((outcome) => !outcome.ok)
+    .map(({ route, detail }) => ({ route, detail }));
   for (const { route } of failed) cells[route] = "fail";
-  const flaky = outcomes.filter((outcome) => outcome.ok && outcome.attempts > 1);
+  const flaky = outcomes.filter(
+    (outcome) => outcome.ok && outcome.attempts > 1,
+  );
   lastRun = {
     noise,
     // Noise is only a meaningful number when every full-page comparison produced one.
-    measurable: !selector && outcomes.length > 0 && outcomes.every((outcome) => outcome.sameSize),
+    measurable:
+      !selector &&
+      outcomes.length > 0 &&
+      outcomes.every((outcome) => outcome.sameSize),
     viewports: config.viewports,
   };
 
@@ -309,7 +374,8 @@ async function run(ctx) {
 function edit(file, pattern, replacement) {
   const before = fs.readFileSync(file, "utf8");
   const after = before.replace(pattern, replacement);
-  if (after === before) throw new Error(`mutation did not apply: ${pattern} not found in ${file}`);
+  if (after === before)
+    throw new Error(`mutation did not apply: ${pattern} not found in ${file}`);
   fs.writeFileSync(file, after);
 }
 
@@ -324,9 +390,15 @@ export default {
         name: "스타일시트의 CSS 값 변경",
         apply(dir) {
           const cssDir = path.join(dir, "_next", "static", "css");
-          const [stylesheet] = fs.readdirSync(cssDir).filter((file) => file.endsWith(".css"));
+          const [stylesheet] = fs
+            .readdirSync(cssDir)
+            .filter((file) => file.endsWith(".css"));
           // The background of code blocks. Same layout, different pixels: only the pixel comparison can notice.
-          edit(path.join(cssDir, stylesheet), "background:#272822", "background:#14506e");
+          edit(
+            path.join(cssDir, stylesheet),
+            "background:#272822",
+            "background:#14506e",
+          );
         },
       },
       {
@@ -334,7 +406,11 @@ export default {
         apply(dir) {
           // Inside the post body, which React leaves alone when it hydrates. Anywhere else the baseline's own
           // JavaScript would put the paragraph back from __NEXT_DATA__ before the screenshot is taken.
-          const post = path.join(dir, "posts", "proxy-to-built-in-objects.html");
+          const post = path.join(
+            dir,
+            "posts",
+            "proxy-to-built-in-objects.html",
+          );
           edit(post, /(<main[^>]*>[\s\S]*?)<p>[\s\S]*?<\/p>/, "$1");
         },
       },

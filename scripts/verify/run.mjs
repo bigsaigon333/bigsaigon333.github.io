@@ -8,7 +8,15 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { baselineDir, distDir, repoRoot, reportDir } from "./lib/paths.mjs";
-import { createContext, emitVerify, formatResults, loadChecks, parseArgs, runChecks, toMatrix } from "./lib/runner.mjs";
+import {
+  createContext,
+  emitVerify,
+  formatResults,
+  loadChecks,
+  parseArgs,
+  runChecks,
+  toMatrix,
+} from "./lib/runner.mjs";
 
 const args = parseArgs(process.argv.slice(2));
 const started = performance.now();
@@ -37,7 +45,9 @@ function step(name, command) {
     ok,
     pass: ok ? 1 : 0,
     fail: ok ? 0 : 1,
-    failed: ok ? [] : [{ route: "-", detail: `${tail}  (see .verify/report/${name}.log)` }],
+    failed: ok
+      ? []
+      : [{ route: "-", detail: `${tail}  (see .verify/report/${name}.log)` }],
     cells: null,
     durationMs: Math.round(performance.now() - begun),
   };
@@ -51,7 +61,9 @@ if (builds) {
   results.push(step("build", ["npx", "astro", "build"]));
 }
 
-const buildFailed = results.some((result) => result.check === "build" && !result.ok);
+const buildFailed = results.some(
+  (result) => result.check === "build" && !result.ok,
+);
 const ctx = createContext({
   candidateDir: args.candidate ? path.resolve(args.candidate) : distDir,
   candidateUrl: args.candidateUrl ?? null,
@@ -60,7 +72,10 @@ const ctx = createContext({
 
 try {
   if (!buildFailed) {
-    const checks = await loadChecks({ only: args.only, staticOnly: args.static });
+    const checks = await loadChecks({
+      only: args.only,
+      staticOnly: args.static,
+    });
     if (checks.length === 0) console.log("(no checks matched)");
     results.push(...(await runChecks(ctx, checks)));
   }
@@ -72,13 +87,22 @@ for (const line of formatResults(results)) console.log(line);
 
 const ok = results.length > 0 && results.every((result) => result.ok);
 const durationMs = Math.round(performance.now() - started);
-console.log(`${ok ? "ALL PASS" : "FAILED"}  ${results.filter((r) => r.ok).length}/${results.length} checks  ${(durationMs / 1000).toFixed(1)}s`);
+console.log(
+  `${ok ? "ALL PASS" : "FAILED"}  ${results.filter((r) => r.ok).length}/${results.length} checks  ${(durationMs / 1000).toFixed(1)}s`,
+);
 
 await emitVerify({
-  scope: args.scope ?? (args.agent || process.env.PROGRESS_AGENT ? "agent" : "integration"),
+  scope:
+    args.scope ??
+    (args.agent || process.env.PROGRESS_AGENT ? "agent" : "integration"),
   args,
   results,
-  matrix: toMatrix(ctx, results.filter((result) => result.check !== "check" && result.check !== "build")),
+  matrix: toMatrix(
+    ctx,
+    results.filter(
+      (result) => result.check !== "check" && result.check !== "build",
+    ),
+  ),
   durationMs,
 });
 

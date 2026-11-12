@@ -7,7 +7,13 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { baselineDir, verifyDir } from "./lib/paths.mjs";
-import { createContext, emitVerify, loadChecks, parseArgs, runChecks } from "./lib/runner.mjs";
+import {
+  createContext,
+  emitVerify,
+  loadChecks,
+  parseArgs,
+  runChecks,
+} from "./lib/runner.mjs";
 
 const args = parseArgs(process.argv.slice(2));
 const started = performance.now();
@@ -65,15 +71,22 @@ for (const check of checks) {
 }
 
 for (const item of cases) {
-  console.log(`${item.ok ? "PASS" : "FAIL"}  ${item.check.padEnd(9)} ${item.name}${item.detail ? `  ${item.detail}` : ""}`);
+  console.log(
+    `${item.ok ? "PASS" : "FAIL"}  ${item.check.padEnd(9)} ${item.name}${item.detail ? `  ${item.detail}` : ""}`,
+  );
 }
 
-const withoutMutation = checks.filter((check) => !(check.selftest?.mutations ?? []).length).map((check) => check.name);
-if (withoutMutation.length) console.log(`WARN  no mutation declared: ${withoutMutation.join(", ")}`);
+const withoutMutation = checks
+  .filter((check) => !(check.selftest?.mutations ?? []).length)
+  .map((check) => check.name);
+if (withoutMutation.length)
+  console.log(`WARN  no mutation declared: ${withoutMutation.join(", ")}`);
 
 const ok = cases.length > 0 && cases.every((item) => item.ok);
 const durationMs = Math.round(performance.now() - started);
-console.log(`${ok ? "SELFTEST PASS" : "SELFTEST FAILED"}  ${cases.filter((c) => c.ok).length}/${cases.length} cases  ${(durationMs / 1000).toFixed(1)}s`);
+console.log(
+  `${ok ? "SELFTEST PASS" : "SELFTEST FAILED"}  ${cases.filter((c) => c.ok).length}/${cases.length} cases  ${(durationMs / 1000).toFixed(1)}s`,
+);
 
 await emitVerify({
   scope: "selftest",

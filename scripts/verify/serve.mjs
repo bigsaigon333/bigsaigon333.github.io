@@ -46,13 +46,17 @@ export function startServer(root, { port = 0 } = {}) {
     }
 
     if (!hit.file) {
-      res.writeHead(hit.status, { "content-type": "text/plain; charset=utf-8" });
+      res.writeHead(hit.status, {
+        "content-type": "text/plain; charset=utf-8",
+      });
       res.end(String(hit.status));
       return;
     }
 
     res.writeHead(hit.status, {
-      "content-type": TYPES[path.extname(hit.file).toLowerCase()] ?? "application/octet-stream",
+      "content-type":
+        TYPES[path.extname(hit.file).toLowerCase()] ??
+        "application/octet-stream",
       "cache-control": "no-store",
     });
     fs.createReadStream(hit.file).pipe(res);

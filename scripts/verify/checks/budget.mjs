@@ -10,14 +10,26 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { allowances, internalPath, mutateFile, probe, rawText } from "../lib/html.mjs";
+import {
+  allowances,
+  internalPath,
+  mutateFile,
+  probe,
+  rawText,
+} from "../lib/html.mjs";
 
 const DATA_TYPES = new Set(["application/json", "application/ld+json"]);
 const bytesOf = (text) => Buffer.byteLength(text, "utf8");
 
 /** { bytes, files, inline, external, missing } of one kind of resource on one page. */
 async function weigh(ctx, side, route, references, inlineTexts) {
-  const total = { bytes: 0, files: 0, inline: inlineTexts.length, external: 0, missing: [] };
+  const total = {
+    bytes: 0,
+    files: 0,
+    inline: inlineTexts.length,
+    external: 0,
+    missing: [],
+  };
   for (const text of inlineTexts) total.bytes += bytesOf(text);
 
   const seen = new Set();
@@ -49,7 +61,9 @@ async function measure(ctx, side, route) {
 
   const inlineScripts = $("script:not([src])")
     .toArray()
-    .filter((el) => !DATA_TYPES.has(($(el).attr("type") ?? "").trim().toLowerCase()))
+    .filter(
+      (el) => !DATA_TYPES.has(($(el).attr("type") ?? "").trim().toLowerCase()),
+    )
     .map(rawText);
   const inlineStyles = $("style").toArray().map(rawText);
 
@@ -58,10 +72,19 @@ async function measure(ctx, side, route) {
       ctx,
       side,
       route,
-      [...attrs("script[src]", "src"), ...attrs('link[rel~="modulepreload"][href]', "href")],
+      [
+        ...attrs("script[src]", "src"),
+        ...attrs('link[rel~="modulepreload"][href]', "href"),
+      ],
       inlineScripts,
     ),
-    css: await weigh(ctx, side, route, attrs('link[rel~="stylesheet"][href]', "href"), inlineStyles),
+    css: await weigh(
+      ctx,
+      side,
+      route,
+      attrs('link[rel~="stylesheet"][href]', "href"),
+      inlineStyles,
+    ),
   };
 }
 
@@ -85,7 +108,11 @@ export default {
       else {
         table.push({
           route,
-          js: { baseline: baseline.js, candidate: candidate.js, deltaBytes: candidate.js.bytes - baseline.js.bytes },
+          js: {
+            baseline: baseline.js,
+            candidate: candidate.js,
+            deltaBytes: candidate.js.bytes - baseline.js.bytes,
+          },
           css: {
             baseline: baseline.css,
             candidate: candidate.css,
@@ -118,8 +145,14 @@ export default {
         allowed,
         // Bytes summed over the compared routes; a file shared by several pages counts once per page.
         totals: {
-          js: { baseline: sum((row) => row.js.baseline.bytes), candidate: sum((row) => row.js.candidate.bytes) },
-          css: { baseline: sum((row) => row.css.baseline.bytes), candidate: sum((row) => row.css.candidate.bytes) },
+          js: {
+            baseline: sum((row) => row.js.baseline.bytes),
+            candidate: sum((row) => row.js.candidate.bytes),
+          },
+          css: {
+            baseline: sum((row) => row.css.baseline.bytes),
+            candidate: sum((row) => row.css.candidate.bytes),
+          },
         },
         // One row per route: { bytes, files, inline, external } for JS and CSS on both sides.
         table,
@@ -133,15 +166,23 @@ export default {
         name: "큰 인라인 스크립트 추가",
         apply(dir) {
           const script = `<script>window.__budgetMutation="${"x".repeat(200_000)}"</script>`;
-          mutateFile(dir, "index.html", (html) => html.replace("</body>", `${script}</body>`));
+          mutateFile(dir, "index.html", (html) =>
+            html.replace("</body>", `${script}</body>`),
+          );
         },
       },
       {
         name: "스크립트 파일 추가",
         apply(dir) {
-          fs.writeFileSync(path.join(dir, "budget-mutation.js"), `window.__budgetMutation="${"x".repeat(200_000)}"`);
+          fs.writeFileSync(
+            path.join(dir, "budget-mutation.js"),
+            `window.__budgetMutation="${"x".repeat(200_000)}"`,
+          );
           mutateFile(dir, "index.html", (html) =>
-            html.replace("</body>", '<script src="/budget-mutation.js"></script></body>'),
+            html.replace(
+              "</body>",
+              '<script src="/budget-mutation.js"></script></body>',
+            ),
           );
         },
       },

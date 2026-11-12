@@ -31,8 +31,11 @@ function readEmbeds() {
     } catch {
       continue;
     }
-    const google = url.hostname === "googletagmanager.com" || url.hostname.endsWith(".googletagmanager.com");
-    if (google && url.pathname === "/gtag/js") loader.push(url.searchParams.get("id"));
+    const google =
+      url.hostname === "googletagmanager.com" ||
+      url.hostname.endsWith(".googletagmanager.com");
+    if (google && url.pathname === "/gtag/js")
+      loader.push(url.searchParams.get("id"));
   }
 
   const config = [];
@@ -40,24 +43,33 @@ function readEmbeds() {
     if (entry && entry[0] === "config") config.push(String(entry[1]));
   }
 
-  const utterances = Array.from(document.querySelectorAll('script[src="https://utteranc.es/client.js"]'), (script) => ({
-    repo: script.getAttribute("repo"),
-    "issue-term": script.getAttribute("issue-term"),
-    theme: script.getAttribute("theme"),
-    crossorigin: script.crossOrigin,
-    async: script.async,
-  }));
+  const utterances = Array.from(
+    document.querySelectorAll('script[src="https://utteranc.es/client.js"]'),
+    (script) => ({
+      repo: script.getAttribute("repo"),
+      "issue-term": script.getAttribute("issue-term"),
+      theme: script.getAttribute("theme"),
+      crossorigin: script.crossOrigin,
+      async: script.async,
+    }),
+  );
 
   return {
     ga: { loader: loader.sort(), config: config.sort() },
     // One script is the normal case; more than one is a difference worth seeing.
-    utterances: utterances.length === 0 ? null : utterances.length === 1 ? utterances[0] : utterances,
+    utterances:
+      utterances.length === 0
+        ? null
+        : utterances.length === 1
+          ? utterances[0]
+          : utterances,
   };
 }
 
 // Expressions evaluated in the page until they hold: has it finished adding its embeds?
 const hasAnalytics = `((embeds) => embeds.ga.loader.length > 0 && embeds.ga.config.length > 0)((${readEmbeds})())`;
-const sameAs = (expected) => `JSON.stringify((${readEmbeds})()) === ${JSON.stringify(JSON.stringify(expected))}`;
+const sameAs = (expected) =>
+  `JSON.stringify((${readEmbeds})()) === ${JSON.stringify(JSON.stringify(expected))}`;
 
 // ── the check ───────────────────────────────────────────────────────────────────────────────────
 
@@ -66,7 +78,8 @@ function collect(browser, url, route, ready, timeout) {
   return browser.withPage(VIEWPORT, async (tab) => {
     const status = await tab.open(url);
     if (status >= 400 && route !== "/404") throw new Error(`HTTP ${status}`);
-    if (tab.failures.length) throw new Error(`third-party request failed: ${tab.failures[0]}`);
+    if (tab.failures.length)
+      throw new Error(`third-party request failed: ${tab.failures[0]}`);
 
     await tab.page.waitForFunction(ready, null, { timeout }).catch(() => {});
     await tab.settle(); // whatever added one embed may still be adding the next
@@ -85,7 +98,8 @@ function differences(baseline, candidate) {
   for (const [name, pick] of FIELDS) {
     const expected = JSON.stringify(pick(baseline));
     const actual = JSON.stringify(pick(candidate));
-    if (expected !== actual) found.push(`${name}: baseline ${expected} ≠ candidate ${actual}`);
+    if (expected !== actual)
+      found.push(`${name}: baseline ${expected} ≠ candidate ${actual}`);
   }
   return found;
 }
@@ -107,24 +121,50 @@ async function run(ctx) {
   const browser = await openBrowser(ctx);
   let outcomes;
   try {
-    const urls = { baseline: await ctx.serve("baseline"), candidate: await ctx.serve("candidate") };
+    const urls = {
+      baseline: await ctx.serve("baseline"),
+      candidate: await ctx.serve("candidate"),
+    };
 
     // One page at a time per route, so MAX_PAGES routes in flight are MAX_PAGES pages.
     outcomes = await mapLimit(routes, MAX_PAGES, async (route) => {
       let baseline;
       let candidate;
       try {
-        baseline = await collect(browser, urls.baseline + route, route, hasAnalytics, BASELINE_WAIT_MS);
+        baseline = await collect(
+          browser,
+          urls.baseline + route,
+          route,
+          hasAnalytics,
+          BASELINE_WAIT_MS,
+        );
       } catch (error) {
         return { route, ok: false, problems: [`baseline: ${oneLine(error)}`] };
       }
       try {
-        candidate = await collect(browser, urls.candidate + route, route, sameAs(baseline), CANDIDATE_WAIT_MS);
+        candidate = await collect(
+          browser,
+          urls.candidate + route,
+          route,
+          sameAs(baseline),
+          CANDIDATE_WAIT_MS,
+        );
       } catch (error) {
-        return { route, ok: false, baseline, problems: [`candidate: ${oneLine(error)}`] };
+        return {
+          route,
+          ok: false,
+          baseline,
+          problems: [`candidate: ${oneLine(error)}`],
+        };
       }
       const problems = differences(baseline, candidate);
-      return { route, ok: problems.length === 0, baseline, candidate, problems };
+      return {
+        route,
+        ok: problems.length === 0,
+        baseline,
+        candidate,
+        problems,
+      };
     });
   } finally {
     await browser.close();
@@ -133,7 +173,11 @@ async function run(ctx) {
   const failed = [];
   for (const outcome of outcomes) {
     cells[outcome.route] = outcome.ok ? "pass" : "fail";
-    if (!outcome.ok) failed.push({ route: outcome.route, detail: outcome.problems.join("; ") });
+    if (!outcome.ok)
+      failed.push({
+        route: outcome.route,
+        detail: outcome.problems.join("; "),
+      });
   }
 
   return {
@@ -161,7 +205,10 @@ function editChunks(dir, pattern, replacement) {
     fs.writeFileSync(file, after);
     edited += 1;
   }
-  if (edited === 0) throw new Error(`mutation did not apply: ${pattern} not found under ${chunks}`);
+  if (edited === 0)
+    throw new Error(
+      `mutation did not apply: ${pattern} not found under ${chunks}`,
+    );
 }
 
 export default {

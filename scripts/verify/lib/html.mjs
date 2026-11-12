@@ -48,13 +48,17 @@ export function rawText(node) {
  * KaTeX version does not matter while the formula itself is still compared. Mutates the document.
  */
 export function tokenizeMath($, root) {
-  for (const annotation of root.find('annotation[encoding="application/x-tex"]').toArray()) {
+  for (const annotation of root
+    .find('annotation[encoding="application/x-tex"]')
+    .toArray()) {
     if (!$.contains(root[0], annotation)) continue; // already replaced together with an enclosing formula
     const source = $(annotation);
     let formula = source.closest(".katex");
     if (!formula.length) formula = source.closest("math");
     if (!formula.length) continue;
-    const display = formula.closest(".katex-display").length > 0 || source.closest("math").attr("display") === "block";
+    const display =
+      formula.closest(".katex-display").length > 0 ||
+      source.closest("math").attr("display") === "block";
     const token = `⟦${display ? "tex-display" : "tex"}:${rawText(annotation)}⟧`;
     formula.replaceWith($("<span></span>").text(token).contents());
   }
@@ -75,10 +79,13 @@ const INVISIBLE = [
   [0x2060, 0x2060],
   [0xfeff, 0xfeff],
 ];
-const isInvisible = (code) => INVISIBLE.some(([from, to]) => code >= from && code <= to);
+const isInvisible = (code) =>
+  INVISIBLE.some(([from, to]) => code >= from && code <= to);
 const spellOut = (text) =>
   text.replace(/[^ -~]/g, (c) =>
-    isInvisible(c.charCodeAt(0)) ? "\\u" + c.charCodeAt(0).toString(16).padStart(4, "0") : c,
+    isInvisible(c.charCodeAt(0))
+      ? "\\u" + c.charCodeAt(0).toString(16).padStart(4, "0")
+      : c,
   );
 
 /** Quoted, single-line form of a value; invisible characters are spelled out. `null`/`undefined` → "(none)". */
@@ -100,7 +107,10 @@ export function firstDiff(a, b) {
 export function contextAt(text, at, radius = 20) {
   const from = Math.max(0, at - radius);
   const to = Math.min(text.length, at + radius);
-  return quote(`${from > 0 ? "…" : ""}${text.slice(from, to)}${to < text.length ? "…" : ""}`, 4 * radius);
+  return quote(
+    `${from > 0 ? "…" : ""}${text.slice(from, to)}${to < text.length ? "…" : ""}`,
+    4 * radius,
+  );
 }
 
 /** "differs at 123: "…baseline…" → "…candidate…"", or null when the strings are equal. */
@@ -117,8 +127,12 @@ export function diffList(name, baseline, candidate) {
   while (i < n && baseline[i] === candidate[i]) i++;
   if (i === baseline.length && i === candidate.length) return null;
 
-  const count = baseline.length === candidate.length ? "" : ` (${baseline.length} → ${candidate.length} items)`;
-  if (i < n) return `${name}[${i}]${count} ${diffText(baseline[i], candidate[i])}`;
+  const count =
+    baseline.length === candidate.length
+      ? ""
+      : ` (${baseline.length} → ${candidate.length} items)`;
+  if (i < n)
+    return `${name}[${i}]${count} ${diffText(baseline[i], candidate[i])}`;
   return `${name}[${i}]${count}: ${quote(baseline[i], 60)} → ${quote(candidate[i], 60)}`;
 }
 
@@ -129,7 +143,8 @@ export const oneLine = (text) => String(text).replace(/\s*[\r\n]+\s*/g, " ⏎ ")
 // Files and references
 // ---------------------------------------------------------------------------------------------
 
-export const sha256 = (buffer) => crypto.createHash("sha256").update(buffer).digest("hex");
+export const sha256 = (buffer) =>
+  crypto.createHash("sha256").update(buffer).digest("hex");
 
 /** Every file below `root` as a sorted list of "/"-separated relative paths (dotfiles included). */
 export function listFiles(root) {
@@ -139,7 +154,8 @@ export function listFiles(root) {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
       const abs = path.join(dir, entry.name);
       if (entry.isDirectory()) walk(abs);
-      else if (entry.isFile()) files.push(path.relative(root, abs).split(path.sep).join("/"));
+      else if (entry.isFile())
+        files.push(path.relative(root, abs).split(path.sep).join("/"));
     }
   };
   if (fs.existsSync(root)) walk(root);
@@ -147,10 +163,12 @@ export function listFiles(root) {
 }
 
 /** Relative paths of the baseline files that are not HTML pages: public assets, sitemap.xml, robots.txt, _next/. */
-export const listAssets = (root) => listFiles(root).filter((rel) => !rel.endsWith(".html"));
+export const listAssets = (root) =>
+  listFiles(root).filter((rel) => !rel.endsWith(".html"));
 
 /** URL path of a relative file path ("a b/c.png" → "/a%20b/c.png"). */
-export const urlPathOf = (rel) => `/${rel.split("/").map(encodeURIComponent).join("/")}`;
+export const urlPathOf = (rel) =>
+  `/${rel.split("/").map(encodeURIComponent).join("/")}`;
 
 /**
  * Site-relative pathname a reference points to, without query and fragment. Returns null for references that leave
@@ -176,8 +194,10 @@ export const srcsetUrls = (srcset) =>
     .map((entry) => entry.trim().split(/\s+/)[0])
     .filter(Boolean);
 
-const dirOf = (ctx, side) => (side === "baseline" ? ctx.baselineDir : ctx.candidateDir);
-const isRemote = (ctx, side) => side === "candidate" && Boolean(ctx.candidateUrl);
+const dirOf = (ctx, side) =>
+  side === "baseline" ? ctx.baselineDir : ctx.candidateDir;
+const isRemote = (ctx, side) =>
+  side === "candidate" && Boolean(ctx.candidateUrl);
 
 const remoteCache = new WeakMap();
 
@@ -190,7 +210,9 @@ async function fetchRemote(ctx, pathname) {
       pathname,
       (async () => {
         try {
-          const response = await fetch(ctx.candidateUrl + pathname, { redirect: "manual" });
+          const response = await fetch(ctx.candidateUrl + pathname, {
+            redirect: "manual",
+          });
           const body = Buffer.from(await response.arrayBuffer());
           return {
             status: response.status,
@@ -250,8 +272,12 @@ export async function readSiteFile(ctx, side, rel) {
 export function candidateRoutes(ctx) {
   if (ctx.candidateUrl) return ctx.routes;
   const wanted = ctx.args?.route ?? [];
-  const routes = fs.existsSync(ctx.candidateDir) ? listRoutes(ctx.candidateDir) : [];
-  return wanted.length ? routes.filter((route) => wanted.includes(route)) : routes;
+  const routes = fs.existsSync(ctx.candidateDir)
+    ? listRoutes(ctx.candidateDir)
+    : [];
+  return wanted.length
+    ? routes.filter((route) => wanted.includes(route))
+    : routes;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -269,7 +295,9 @@ export function allowances(ctx, check) {
     skip(item, detail) {
       const reason = ctx.allowed(check, item);
       if (reason === null) return false;
-      allowed.push(detail === undefined ? { item, reason } : { item, reason, detail });
+      allowed.push(
+        detail === undefined ? { item, reason } : { item, reason, detail },
+      );
       return true;
     },
   };
@@ -289,19 +317,26 @@ export function mutateFirst(dir, rels, edit) {
       return rel;
     }
   }
-  throw new Error(`mutation changed nothing in: ${rels.slice(0, 3).join(", ") || "(no files)"}`);
+  throw new Error(
+    `mutation changed nothing in: ${rels.slice(0, 3).join(", ") || "(no files)"}`,
+  );
 }
 
 /** Self-test: apply `edit` to one file of a mutant copy; throws when the edit changes nothing. */
 export const mutateFile = (dir, rel, edit) => mutateFirst(dir, [rel], edit);
 
 /** Self-test: relative paths of the post pages of a site copy, sorted. */
-export const postFiles = (dir) => listFiles(dir).filter((rel) => /^posts\/[^/]+\.html$/.test(rel));
+export const postFiles = (dir) =>
+  listFiles(dir).filter((rel) => /^posts\/[^/]+\.html$/.test(rel));
 
 /** Self-test: replace the first match of `pattern` inside <main>…</main> only. Returns the input when nothing matches. */
 export function replaceInMain(html, pattern, replacement) {
   const start = html.indexOf("<main");
   const end = html.indexOf("</main>", start);
   if (start === -1 || end === -1) return html;
-  return html.slice(0, start) + html.slice(start, end).replace(pattern, replacement) + html.slice(end);
+  return (
+    html.slice(0, start) +
+    html.slice(start, end).replace(pattern, replacement) +
+    html.slice(end)
+  );
 }

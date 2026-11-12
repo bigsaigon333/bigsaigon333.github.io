@@ -17,15 +17,13 @@ const posts = await getPublishedPosts();
   home
 >
   <section>
-    {
-      posts.map(({ id, data: { title, date } }) => (
-        <article>
-          <a href={postPath(id)}>
-            <h2>{title}</h2>
-          </a>
-          <time datetime={date.toISOString()}>{formatDate(date)}</time>
-        </article>
-      ))
-    }
+    {posts.map(({ id, data: { title, date } }) => (
+      <article>
+        <a href={postPath(id)}>
+          <h2>{title}</h2>
+        </a>
+        <time datetime={date.toISOString()}>{formatDate(date)}</time>
+      </article>
+    ))}
   </section>
 </BaseLayout>

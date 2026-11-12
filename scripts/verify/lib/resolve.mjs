@@ -38,12 +38,15 @@ export function resolve(root, pathname) {
   if (abs !== root && !abs.startsWith(root + path.sep)) return { status: 403 };
 
   if (isFile(abs)) return { status: 200, file: abs };
-  if (!rel.endsWith("/") && isFile(`${abs}.html`)) return { status: 200, file: `${abs}.html` };
+  if (!rel.endsWith("/") && isFile(`${abs}.html`))
+    return { status: 200, file: `${abs}.html` };
 
   if (isDir(abs)) {
     const index = path.join(abs, "index.html");
     if (isFile(index)) {
-      return rel.endsWith("/") ? { status: 200, file: index } : { status: 301, location: `${pathname}/` };
+      return rel.endsWith("/")
+        ? { status: 200, file: index }
+        : { status: 301, location: `${pathname}/` };
     }
   }
 
@@ -62,14 +65,21 @@ export function listRoutes(root) {
       const abs = path.join(dir, entry.name);
       if (entry.isDirectory()) walk(abs);
       else if (entry.name.endsWith(".html")) {
-        const rel = path.relative(root, abs).split(path.sep).join("/").replace(/\.html$/, "");
+        const rel = path
+          .relative(root, abs)
+          .split(path.sep)
+          .join("/")
+          .replace(/\.html$/, "");
         if (rel === "index") routes.push("/");
-        else if (rel.endsWith("/index")) routes.push(`/${rel.slice(0, -"/index".length)}/`);
+        else if (rel.endsWith("/index"))
+          routes.push(`/${rel.slice(0, -"/index".length)}/`);
         else routes.push(`/${rel}`);
       }
     }
   };
 
   walk(root);
-  return routes.sort((a, b) => (a === "/" ? -1 : b === "/" ? 1 : a.localeCompare(b)));
+  return routes.sort((a, b) =>
+    a === "/" ? -1 : b === "/" ? 1 : a.localeCompare(b),
+  );
 }

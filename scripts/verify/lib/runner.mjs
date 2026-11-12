@@ -7,19 +7,36 @@ import { pathToFileURL } from "node:url";
 import { load } from "cheerio";
 
 import { startServer } from "../serve.mjs";
-import { allowlistFile, baselineDir, cacheDir, checksDir, distDir, mainRoot, reportDir } from "./paths.mjs";
+import {
+  allowlistFile,
+  baselineDir,
+  cacheDir,
+  checksDir,
+  distDir,
+  mainRoot,
+  reportDir,
+} from "./paths.mjs";
 import { listRoutes, resolve } from "./resolve.mjs";
 
 export function parseArgs(argv) {
-  const args = { only: [], route: [], static: false, noBuild: false, noCheck: false };
+  const args = {
+    only: [],
+    route: [],
+    static: false,
+    noBuild: false,
+    noCheck: false,
+  };
   for (const raw of argv) {
     const [key, ...rest] = raw.replace(/^--/, "").split("=");
     const value = rest.join("=");
-    if (key === "only" || key === "route") args[key] = value.split(",").filter(Boolean);
+    if (key === "only" || key === "route")
+      args[key] = value.split(",").filter(Boolean);
     else if (key === "static") args.static = true;
     else if (key === "no-build") args.noBuild = true;
     else if (key === "no-check") args.noCheck = true;
-    else args[key.replace(/-([a-z])/g, (_, c) => c.toUpperCase())] = value === "" ? true : value;
+    else
+      args[key.replace(/-([a-z])/g, (_, c) => c.toUpperCase())] =
+        value === "" ? true : value;
   }
   return args;
 }
@@ -41,7 +58,12 @@ function loadAllowlist() {
  * @param {string} [options.baseline]      reference site (default: .verify/baseline)
  * @param {object} [options.args]          parsed CLI args
  */
-export function createContext({ candidateDir = distDir, candidateUrl = null, baseline = baselineDir, args = {} } = {}) {
+export function createContext({
+  candidateDir = distDir,
+  candidateUrl = null,
+  baseline = baselineDir,
+  args = {},
+} = {}) {
   const allRoutes = listRoutes(baseline);
   const wanted = args.route ?? [];
   const allowlist = loadAllowlist();
@@ -59,14 +81,18 @@ export function createContext({ candidateDir = distDir, candidateUrl = null, bas
     /** Every HTML route of the baseline: "/", "/404", "/posts/<id>". */
     allRoutes,
     /** allRoutes narrowed by --route. Checks iterate over this. */
-    routes: wanted.length ? allRoutes.filter((route) => wanted.includes(route)) : allRoutes,
+    routes: wanted.length
+      ? allRoutes.filter((route) => wanted.includes(route))
+      : allRoutes,
 
     /** Reason string if `item` is an accepted difference for `check`, else null. */
     allowed(check, item) {
       const hit = allowlist.find(
         (entry) =>
           entry.check === check &&
-          (entry.item === item || (entry.item.endsWith("**") && item.startsWith(entry.item.slice(0, -2)))),
+          (entry.item === item ||
+            (entry.item.endsWith("**") &&
+              item.startsWith(entry.item.slice(0, -2)))),
       );
       return hit ? hit.reason : null;
     },
@@ -74,7 +100,9 @@ export function createContext({ candidateDir = distDir, candidateUrl = null, bas
     /** Absolute path of the file a route resolves to on `side` ("baseline" | "candidate"), or null. */
     fileFor(side, route) {
       const hit = resolve(dirs[side], route);
-      return hit.file && (hit.status === 200 || route === "/404") ? hit.file : null;
+      return hit.file && (hit.status === 200 || route === "/404")
+        ? hit.file
+        : null;
     },
 
     /** HTML source of a route, or null when the route does not exist on that side. */
@@ -84,8 +112,14 @@ export function createContext({ candidateDir = distDir, candidateUrl = null, bas
 
       let html = null;
       if (side === "candidate" && candidateUrl) {
-        const response = await fetch(candidateUrl + route, { redirect: "manual" });
-        if (response.status === 200) html = await response.text();
+        try {
+          const response = await fetch(candidateUrl + route, {
+            redirect: "manual",
+          });
+          if (response.status === 200) html = await response.text();
+        } catch {
+          // Unreachable host: the route does not exist as far as the checks are concerned.
+        }
       } else {
         const file = ctx.fileFor(side, route);
         if (file) html = fs.readFileSync(file, "utf8");
@@ -137,7 +171,9 @@ export async function loadChecks({ only = [], staticOnly = false } = {}) {
     const module = await import(pathToFileURL(path.join(checksDir, file)).href);
     const check = module.default;
     if (!check?.name || typeof check.run !== "function") {
-      throw new Error(`${file}: default export must be { name, kind, run(ctx) }`);
+      throw new Error(
+        `${file}: default export must be { name, kind, run(ctx) }`,
+      );
     }
     if (only.length && !only.includes(check.name)) continue;
     if (staticOnly && check.kind !== "static") continue;
@@ -154,7 +190,14 @@ export async function runChecks(ctx, checks) {
     try {
       result = await check.run(ctx);
     } catch (error) {
-      result = { ok: false, pass: 0, fail: 1, failed: [{ route: "-", detail: `check crashed: ${error.stack ?? error}` }] };
+      result = {
+        ok: false,
+        pass: 0,
+        fail: 1,
+        failed: [
+          { route: "-", detail: `check crashed: ${error.stack ?? error}` },
+        ],
+      };
     }
     const failed = result.failed ?? [];
     const normalized = {
@@ -183,8 +226,11 @@ export function formatResults(results) {
   return results.map((result) => {
     const head = `${result.ok ? "PASS" : "FAIL"}  ${result.check.padEnd(9)} ${result.pass}/${result.pass + result.fail}`;
     if (result.ok) return head;
-    const shown = result.failed.slice(0, 3).map((item) => `${item.route}: ${clip(item.detail)}`);
-    const more = result.failed.length > 3 ? ` (+${result.failed.length - 3} more)` : "";
+    const shown = result.failed
+      .slice(0, 3)
+      .map((item) => `${item.route}: ${clip(item.detail)}`);
+    const more =
+      result.failed.length > 3 ? ` (+${result.failed.length - 3} more)` : "";
     return `${head}  ${shown.join(" | ")}${more}  → .verify/report/${result.check}.json`;
   });
 }
@@ -195,7 +241,9 @@ export function toMatrix(ctx, results) {
   const cells = {};
   for (const result of results) {
     const failedRoutes = new Set(result.failed.map((item) => item.route));
-    const perRoute = result.cells !== null || result.failed.some((item) => ctx.allRoutes.includes(item.route));
+    const perRoute =
+      result.cells !== null ||
+      result.failed.some((item) => ctx.allRoutes.includes(item.route));
     for (const route of ctx.routes) {
       let state;
       if (result.cells) state = result.cells[route] ?? "skip";
@@ -211,7 +259,9 @@ export function toMatrix(ctx, results) {
 export async function emitVerify({ scope, args, results, matrix, durationMs }) {
   try {
     // Always the main checkout's emitter, so every worktree writes to the same log.
-    const { emit } = await import(pathToFileURL(path.join(mainRoot, "scripts", "progress", "emit.mjs")).href);
+    const { emit } = await import(
+      pathToFileURL(path.join(mainRoot, "scripts", "progress", "emit.mjs")).href
+    );
     emit({
       type: "verify",
       scope,
@@ -225,7 +275,10 @@ export async function emitVerify({ scope, args, results, matrix, durationMs }) {
         ok,
         pass,
         fail,
-        failed: failed.slice(0, 20).map((item) => ({ route: item.route, detail: clip(item.detail, 200) })),
+        failed: failed.slice(0, 20).map((item) => ({
+          route: item.route,
+          detail: clip(item.detail, 200),
+        })),
       })),
       matrix,
     });

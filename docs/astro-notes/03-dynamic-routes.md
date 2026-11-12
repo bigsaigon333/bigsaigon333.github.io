@@ -16,16 +16,16 @@
 
 ## Next.js 대응
 
-| 예전 (`git show "main:pages/posts/[id].page.tsx"`, `main:lib/posts.ts`) | 지금 |
-|---|---|
-| `pages/posts/[id].page.tsx` | `src/pages/posts/[id].astro` |
-| `getStaticPaths` → `{ paths: getAllPostIds(), fallback: false }` | `getStaticPaths` → `posts.map((post) => ({ params: { id: post.id }, props: { post } }))` |
-| `getStaticProps({ params })` → `getPostData(params.id)` | 없다. `props`로 이미 받았다 |
-| `getPostData`의 unified 체인(`remarkParse` … `rehypeStringify`) | `render(post)` + `config/markdown.mjs` |
-| `<Main dangerouslySetInnerHTML={{ __html: contentHtml }} />` | `<main><Content /></main>` |
-| `<Article><h2>…</h2><time …></Article>` (styled-components) | `src/components/PostHeader.astro` |
-| `useEffect`로 `<div ref>`를 utterances 스크립트로 교체 | 스텁 `src/components/Comments.astro` (S2.4) |
-| `` const url = `https://bigsaigon333.github.io/posts/${id}` `` | `postUrl(post.id)` |
+| 예전 (`git show "main:pages/posts/[id].page.tsx"`, `main:lib/posts.ts`) | 지금                                                                                     |
+| ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `pages/posts/[id].page.tsx`                                             | `src/pages/posts/[id].astro`                                                             |
+| `getStaticPaths` → `{ paths: getAllPostIds(), fallback: false }`        | `getStaticPaths` → `posts.map((post) => ({ params: { id: post.id }, props: { post } }))` |
+| `getStaticProps({ params })` → `getPostData(params.id)`                 | 없다. `props`로 이미 받았다                                                              |
+| `getPostData`의 unified 체인(`remarkParse` … `rehypeStringify`)         | `render(post)` + `config/markdown.mjs`                                                   |
+| `<Main dangerouslySetInnerHTML={{ __html: contentHtml }} />`            | `<main><Content /></main>`                                                               |
+| `<Article><h2>…</h2><time …></Article>` (styled-components)             | `src/components/PostHeader.astro`                                                        |
+| `useEffect`로 `<div ref>`를 utterances 스크립트로 교체                  | 스텁 `src/components/Comments.astro` (S2.4)                                              |
+| `` const url = `https://bigsaigon333.github.io/posts/${id}` ``          | `postUrl(post.id)`                                                                       |
 
 ## 빌드 결과물에서 확인하기
 

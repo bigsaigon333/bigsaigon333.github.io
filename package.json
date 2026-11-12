@@ -13,7 +13,8 @@
     "verify:selftest": "node scripts/verify/selftest.mjs",
     "verify:live": "node scripts/verify/live.mjs",
     "progress": "node scripts/progress/server.mjs",
-    "progress:watch": "node scripts/progress/watch.mjs"
+    "progress:watch": "node scripts/progress/watch.mjs",
+    "prepare": "husky"
   },
   "engines": {
     "node": ">=24"

@@ -6,11 +6,28 @@
 // One failed item per route lists every differing field as "field: baseline → candidate".
 //
 // Allowlist item: "route:<route>".
-import { allowances, mutateFile, postFiles, quote, rawText } from "../lib/html.mjs";
+import {
+  allowances,
+  mutateFile,
+  postFiles,
+  quote,
+  rawText,
+} from "../lib/html.mjs";
 
 const NAMED = ["description", "author", "viewport", "google-site-verification"];
-const OPEN_GRAPH = ["og:title", "og:description", "og:url", "og:type", "og:image"];
-const TWITTER = ["twitter:card", "twitter:title", "twitter:description", "twitter:image"];
+const OPEN_GRAPH = [
+  "og:title",
+  "og:description",
+  "og:url",
+  "og:type",
+  "og:image",
+];
+const TWITTER = [
+  "twitter:card",
+  "twitter:title",
+  "twitter:description",
+  "twitter:image",
+];
 
 const keywordList = (content) =>
   String(content ?? "")
@@ -34,7 +51,9 @@ function headFields($) {
   );
   fields.set(
     "charset",
-    attrs("meta[charset]", "charset").map((value) => value.trim().toLowerCase()),
+    attrs("meta[charset]", "charset").map((value) =>
+      value.trim().toLowerCase(),
+    ),
   );
   fields.set(
     "title",
@@ -43,20 +62,29 @@ function headFields($) {
       .toArray()
       .map((el) => rawText(el)),
   );
-  for (const name of NAMED) fields.set(name, attrs(`meta[name="${name}"]`, "content"));
+  for (const name of NAMED)
+    fields.set(name, attrs(`meta[name="${name}"]`, "content"));
   fields.set(
     "keywords",
-    attrs('meta[name="keywords"]', "content").map((content) => keywordList(content).join(", ")),
+    attrs('meta[name="keywords"]', "content").map((content) =>
+      keywordList(content).join(", "),
+    ),
   );
   fields.set("canonical", attrs('link[rel~="canonical"]', "href"));
-  for (const property of OPEN_GRAPH) fields.set(property, attrs(`meta[property="${property}"]`, "content"));
-  for (const name of TWITTER) fields.set(name, attrs(`meta[name="${name}"]`, "content"));
+  for (const property of OPEN_GRAPH)
+    fields.set(property, attrs(`meta[property="${property}"]`, "content"));
+  for (const name of TWITTER)
+    fields.set(name, attrs(`meta[name="${name}"]`, "content"));
   fields.set("icon", attrs('link[rel~="icon"]', "href"));
   return fields;
 }
 
-const show = (values) => (values.length === 0 ? "(none)" : values.map((value) => quote(value, 70)).join(" + "));
-const same = (a, b) => a.length === b.length && a.every((value, index) => value === b[index]);
+const show = (values) =>
+  values.length === 0
+    ? "(none)"
+    : values.map((value) => quote(value, 70)).join(" + ");
+const same = (a, b) =>
+  a.length === b.length && a.every((value, index) => value === b[index]);
 
 export default {
   name: "head",
@@ -81,11 +109,17 @@ export default {
         for (const [field, values] of before) {
           if (field === "charset") {
             // Only the presence of a utf-8 charset declaration counts.
-            if (values.includes("utf-8") !== after.get(field).includes("utf-8")) {
-              differing.push(`charset: ${show(values)} → ${show(after.get(field))}`);
+            if (
+              values.includes("utf-8") !== after.get(field).includes("utf-8")
+            ) {
+              differing.push(
+                `charset: ${show(values)} → ${show(after.get(field))}`,
+              );
             }
           } else if (!same(values, after.get(field))) {
-            differing.push(`${field}: ${show(values)} → ${show(after.get(field))}`);
+            differing.push(
+              `${field}: ${show(values)} → ${show(after.get(field))}`,
+            );
           }
         }
       }
@@ -104,7 +138,14 @@ export default {
       }
     }
 
-    return { ok: failed.length === 0, pass, fail: failed.length, failed, cells, extra: { allowed, diffs } };
+    return {
+      ok: failed.length === 0,
+      pass,
+      fail: failed.length,
+      failed,
+      cells,
+      extra: { allowed, diffs },
+    };
   },
 
   selftest: {
@@ -112,19 +153,25 @@ export default {
       {
         name: "제목 변경",
         apply(dir) {
-          mutateFile(dir, postFiles(dir)[0], (html) => html.replace(/<title>([^<]*)<\/title>/, "<title>$1!</title>"));
+          mutateFile(dir, postFiles(dir)[0], (html) =>
+            html.replace(/<title>([^<]*)<\/title>/, "<title>$1!</title>"),
+          );
         },
       },
       {
         name: "og:image 삭제",
         apply(dir) {
-          mutateFile(dir, "index.html", (html) => html.replace(/<meta property="og:image"[^>]*>/, ""));
+          mutateFile(dir, "index.html", (html) =>
+            html.replace(/<meta property="og:image"[^>]*>/, ""),
+          );
         },
       },
       {
         name: "keywords 항목 삭제",
         apply(dir) {
-          mutateFile(dir, "index.html", (html) => html.replace(/(<meta name="keywords" content=")[^,"]*,/, "$1"));
+          mutateFile(dir, "index.html", (html) =>
+            html.replace(/(<meta name="keywords" content=")[^,"]*,/, "$1"),
+          );
         },
       },
     ],

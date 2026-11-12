@@ -12,7 +12,15 @@ import path from "node:path";
 
 import { listAssets, probe, urlPathOf } from "./lib/html.mjs";
 import { baselineDir } from "./lib/paths.mjs";
-import { createContext, emitVerify, formatResults, loadChecks, parseArgs, runChecks, toMatrix } from "./lib/runner.mjs";
+import {
+  createContext,
+  emitVerify,
+  formatResults,
+  loadChecks,
+  parseArgs,
+  runChecks,
+  toMatrix,
+} from "./lib/runner.mjs";
 import { startServer } from "./serve.mjs";
 
 const REUSED = ["head", "content", "sitemap"];
@@ -21,7 +29,9 @@ const args = parseArgs(process.argv.slice(2));
 const started = performance.now();
 
 const usage = (message) => {
-  console.error(`${message}\nusage: npm run verify:live -- --base-url=<url> | --serve=<dir>`);
+  console.error(
+    `${message}\nusage: npm run verify:live -- --base-url=<url> | --serve=<dir>`,
+  );
   process.exit(2);
 };
 
@@ -31,7 +41,8 @@ if (!fs.existsSync(path.join(baselineDir, "index.html"))) {
 }
 
 const hasValue = (value) => typeof value === "string" && value !== "";
-if (hasValue(args.baseUrl) === hasValue(args.serve)) usage("give exactly one of --base-url=<url> and --serve=<dir>");
+if (hasValue(args.baseUrl) === hasValue(args.serve))
+  usage("give exactly one of --base-url=<url> and --serve=<dir>");
 
 let server = null;
 let baseUrl;
@@ -47,7 +58,8 @@ if (hasValue(args.serve)) {
   } catch {
     usage(`not a URL: ${args.baseUrl}`);
   }
-  if (url.protocol !== "http:" && url.protocol !== "https:") usage(`not an http(s) URL: ${args.baseUrl}`);
+  if (url.protocol !== "http:" && url.protocol !== "https:")
+    usage(`not an http(s) URL: ${args.baseUrl}`);
   baseUrl = (url.origin + url.pathname).replace(/\/+$/, "");
 }
 
@@ -58,8 +70,17 @@ const status = {
 
   async run(ctx) {
     // Public assets = non-HTML baseline files the Astro site is expected to keep (not allowlisted in the routes check).
-    const assets = listAssets(ctx.baselineDir).filter((rel) => ctx.allowed("routes", `asset:${rel}`) === null);
-    const targets = [...new Set([...ctx.routes, "/sitemap.xml", "/robots.txt", ...assets.map(urlPathOf)])];
+    const assets = listAssets(ctx.baselineDir).filter(
+      (rel) => ctx.allowed("routes", `asset:${rel}`) === null,
+    );
+    const targets = [
+      ...new Set([
+        ...ctx.routes,
+        "/sitemap.xml",
+        "/robots.txt",
+        ...assets.map(urlPathOf),
+      ]),
+    ];
 
     const failed = [];
     const cells = {};
@@ -103,7 +124,9 @@ ctx.html = async (side, route) => {
 };
 
 const wanted = args.only ?? [];
-const reused = wanted.length ? REUSED.filter((name) => wanted.includes(name)) : REUSED;
+const reused = wanted.length
+  ? REUSED.filter((name) => wanted.includes(name))
+  : REUSED;
 const checks = [
   ...(wanted.length === 0 || wanted.includes("status") ? [status] : []),
   // An empty `only` would mean "every check" to loadChecks.
@@ -127,6 +150,12 @@ console.log(
   `${ok ? "ALL PASS" : "FAILED"}  ${results.filter((r) => r.ok).length}/${results.length} checks  ${(durationMs / 1000).toFixed(1)}s`,
 );
 
-await emitVerify({ scope: "live", args, results, matrix: toMatrix(ctx, results), durationMs });
+await emitVerify({
+  scope: "live",
+  args,
+  results,
+  matrix: toMatrix(ctx, results),
+  durationMs,
+});
 
 process.exit(ok ? 0 : 1);

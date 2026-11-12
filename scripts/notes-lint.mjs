@@ -23,9 +23,12 @@ function lint(file) {
   const lines = text.split("\n");
   const problems = [];
 
-  if (!/^# \S/.test(lines[0] ?? "")) problems.push("첫 줄은 `# 제목`이어야 한다");
+  if (!/^# \S/.test(lines[0] ?? ""))
+    problems.push("첫 줄은 `# 제목`이어야 한다");
 
-  const headings = lines.filter((line) => line.startsWith("## ")).map((line) => line.slice(3).trim());
+  const headings = lines
+    .filter((line) => line.startsWith("## "))
+    .map((line) => line.slice(3).trim());
   if (headings.join("|") !== SECTIONS.join("|")) {
     problems.push(`절 구성이 다르다(순서 포함). 기대: ${SECTIONS.join(" / ")}`);
   }
@@ -41,14 +44,19 @@ function lint(file) {
   if ((section("직접 해볼 실험").match(/<details>/g) ?? []).length < 2) {
     problems.push("실험이 2개 이상이어야 하고 예상 결과는 <details>로 접는다");
   }
-  if (!/https:\/\/\S+/.test(section("문서 근거"))) problems.push("문서 근거에 URL이 없다");
-  if (lines.length > MAX_LINES) problems.push(`${lines.length}줄 — ${MAX_LINES}줄 이하여야 한다`);
+  if (!/https:\/\/\S+/.test(section("문서 근거")))
+    problems.push("문서 근거에 URL이 없다");
+  if (lines.length > MAX_LINES)
+    problems.push(`${lines.length}줄 — ${MAX_LINES}줄 이하여야 한다`);
 
   return problems;
 }
 
 const files = fs.existsSync(dir)
-  ? fs.readdirSync(dir).filter((name) => /^\d\d-.+\.md$/.test(name)).sort()
+  ? fs
+      .readdirSync(dir)
+      .filter((name) => /^\d\d-.+\.md$/.test(name))
+      .sort()
   : [];
 
 let failed = 0;
@@ -60,5 +68,7 @@ for (const name of files) {
   }
 }
 
-console.log(`${failed ? "NOTES FAILED" : "NOTES PASS"}  ${files.length - failed}/${files.length} notes`);
+console.log(
+  `${failed ? "NOTES FAILED" : "NOTES PASS"}  ${files.length - failed}/${files.length} notes`,
+);
 process.exit(failed ? 1 : 0);

@@ -16,16 +16,16 @@
 
 ## Next.js 대응
 
-| 예전 (`git show main:lib/posts.ts`) | 지금 |
-|---|---|
-| `readdirSync(postsDirectory).filter(/\.md$/)` | `glob({ pattern: "*.md", base: "./posts" })` |
-| `fileName.replace(/\.md$/, "")` | `generateId` |
-| `matter.read(fullPath)` | 로더가 frontmatter와 본문을 나눈다 |
-| superstruct `MatterData` (`coerce(date(), string(), …)`, `defaulted(string(), "")`) | Zod 스키마 (`z.iso.date().transform(…)`, `.default("")`) |
-| `getSortedPostsData()` + date-fns `compareDesc` | `src/lib/posts.ts`의 `getPublishedPosts()` |
-| date-fns `format(date, "yyyy-MM-dd")` (로컬 시간대) | `formatDate()` (UTC) |
-| `pages/index.page.tsx`의 `getStaticProps` → props → JSX | `src/pages/index.astro` 펜스의 `await getPublishedPosts()` → 같은 파일의 템플릿 |
-| `next-superjson-plugin` (`Date`를 props로 넘기려고) | 필요 없다. 직렬화 경계가 없다 |
+| 예전 (`git show main:lib/posts.ts`)                                                 | 지금                                                                            |
+| ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `readdirSync(postsDirectory).filter(/\.md$/)`                                       | `glob({ pattern: "*.md", base: "./posts" })`                                    |
+| `fileName.replace(/\.md$/, "")`                                                     | `generateId`                                                                    |
+| `matter.read(fullPath)`                                                             | 로더가 frontmatter와 본문을 나눈다                                              |
+| superstruct `MatterData` (`coerce(date(), string(), …)`, `defaulted(string(), "")`) | Zod 스키마 (`z.iso.date().transform(…)`, `.default("")`)                        |
+| `getSortedPostsData()` + date-fns `compareDesc`                                     | `src/lib/posts.ts`의 `getPublishedPosts()`                                      |
+| date-fns `format(date, "yyyy-MM-dd")` (로컬 시간대)                                 | `formatDate()` (UTC)                                                            |
+| `pages/index.page.tsx`의 `getStaticProps` → props → JSX                             | `src/pages/index.astro` 펜스의 `await getPublishedPosts()` → 같은 파일의 템플릿 |
+| `next-superjson-plugin` (`Date`를 props로 넘기려고)                                 | 필요 없다. 직렬화 경계가 없다                                                   |
 
 예전 `keywords`는 `split(",")`만 해서 배포본 메타가 `"Proxy,  Map,  …"`(공백 두 칸)였다. 지금은 trim 한다.
 

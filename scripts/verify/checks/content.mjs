@@ -46,7 +46,9 @@ function homeSnapshot($) {
     .toArray()
     .map((article) => {
       const heading = $(article).find("h2").first();
-      const link = heading.closest("a[href]").length ? heading.closest("a[href]") : heading.find("a[href]").first();
+      const link = heading.closest("a[href]").length
+        ? heading.closest("a[href]")
+        : heading.find("a[href]").first();
       const time = $(article).find("time[datetime]").first();
       return [
         link.attr("href") ?? "(no link)",
@@ -74,7 +76,9 @@ function postSnapshot($) {
   // A footnote reference is an in-page link in a <sup>; its definition is whatever element that link points to.
   const references = find('sup a[href^="#"], a[data-footnote-ref]');
   const targets = new Map(find("[id]").map((el) => [el.attribs.id, el]));
-  const definitions = [...new Set(references.map((el) => attr(el, "href")).filter(Boolean))].map((href) => {
+  const definitions = [
+    ...new Set(references.map((el) => attr(el, "href")).filter(Boolean)),
+  ].map((href) => {
     let id = href.slice(1);
     try {
       id = decodeURIComponent(id);
@@ -89,14 +93,20 @@ function postSnapshot($) {
     time: `${time.attr("datetime") ?? "(no datetime)"} | ${text(time[0])}`,
     main: `${$("main").length} <main>`,
     text: text(main[0]),
-    headings: find("h1, h2, h3, h4, h5, h6").map((el) => `${el.name} ${text(el)}`),
+    headings: find("h1, h2, h3, h4, h5, h6").map(
+      (el) => `${el.name} ${text(el)}`,
+    ),
     pre: find("pre").map(preText),
     links: find("a[href]").map((el) => attr(el, "href")),
     images: find("img").map((el) =>
-      ["src", "alt", "width"].map((name) => `${name}: ${attr(el, name) ?? "(none)"}`).join(" | "),
+      ["src", "alt", "width"]
+        .map((name) => `${name}: ${attr(el, name) ?? "(none)"}`)
+        .join(" | "),
     ),
     cells: find("th, td").map((el) => `${el.name} ${text(el)}`),
-    checkboxes: find('input[type="checkbox"]').map((el) => (attr(el, "checked") === null ? "unchecked" : "checked")),
+    checkboxes: find('input[type="checkbox"]').map((el) =>
+      attr(el, "checked") === null ? "unchecked" : "checked",
+    ),
     del: find("del").map(text),
     "footnote refs": references.map(text),
     "footnote defs": definitions,
@@ -112,7 +122,8 @@ const bodySnapshot = ($) => ({ text: text($("body")[0]) });
 /** Element counts inside <main>, for the report only (helps to explain a visual difference). */
 function tagCounts($) {
   const counts = {};
-  for (const el of $("main").first().find("*").toArray()) counts[el.name] = (counts[el.name] ?? 0) + 1;
+  for (const el of $("main").first().find("*").toArray())
+    counts[el.name] = (counts[el.name] ?? 0) + 1;
   return counts;
 }
 
@@ -126,7 +137,9 @@ function compare(before, after) {
     } else if (baseline !== candidate) {
       const short = baseline.length <= 60 && candidate.length <= 60;
       differing.push(
-        short ? `${name}: ${quote(baseline)} → ${quote(candidate)}` : `${name} ${diffText(baseline, candidate)}`,
+        short
+          ? `${name}: ${quote(baseline)} → ${quote(candidate)}`
+          : `${name} ${diffText(baseline, candidate)}`,
       );
     }
   }
@@ -152,7 +165,12 @@ export default {
       let differing;
       if (candidate === null) differing = ["route missing in candidate"];
       else {
-        const snapshot = route === "/" ? homeSnapshot : baseline("main").length ? postSnapshot : bodySnapshot;
+        const snapshot =
+          route === "/"
+            ? homeSnapshot
+            : baseline("main").length
+              ? postSnapshot
+              : bodySnapshot;
         tokenizeMath(baseline, baseline("body"));
         tokenizeMath(candidate, candidate("body"));
         differing = compare(snapshot(baseline), snapshot(candidate));
@@ -160,7 +178,9 @@ export default {
         if (snapshot === postSnapshot) {
           const before = tagCounts(baseline);
           const after = tagCounts(candidate);
-          const changed = [...new Set([...Object.keys(before), ...Object.keys(after)])]
+          const changed = [
+            ...new Set([...Object.keys(before), ...Object.keys(after)]),
+          ]
             .sort()
             .filter((tag) => before[tag] !== after[tag])
             .map((tag) => [tag, [before[tag] ?? 0, after[tag] ?? 0]]);
@@ -175,7 +195,8 @@ export default {
       }
       diffs[route] = differing;
       const detail =
-        differing.slice(0, 4).join("; ") + (differing.length > 4 ? ` (+${differing.length - 4} more)` : "");
+        differing.slice(0, 4).join("; ") +
+        (differing.length > 4 ? ` (+${differing.length - 4} more)` : "");
       if (skip(`route:${route}`, detail)) cells[route] = "skip";
       else {
         failed.push({ route, detail });
@@ -199,33 +220,45 @@ export default {
       {
         name: "본문 문단 삭제",
         apply(dir) {
-          mutateFirst(dir, postFiles(dir), (html) => replaceInMain(html, /<p>[\s\S]*?<\/p>/, ""));
+          mutateFirst(dir, postFiles(dir), (html) =>
+            replaceInMain(html, /<p>[\s\S]*?<\/p>/, ""),
+          );
         },
       },
       {
         name: "코드 블록 들여쓰기 변경",
         apply(dir) {
-          mutateFirst(dir, postFiles(dir), (html) => replaceInMain(html, /(<pre><code[^>]*>)/, "$1  "));
+          mutateFirst(dir, postFiles(dir), (html) =>
+            replaceInMain(html, /(<pre><code[^>]*>)/, "$1  "),
+          );
         },
       },
       {
         name: "링크 href 변경",
         apply(dir) {
-          mutateFirst(dir, postFiles(dir), (html) => replaceInMain(html, /<a href="([^"#][^"]*)"/, '<a href="$1-x"'));
+          mutateFirst(dir, postFiles(dir), (html) =>
+            replaceInMain(html, /<a href="([^"#][^"]*)"/, '<a href="$1-x"'),
+          );
         },
       },
       {
         name: "수식 TeX 원문 변경",
         apply(dir) {
           mutateFirst(dir, postFiles(dir), (html) =>
-            replaceInMain(html, /(<annotation encoding="application\/x-tex">)([^<]*)/, "$1$2+1"),
+            replaceInMain(
+              html,
+              /(<annotation encoding="application\/x-tex">)([^<]*)/,
+              "$1$2+1",
+            ),
           );
         },
       },
       {
         name: "글 머리 제목 변경",
         apply(dir) {
-          mutateFirst(dir, postFiles(dir), (html) => html.replace(/(<article[^>]*><h2>)/, "$1!"));
+          mutateFirst(dir, postFiles(dir), (html) =>
+            html.replace(/(<article[^>]*><h2>)/, "$1!"),
+          );
         },
       },
       {
@@ -233,7 +266,10 @@ export default {
         apply(dir) {
           // React writes the attribute as dateTime; HTML attribute names are case-insensitive.
           mutateFile(dir, "index.html", (html) =>
-            html.replace(/<time datetime="[^"]*"/i, '<time datetime="1999-01-01T00:00:00.000Z"'),
+            html.replace(
+              /<time datetime="[^"]*"/i,
+              '<time datetime="1999-01-01T00:00:00.000Z"',
+            ),
           );
         },
       },

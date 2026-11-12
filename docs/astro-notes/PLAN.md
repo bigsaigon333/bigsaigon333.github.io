@@ -6,15 +6,15 @@
 
 합의된 결정:
 
-| 항목 | 결정 |
-|---|---|
-| 범위 | 먼저 현재 사이트를 1:1로 재현(URL·메타·디자인 동일) → 그다음 개선(RSS, 다크 모드, 태그, View Transitions, 그 외 Astro 기능 전반) |
-| 학습 | 단계 1개 = Astro 개념 1개 = 커밋 1개 = 학습 노트 1개. 체크포인트 6곳에서만 멈춤 |
-| 배포 | GitHub Actions로 전환 (운영 전환 직전에 확인) |
-| Node 버전 관리 | nvm 대신 mise. `mise.toml`의 `[tools] node`가 유일한 출처이고 로컬·worktree·CI가 모두 이 파일을 읽는다 |
-| 서버 전용 기능 | 블로그에는 억지로 넣지 않고, 배포되지 않는 `labs/playground/`에서 실습 |
-| 실행 방식 | 메인 세션은 오케스트레이터 역할만 하고, 구현은 Workflow 도구로 웨이브 단위 병렬 서브에이전트에 맡긴다 |
-| 진행 상황 확인 | 로컬 실시간 대시보드 + 터미널 요약 + `/workflows` + Draft PR 체크리스트 |
+| 항목           | 결정                                                                                                                             |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| 범위           | 먼저 현재 사이트를 1:1로 재현(URL·메타·디자인 동일) → 그다음 개선(RSS, 다크 모드, 태그, View Transitions, 그 외 Astro 기능 전반) |
+| 학습           | 단계 1개 = Astro 개념 1개 = 커밋 1개 = 학습 노트 1개. 체크포인트 6곳에서만 멈춤                                                  |
+| 배포           | GitHub Actions로 전환 (운영 전환 직전에 확인)                                                                                    |
+| Node 버전 관리 | nvm 대신 mise. `mise.toml`의 `[tools] node`가 유일한 출처이고 로컬·worktree·CI가 모두 이 파일을 읽는다                           |
+| 서버 전용 기능 | 블로그에는 억지로 넣지 않고, 배포되지 않는 `labs/playground/`에서 실습                                                           |
+| 실행 방식      | 메인 세션은 오케스트레이터 역할만 하고, 구현은 Workflow 도구로 웨이브 단위 병렬 서브에이전트에 맡긴다                            |
+| 진행 상황 확인 | 로컬 실시간 대시보드 + 터미널 요약 + `/workflows` + Draft PR 체크리스트                                                          |
 
 ## 확인된 사실
 
@@ -112,12 +112,12 @@
 
 ### 역할
 
-| 역할 | 하는 일 |
-|---|---|
-| 오케스트레이터(메인 세션) | 계약·브리프 작성, 웨이브 실행(Workflow), 병합, 통합 검증, 대시보드 이벤트, push·PR·배포, 체크포인트 보고 |
-| 문서 스카우트(`web-fetch`) | 공식 문서를 읽고 요약 반환. 파일을 쓰지 않는다 |
-| 구현 에이전트 | 단계 구현 + 자기 게이트 통과 + 커밋 + 노트. `isolation: 'worktree'` |
-| 리뷰어 | 읽기 전용 독립 리뷰. 운영 전환 직전과 종료 시 |
+| 역할                       | 하는 일                                                                                                  |
+| -------------------------- | -------------------------------------------------------------------------------------------------------- |
+| 오케스트레이터(메인 세션)  | 계약·브리프 작성, 웨이브 실행(Workflow), 병합, 통합 검증, 대시보드 이벤트, push·PR·배포, 체크포인트 보고 |
+| 문서 스카우트(`web-fetch`) | 공식 문서를 읽고 요약 반환. 파일을 쓰지 않는다                                                           |
+| 구현 에이전트              | 단계 구현 + 자기 게이트 통과 + 커밋 + 노트. `isolation: 'worktree'`                                      |
+| 리뷰어                     | 읽기 전용 독립 리뷰. 운영 전환 직전과 종료 시                                                            |
 
 ### 병렬 실행 규칙
 
@@ -152,20 +152,20 @@
 
 기록은 한 곳에 모은다: 메인 체크아웃의 `.progress/events.jsonl`(추가 전용, gitignore).
 
-| 누가 | 무엇을 기록 |
-|---|---|
-| 오케스트레이터 | 웨이브 시작·종료, 병합, 통합 게이트 결과, 체크포인트 대기, 배포 상태 |
-| 구현 에이전트 | 단계 시작, 닫힌 고리의 현재 위치(근거/Red/구현/검증), 시도 횟수, 완료 또는 `blocked` (`node scripts/progress/emit.mjs …`) |
-| `scripts/verify/run.mjs` | 검증을 돌릴 때마다 검사별 결과를 자동 기록(에이전트가 잊어도 남는다) |
+| 누가                     | 무엇을 기록                                                                                                               |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| 오케스트레이터           | 웨이브 시작·종료, 병합, 통합 게이트 결과, 체크포인트 대기, 배포 상태                                                      |
+| 구현 에이전트            | 단계 시작, 닫힌 고리의 현재 위치(근거/Red/구현/검증), 시도 횟수, 완료 또는 `blocked` (`node scripts/progress/emit.mjs …`) |
+| `scripts/verify/run.mjs` | 검증을 돌릴 때마다 검사별 결과를 자동 기록(에이전트가 잊어도 남는다)                                                      |
 
 보는 방법:
 
-| 방법 | 내용 |
-|---|---|
+| 방법                                         | 내용                                                                                              |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------- |
 | `http://localhost:4400` (`npm run progress`) | 의존성 없는 Node 서버 + HTML 한 장, SSE로 실시간 갱신. S0.0에서 백그라운드로 띄우고 주소를 알린다 |
-| `npm run progress:watch` | 같은 내용을 터미널 한 화면으로 요약, 2초마다 갱신 |
-| `/workflows` | 실행 중인 웨이브의 에이전트별 상태(Claude Code 내장) |
-| Draft PR | 본문의 단계 체크리스트를 웨이브마다 갱신. CI 결과와 함께 원격·모바일에서 확인 |
+| `npm run progress:watch`                     | 같은 내용을 터미널 한 화면으로 요약, 2초마다 갱신                                                 |
+| `/workflows`                                 | 실행 중인 웨이브의 에이전트별 상태(Claude Code 내장)                                              |
+| Draft PR                                     | 본문의 단계 체크리스트를 웨이브마다 갱신. CI 결과와 함께 원격·모바일에서 확인                     |
 
 대시보드 화면 구성:
 
@@ -179,19 +179,19 @@
 
 검사는 `checks/<이름>.mjs`가 `{ name, kind: 'static' | 'browser', run(ctx) }`를 export하는 모듈이고, `run.mjs`가 폴더를 훑어 자동으로 싣는다. 검사를 병렬로 만들어도 공유 파일을 건드리지 않는다.
 
-| 파일 | 역할 |
-|---|---|
-| `serve.mjs` | GitHub Pages의 경로 해석을 흉내 내는 의존성 없는 정적 서버: `/p` → `p` → `p.html` → `p/index.html` → `404.html`(404). 기준선과 `dist/` 양쪽에 같은 서버를 쓴다 |
-| `routes` | HTML 라우트 집합 일치(`/`, `/posts/<id>` 12개, `/404`). `public` 자산은 sha256 일치 |
-| `head` | 라우트별 `html[lang]`, `<title>`(바이트 일치), description/author/keywords(목록 정규화)/viewport/site-verification, canonical, `og:*`, `twitter:*`, icon |
-| `content` | 본문 루트(`main`)의 정규화 텍스트 완전 일치 + 구조 일치: 제목(레벨+텍스트), `pre` 텍스트, 링크 `href`, 이미지 `src/alt/width`, 표 셀, `details`, 체크박스, 취소선, 각주, 수식의 TeX 원문. 홈은 (href, 제목, `datetime`, 날짜) 순서 목록 |
-| `links` | `dist`의 모든 내부 `href/src`가 실제 파일로 해석됨. `/_next/` 참조 0건 |
-| `embeds` | GA ID가 모든 페이지에 있음. 글 페이지에만 utterances 스크립트가 올바른 속성으로 삽입됨(Playwright, 네트워크 차단) |
-| `sitemap` | `/sitemap.xml`의 `<loc>` 집합이 기준선과 일치, `robots.txt` 동일 |
-| `budget` | 페이지별 JS·CSS 개수와 바이트를 기준선과 나란히 출력. 1차 JS 예산 초과 시 FAIL |
-| `visual` | Playwright로 13개 라우트 × 3개 뷰포트(375, 768, 1280) 전체 페이지 스크린샷 비교. 페이지 높이 일치 + 픽셀 차이 비율이 임계값 이하. `--selector=`로 요소 단위 비교도 지원. 실패 시 차이 이미지와 영역 좌표를 리포트에 저장 |
-| `run.mjs` | `astro check` → `astro build` → 정적 검사 → 시각 검사. `--only=`, `--route=`, `--static` 지원. 결과를 `.progress/`에 자동 기록 |
-| `live.mjs` | 배포 후 실제 URL 대상: 200, 리다이렉트 없음, `<title>` 일치, `head`·`content` 검사 재사용 |
+| 파일        | 역할                                                                                                                                                                                                                                    |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `serve.mjs` | GitHub Pages의 경로 해석을 흉내 내는 의존성 없는 정적 서버: `/p` → `p` → `p.html` → `p/index.html` → `404.html`(404). 기준선과 `dist/` 양쪽에 같은 서버를 쓴다                                                                          |
+| `routes`    | HTML 라우트 집합 일치(`/`, `/posts/<id>` 12개, `/404`). `public` 자산은 sha256 일치                                                                                                                                                     |
+| `head`      | 라우트별 `html[lang]`, `<title>`(바이트 일치), description/author/keywords(목록 정규화)/viewport/site-verification, canonical, `og:*`, `twitter:*`, icon                                                                                |
+| `content`   | 본문 루트(`main`)의 정규화 텍스트 완전 일치 + 구조 일치: 제목(레벨+텍스트), `pre` 텍스트, 링크 `href`, 이미지 `src/alt/width`, 표 셀, `details`, 체크박스, 취소선, 각주, 수식의 TeX 원문. 홈은 (href, 제목, `datetime`, 날짜) 순서 목록 |
+| `links`     | `dist`의 모든 내부 `href/src`가 실제 파일로 해석됨. `/_next/` 참조 0건                                                                                                                                                                  |
+| `embeds`    | GA ID가 모든 페이지에 있음. 글 페이지에만 utterances 스크립트가 올바른 속성으로 삽입됨(Playwright, 네트워크 차단)                                                                                                                       |
+| `sitemap`   | `/sitemap.xml`의 `<loc>` 집합이 기준선과 일치, `robots.txt` 동일                                                                                                                                                                        |
+| `budget`    | 페이지별 JS·CSS 개수와 바이트를 기준선과 나란히 출력. 1차 JS 예산 초과 시 FAIL                                                                                                                                                          |
+| `visual`    | Playwright로 13개 라우트 × 3개 뷰포트(375, 768, 1280) 전체 페이지 스크린샷 비교. 페이지 높이 일치 + 픽셀 차이 비율이 임계값 이하. `--selector=`로 요소 단위 비교도 지원. 실패 시 차이 이미지와 영역 좌표를 리포트에 저장                |
+| `run.mjs`   | `astro check` → `astro build` → 정적 검사 → 시각 검사. `--only=`, `--route=`, `--static` 지원. 결과를 `.progress/`에 자동 기록                                                                                                          |
+| `live.mjs`  | 배포 후 실제 URL 대상: 200, 리다이렉트 없음, `<title>` 일치, `head`·`content` 검사 재사용                                                                                                                                               |
 
 시각 검사의 결정성:
 
@@ -239,22 +239,22 @@ mise.toml                   Node 버전 고정([tools]만)
 
 **W0 준비** — 오케스트레이터가 직접 하고, 문서 스카우트 6개가 동시에 돈다.
 
-| 단계 | 내용 | 게이트 |
-|---|---|---|
-| S0.0 | 진행 대시보드(`scripts/progress/`) 작성, 서버 기동 | 시험 이벤트가 `localhost:4400`에 표시됨 |
-| S0.1 | 브랜치 생성, Next 소스·설정과 `.nvmrc` 삭제, `mise.toml` 작성 후 `mise install`, `package.json` 재작성(Part 1 의존성 전부, `engines.node` `>=24`), `.gitignore`에 `dist/ .astro/ .verify/ .progress/`, 계획 사본 커밋 | `node -v`가 `mise.toml`의 버전과 같음, `npm install` 성공 |
-| S0.2 | 기준선 추출(`verify:setup`), `serve.mjs`, `run.mjs`와 검사 모듈 인터페이스 | 기준선의 `/posts/<id>`가 200 |
-| S0.3 | 오케스트레이션 스파이크 | 위 5개 항목 확인 |
-| 스카우트 ×6 | 구조·설정·`build.format` / 컴포넌트·레이아웃·스타일 / 콘텐츠 컬렉션 / 라우팅·엔드포인트·404 / 마크다운 processor·구문 강조 / 스크립트·GitHub Pages 배포(`actions/setup-node`의 `node-version-file` 포함) | `_refs/` 6개 저장 |
+| 단계        | 내용                                                                                                                                                                                                                  | 게이트                                                    |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| S0.0        | 진행 대시보드(`scripts/progress/`) 작성, 서버 기동                                                                                                                                                                    | 시험 이벤트가 `localhost:4400`에 표시됨                   |
+| S0.1        | 브랜치 생성, Next 소스·설정과 `.nvmrc` 삭제, `mise.toml` 작성 후 `mise install`, `package.json` 재작성(Part 1 의존성 전부, `engines.node` `>=24`), `.gitignore`에 `dist/ .astro/ .verify/ .progress/`, 계획 사본 커밋 | `node -v`가 `mise.toml`의 버전과 같음, `npm install` 성공 |
+| S0.2        | 기준선 추출(`verify:setup`), `serve.mjs`, `run.mjs`와 검사 모듈 인터페이스                                                                                                                                            | 기준선의 `/posts/<id>`가 200                              |
+| S0.3        | 오케스트레이션 스파이크                                                                                                                                                                                               | 위 5개 항목 확인                                          |
+| 스카우트 ×6 | 구조·설정·`build.format` / 컴포넌트·레이아웃·스타일 / 콘텐츠 컬렉션 / 라우팅·엔드포인트·404 / 마크다운 processor·구문 강조 / 스크립트·GitHub Pages 배포(`actions/setup-node`의 `node-version-file` 포함)              | `_refs/` 6개 저장                                         |
 
 **W1 검증 장치 + 워킹 스켈레톤** — 병렬 4
 
-| 에이전트 | 단계(Astro 개념) | 소유 파일 | 게이트 |
-|---|---|---|---|
-| V1 | 정적 검사기 | `checks/{routes,head,content,links,sitemap,budget}.mjs`, 정적 selftest | 동일본 PASS, 변이본 FAIL |
-| V2 | 브라우저 검사기 | `checks/{visual,embeds}.mjs`, `lib/browser.mjs`, 응답 캐시, 노이즈 측정 | 동일본 PASS, CSS 변이본 FAIL, 임계값 확정 |
-| SK | S1.1 프로젝트 구조·CLI·설정 / S1.3 콘텐츠 컬렉션(로더, 스키마, `getCollection`) / S2.1 동적 라우트(`getStaticPaths`, `render()`) | `astro.config.mjs`, `config/markdown.mjs`(기본값), `tsconfig.json`, `src/content.config.ts`, `src/lib/posts.ts`, `src/pages/**`, `PostHeader`, 스텁(`BaseLayout`, `Seo`, `HeadAssets`, `Analytics`, `Comments`) | `astro check` 오류 0, `dist`에 14개 라우트. 잘못된 frontmatter 픽스처로 빌드가 파일명을 짚으며 실패. `TZ=Asia/Seoul`과 `TZ=America/Los_Angeles` 빌드의 날짜 문자열 동일 |
-| K1 | 도구·CI | prettier 설정, husky 9 + lint-staged, `ci.yml`, `deploy.yml`, README | `prettier --check`(설정 파일), 워크플로 YAML 문법 검사, 워크플로에 Node 버전 리터럴 0건 |
+| 에이전트 | 단계(Astro 개념)                                                                                                                 | 소유 파일                                                                                                                                                                                                       | 게이트                                                                                                                                                                  |
+| -------- | -------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| V1       | 정적 검사기                                                                                                                      | `checks/{routes,head,content,links,sitemap,budget}.mjs`, 정적 selftest                                                                                                                                          | 동일본 PASS, 변이본 FAIL                                                                                                                                                |
+| V2       | 브라우저 검사기                                                                                                                  | `checks/{visual,embeds}.mjs`, `lib/browser.mjs`, 응답 캐시, 노이즈 측정                                                                                                                                         | 동일본 PASS, CSS 변이본 FAIL, 임계값 확정                                                                                                                               |
+| SK       | S1.1 프로젝트 구조·CLI·설정 / S1.3 콘텐츠 컬렉션(로더, 스키마, `getCollection`) / S2.1 동적 라우트(`getStaticPaths`, `render()`) | `astro.config.mjs`, `config/markdown.mjs`(기본값), `tsconfig.json`, `src/content.config.ts`, `src/lib/posts.ts`, `src/pages/**`, `PostHeader`, 스텁(`BaseLayout`, `Seo`, `HeadAssets`, `Analytics`, `Comments`) | `astro check` 오류 0, `dist`에 14개 라우트. 잘못된 frontmatter 픽스처로 빌드가 파일명을 짚으며 실패. `TZ=Asia/Seoul`과 `TZ=America/Los_Angeles` 빌드의 날짜 문자열 동일 |
+| K1       | 도구·CI                                                                                                                          | prettier 설정, husky 9 + lint-staged, `ci.yml`, `deploy.yml`, README                                                                                                                                            | `prettier --check`(설정 파일), 워크플로 YAML 문법 검사, 워크플로에 Node 버전 리터럴 0건                                                                                 |
 
 K1의 두 워크플로는 Node를 `actions/setup-node`의 `node-version-file: mise.toml`로 설정한다. `deploy.yml`은 `withastro/action`을 쓰지 않고 같은 일을 직접 적는다: checkout → setup-node → `npm ci` → `npm run build` → `actions/upload-pages-artifact`(`dist`) → `actions/deploy-pages`. `withastro/action`은 버전 파일을 읽지 못해 Node 버전을 워크플로에 한 번 더 적어야 하기 때문이다. `deploy.yml`에서는 npm 캐시를 끈다(게시 워크플로에 대한 setup-node 문서의 권고). README의 준비 절차는 `mise install` → `npm ci`다. Draft PR의 첫 CI 실행에서 오케스트레이터가 로그의 Node 버전이 `mise.toml`과 같은지 확인한다.
 
@@ -268,11 +268,11 @@ SK는 스타일 없는 시맨틱 마크업으로 14개 라우트를 끝까지 �
 
 **W2 페이지 완성** — 병렬 3 (+ 다음 웨이브용 스카우트)
 
-| 에이전트 | 단계(Astro 개념) | 소유 파일 | 게이트 |
-|---|---|---|---|
-| T1 | S2.2 마크다운 파이프라인 | `config/markdown.mjs` | `content`에서 글 12개 통과 |
-| T2 | S1.2 컴포넌트·props·레이아웃·`<slot />` / S1.4 scoped 스타일·`is:global`·CSS 번들링 | `BaseLayout`, `Seo`, `Header`, `Footer`, `site.ts`, `global.css`, `src/pages/**`의 마크업 | `head` 전 라우트 통과, `visual`에서 `/` 3개 뷰포트 통과 |
-| T4 | S2.4 `<script>` 처리와 `is:inline` / S2.5 정적 엔드포인트·404 | `Analytics`, `Comments`, `sitemap.xml.ts`, `404.astro` | `embeds`, `sitemap`, `links` 통과 |
+| 에이전트 | 단계(Astro 개념)                                                                    | 소유 파일                                                                                 | 게이트                                                  |
+| -------- | ----------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| T1       | S2.2 마크다운 파이프라인                                                            | `config/markdown.mjs`                                                                     | `content`에서 글 12개 통과                              |
+| T2       | S1.2 컴포넌트·props·레이아웃·`<slot />` / S1.4 scoped 스타일·`is:global`·CSS 번들링 | `BaseLayout`, `Seo`, `Header`, `Footer`, `site.ts`, `global.css`, `src/pages/**`의 마크업 | `head` 전 라우트 통과, `visual`에서 `/` 3개 뷰포트 통과 |
+| T4       | S2.4 `<script>` 처리와 `is:inline` / S2.5 정적 엔드포인트·404                       | `Analytics`, `Comments`, `sitemap.xml.ts`, `404.astro`                                    | `embeds`, `sitemap`, `links` 통과                       |
 
 S2.2는 기존과 같은 unified 계열(`@astrojs/markdown-remark` + remark-math, rehype-katex, rehype-highlight)로 먼저 재현한다. 같은 HTML 구조와 같은 CSS여야 코드 블록까지 픽셀 비교가 가능하고, Astro의 마크다운 파이프라인이 이미 아는 unified라는 점도 확인할 수 있다. Astro 기본 엔진(Sätteri + Shiki)으로의 전환은 S4.1에서 의도한 개선으로 따로 한다.
 
@@ -280,10 +280,10 @@ S2.2는 기존과 같은 unified 계열(`@astrojs/markdown-remark` + remark-math
 
 **W3 시각 일치 수렴** — 구현 1 + 리뷰 1 병렬
 
-| 에이전트 | 단계 | 소유 파일 | 게이트 |
-|---|---|---|---|
-| T3 | S2.3 전역 CSS 가져오기, 서드파티 CSS | `prose.css`, `HeadAssets`(폰트·KaTeX 링크, highlight.js monokai), 시각 차이 수정에 필요한 스타일·마크업 | `visual` 전 라우트 통과 → **`npm run verify` 전체 PASS** |
-| R1 | 독립 리뷰(읽기 전용) | — | 지적 사항 목록 |
+| 에이전트 | 단계                                 | 소유 파일                                                                                               | 게이트                                                   |
+| -------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| T3       | S2.3 전역 CSS 가져오기, 서드파티 CSS | `prose.css`, `HeadAssets`(폰트·KaTeX 링크, highlight.js monokai), 시각 차이 수정에 필요한 스타일·마크업 | `visual` 전 라우트 통과 → **`npm run verify` 전체 PASS** |
+| R1       | 독립 리뷰(읽기 전용)                 | —                                                                                                       | 지적 사항 목록                                           |
 
 시각 일치는 내용과 스타일이 합쳐져야 판정할 수 있어서 병렬로 나누지 않는다. 통합 뒤 오케스트레이터가 prettier를 한 번 적용하고 리뷰 지적을 반영한다.
 
@@ -291,14 +291,14 @@ S2.2는 기존과 같은 unified 계열(`@astrojs/markdown-remark` + remark-math
 
 **W4 운영 전환** — 오케스트레이터
 
-| 단계 | 내용 | 게이트 |
-|---|---|---|
+| 단계 | 내용                                | 게이트                                                  |
+| ---- | ----------------------------------- | ------------------------------------------------------- |
 | S3.1 | PR을 리뷰 가능 상태로 전환, CI 확인 | `gh pr checks --watch` 통과, `npm run verify` 전체 PASS |
 
 → **CP3 (운영 전환 승인)**
 
-| 단계 | 내용 | 게이트 |
-|---|---|---|
+| 단계 | 내용                                                                                                                                                      | 게이트                                                                |
+| ---- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
 | S3.2 | ① `gh api -X PUT repos/bigsaigon333/bigsaigon333.github.io/pages -f build_type=workflow` ② PR 병합 ③ `gh run watch --exit-status` ④ `npm run verify:live` | 실제 URL 13개 + 자산 + sitemap이 200, 리다이렉트 없음, `<title>` 일치 |
 
 롤백: `gh api -X PUT …/pages -f build_type=legacy -f 'source[branch]=gh-pages' -f 'source[path]=/'` 후 `verify:live`로 기준선 복귀 확인. `github-pages` 환경의 배포 브랜치 제한으로 deploy가 막히면 환경 정책에 `main`을 추가한다.
@@ -317,22 +317,22 @@ S2.2는 기존과 같은 unified 계열(`@astrojs/markdown-remark` + remark-math
 
 **W5 Astro 네이티브 파이프라인** — 병렬 4
 
-| 단계 | Astro 개념 | 내용 | 소유 파일 | 게이트 |
-|---|---|---|---|---|
-| S4.1 | Sätteri, Shiki, `<Code />` | 엔진을 기본값으로 전환, 라이트·다크 듀얼 테마 | `config/markdown.mjs`, `src/styles/code.css` | 본문 텍스트 일치 유지, `pre`를 가리면 시각 동일 |
-| S4.2 | Fonts API, CSS import | Source Code Pro와 KaTeX CSS 자체 호스팅 | `config/fonts.mjs`, `HeadAssets` | 외부 요청이 GA·utterances·본문 원격 이미지뿐, 시각 동일 |
+| 단계 | Astro 개념                                       | 내용                                                            | 소유 파일                                             | 게이트                                                                |
+| ---- | ------------------------------------------------ | --------------------------------------------------------------- | ----------------------------------------------------- | --------------------------------------------------------------------- |
+| S4.1 | Sätteri, Shiki, `<Code />`                       | 엔진을 기본값으로 전환, 라이트·다크 듀얼 테마                   | `config/markdown.mjs`, `src/styles/code.css`          | 본문 텍스트 일치 유지, `pre`를 가리면 시각 동일                       |
+| S4.2 | Fonts API, CSS import                            | Source Code Pro와 KaTeX CSS 자체 호스팅                         | `config/fonts.mjs`, `HeadAssets`                      | 외부 요청이 GA·utterances·본문 원격 이미지뿐, 시각 동일               |
 | S4.3 | `astro:assets`(`Image`, `Picture`), SVG 컴포넌트 | 프로필 이미지 최적화, 아이콘 PNG → SVG, 본문 원격 이미지 로컬화 | `Header`, `src/assets/**`, `posts/*.md`의 이미지 경로 | 이미지 요청 전부 same-origin, 렌더 크기 동일, 이미지 바이트 감소 수치 |
-| S4.4 | `import.meta.env`, 컬렉션 필터 | 초안 파일명 정리(`draft:` 제거), dev에서만 노출 | `content.config.ts`, `posts.ts`, `posts/draft/**` | 운영 `dist`·sitemap에 초안 0건, dev에서는 보임 |
+| S4.4 | `import.meta.env`, 컬렉션 필터                   | 초안 파일명 정리(`draft:` 제거), dev에서만 노출                 | `content.config.ts`, `posts.ts`, `posts/draft/**`     | 운영 `dist`·sitemap에 초안 0건, dev에서는 보임                        |
 
 **W6 콘텐츠 모델 확장** — 병렬 5
 
-| 단계 | Astro 개념 | 내용 | 게이트 |
-|---|---|---|---|
-| S5.1 | 컬렉션에서 동적 라우트 파생 | `/tags`, `/tags/[tag]`(keywords 활용, 한글·공백 슬러그 규칙) | 태그별 글 집합이 frontmatter 계산값과 일치, 인코딩된 URL이 `links` 통과 |
-| S5.2 | `file()` 로더, `reference()` | `series` 컬렉션, css-masters-2 1~4주차 이전/다음 | 4개 글의 prev/next 순서 정확 |
-| S5.3 | `render()`의 `headings` | 목차, 읽는 시간 | 목차 항목 = 본문 h2/h3, 앵커 대상 존재 |
-| S5.4 | 엔드포인트 + `@astrojs/rss` | `/rss.xml`, `<link rel="alternate">` | XML 유효, 항목 12개, link = canonical |
-| S5.5 | MDX, 통합(`astro add`) | `@astrojs/mdx`, 커스텀 컴포넌트를 초안 1개로 시연 | 기존 md 결과 불변, `astro check` 통과 |
+| 단계 | Astro 개념                   | 내용                                                         | 게이트                                                                  |
+| ---- | ---------------------------- | ------------------------------------------------------------ | ----------------------------------------------------------------------- |
+| S5.1 | 컬렉션에서 동적 라우트 파생  | `/tags`, `/tags/[tag]`(keywords 활용, 한글·공백 슬러그 규칙) | 태그별 글 집합이 frontmatter 계산값과 일치, 인코딩된 URL이 `links` 통과 |
+| S5.2 | `file()` 로더, `reference()` | `series` 컬렉션, css-masters-2 1~4주차 이전/다음             | 4개 글의 prev/next 순서 정확                                            |
+| S5.3 | `render()`의 `headings`      | 목차, 읽는 시간                                              | 목차 항목 = 본문 h2/h3, 앵커 대상 존재                                  |
+| S5.4 | 엔드포인트 + `@astrojs/rss`  | `/rss.xml`, `<link rel="alternate">`                         | XML 유효, 항목 12개, link = canonical                                   |
+| S5.5 | MDX, 통합(`astro add`)       | `@astrojs/mdx`, 커스텀 컴포넌트를 초안 1개로 시연            | 기존 md 결과 불변, `astro check` 통과                                   |
 
 이음매 커밋: `[id].astro`에 스텁 `PostTags`, `SeriesNav`, `Toc` 배치, 컬렉션 정의를 파일별로 분리, `@astrojs/rss`·`@astrojs/mdx` 설치.
 
@@ -340,22 +340,22 @@ S2.2는 기존과 같은 unified 계열(`@astrojs/markdown-remark` + remark-math
 
 **W7 인터랙션** — 병렬 2, 이어서 단독 1
 
-| 단계 | Astro 개념 | 내용 | 게이트 |
-|---|---|---|---|
-| S6.1 | CSS 변수, `is:inline`, `define:vars` | 다크 모드(시스템 연동 + 토글, utterances 테마 연동) | 라이트 스크린샷은 기준선과 동일, 다크에서 axe 대비 위반 0, 첫 페인트 전 테마 적용, 선택 유지 |
-| S6.3 | 번들되는 `<script>`, 커스텀 엘리먼트 | 코드 복사 버튼, 목차 스크롤 스파이 | Playwright 동작 검증, JS 예산 이내 |
-| S6.2 (단독) | `<ClientRouter />`, `transition:*`, 라이프사이클, prefetch | 페이지 전환 | 이동 시 문서 리로드 없음, 이동마다 utterances 로드와 GA page_view 1회, 다크 모드 유지 |
+| 단계        | Astro 개념                                                 | 내용                                                | 게이트                                                                                       |
+| ----------- | ---------------------------------------------------------- | --------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| S6.1        | CSS 변수, `is:inline`, `define:vars`                       | 다크 모드(시스템 연동 + 토글, utterances 테마 연동) | 라이트 스크린샷은 기준선과 동일, 다크에서 axe 대비 위반 0, 첫 페인트 전 테마 적용, 선택 유지 |
+| S6.3        | 번들되는 `<script>`, 커스텀 엘리먼트                       | 코드 복사 버튼, 목차 스크롤 스파이                  | Playwright 동작 검증, JS 예산 이내                                                           |
+| S6.2 (단독) | `<ClientRouter />`, `transition:*`, 라이프사이클, prefetch | 페이지 전환                                         | 이동 시 문서 리로드 없음, 이동마다 utterances 로드와 GA page_view 1회, 다크 모드 유지        |
 
 S6.2는 모든 스크립트의 수명주기를 바꾸므로 앞의 둘이 통합된 뒤 혼자 돈다.
 
 **W8 플랫폼** — 병렬 3, 이어서 단독 1
 
-| 단계 | Astro 개념 | 내용 | 게이트 |
-|---|---|---|---|
-| S7.1 | `astro:env` | GA ID 등 타입 안전 환경 변수 | `astro check` 통과, 값 누락 시 빌드 실패 |
-| S7.3 | Integration API | `astro:build:done` 훅에서 링크·JS 예산 검사 | 일부러 깨뜨린 링크로 빌드 실패 |
-| S7.4 | Vitest, Container API(실험적) | `Seo.astro` 단위 테스트 | `npm test` 통과, CI 연결 |
-| S7.2 (단독) | CSP | GA·utterances 허용 목록 | 콘솔 CSP 위반 0, 임베드 정상 |
+| 단계        | Astro 개념                    | 내용                                        | 게이트                                   |
+| ----------- | ----------------------------- | ------------------------------------------- | ---------------------------------------- |
+| S7.1        | `astro:env`                   | GA ID 등 타입 안전 환경 변수                | `astro check` 통과, 값 누락 시 빌드 실패 |
+| S7.3        | Integration API               | `astro:build:done` 훅에서 링크·JS 예산 검사 | 일부러 깨뜨린 링크로 빌드 실패           |
+| S7.4        | Vitest, Container API(실험적) | `Seo.astro` 단위 테스트                     | `npm test` 통과, CI 연결                 |
+| S7.2 (단독) | CSP                           | GA·utterances 허용 목록                     | 콘솔 CSP 위반 0, 임베드 정상             |
 
 S7.2는 사이트의 모든 인라인 스크립트를 알아야 하므로 마지막에 혼자 돈다.
 
@@ -365,22 +365,22 @@ S7.2는 사이트의 모든 인라인 스크립트를 알아야 하므로 마지
 
 **lab 레인** (`labs/playground/`, 별도 `package.json`, 배포 대상 아님) — W7~W8과 동시에 진행. 블로그 코드와 파일이 겹치지 않는다. 스캐폴드 1개가 어댑터와 공유 설정을 잡은 뒤 데모 5개가 병렬로 돈다.
 
-| 단계 | 다루는 기능 |
-|---|---|
-| S8.1 | Node 어댑터, on-demand 렌더링과 `prerender`, API 엔드포인트(GET/POST), 쿠키 |
-| S8.2 | Actions, 세션 |
-| S8.3 | 서버 아일랜드와 클라이언트 아일랜드(UI 프레임워크 + `client:*`) 비교 |
-| S8.4 | 요청 시점 미들웨어, redirects/rewrites, i18n 라우팅, `paginate()` |
+| 단계 | 다루는 기능                                                                                             |
+| ---- | ------------------------------------------------------------------------------------------------------- |
+| S8.1 | Node 어댑터, on-demand 렌더링과 `prerender`, API 엔드포인트(GET/POST), 쿠키                             |
+| S8.2 | Actions, 세션                                                                                           |
+| S8.3 | 서버 아일랜드와 클라이언트 아일랜드(UI 프레임워크 + `client:*`) 비교                                    |
+| S8.4 | 요청 시점 미들웨어, redirects/rewrites, i18n 라우팅, `paginate()`                                       |
 | S8.5 | v7 신규(`cache`/`routeRules`, advanced routing과 `src/fetch.ts`, `logger`), live 컬렉션, dev toolbar 앱 |
 
 공통 게이트: `labs/playground/verify.mjs`가 서버를 띄우고 HTTP·Playwright 단언을 통과. 단계마다 노트 1개.
 
 **W9 마무리** — 병렬 2
 
-| 단계 | 내용 |
-|---|---|
+| 단계 | 내용                                                                                                                      |
+| ---- | ------------------------------------------------------------------------------------------------------------------------- |
 | S9.1 | 마이그레이션 전용 검사(기준선 비교)와 진행 대시보드를 제거하고 상시 검사(check, build, links, budget, a11y)만 CI에 남긴다 |
-| S9.2 | 최종 독립 리뷰, 기능 커버리지 표 확정, 노트 인덱스 정리 |
+| S9.2 | 최종 독립 리뷰, 기능 커버리지 표 확정, 노트 인덱스 정리                                                                   |
 
 → **CP6**
 
@@ -388,20 +388,20 @@ S7.2는 사이트의 모든 인라인 스크립트를 알아야 하므로 마지
 
 ## 위험과 결정 규칙
 
-| 위험 | 결정 규칙 |
-|---|---|
+| 위험                                                                  | 결정 규칙                                                                                                                                                                                             |
+| --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | unified 계열로 기준선 HTML을 재현하지 못함(플러그인 메이저 버전 차이) | 텍스트·구조·픽셀이 같으면 마크업 차이는 허용. highlight.js 토큰 차이는 `overrides`로 11.5.1 고정을 먼저 시도. 그래도 안 되면 Sätteri + Shiki로 직행하고 `pre`를 가린 시각 비교로 대체(allowlist 기록) |
-| `posts/`를 `src/` 밖에 두면 로더가 못 읽음 | SK가 스파이크. 안 되면 `git mv posts src/content/posts` |
-| smartypants 기본값이 따옴표·대시를 바꿈 | 끈다(`content` 검사가 잡는다) |
-| 제목에 자동으로 붙는 `id` | 추가만 되는 변화라 허용 |
-| 외부 리소스(폰트, 이미지) 때문에 스크린샷이 흔들림 | 응답 캐시 재생으로 고정 |
-| Rust 컴파일러가 닫히지 않은 태그·잘못된 중첩을 오류로 처리 | 유효한 HTML로 작성, `astro check`를 게이트에 포함 |
-| 한글·공백이 든 태그의 URL | S5.1에서 슬러그 규칙을 정하고 `links`와 `verify:live`로 확인 |
-| 병렬 에이전트의 병합 충돌 | 파일 소유권 + 이음매 커밋으로 예방. 그래도 충돌하면 오케스트레이터가 해소하고, 같은 파일에서 두 번 나면 그 단계들을 다음부터 순차로 돌린다 |
-| worktree 격리가 기대대로 동작하지 않음 | S0.3 스파이크로 먼저 확인. 안 되면 같은 편성으로 순차 실행 |
-| 동시 빌드·브라우저 검사로 시각 검사가 불안정 | 동시 구현 에이전트 5개 이하, 시각 검사 1회 재시도, 통합 검증은 다른 에이전트가 돌지 않을 때 실행 |
-| `actions/setup-node`가 `mise.toml`의 Node 버전을 읽지 못함 | `jdx/mise-action@v5`로 바꾼다(CI에 mise를 설치해 같은 파일을 읽는다). 워크플로에 버전을 직접 적지는 않는다 |
-| 에이전트가 진행 이벤트를 기록하지 않음 | `run.mjs`의 자동 기록과 오케스트레이터의 웨이브 이벤트로 최소한의 가시성 보장 |
+| `posts/`를 `src/` 밖에 두면 로더가 못 읽음                            | SK가 스파이크. 안 되면 `git mv posts src/content/posts`                                                                                                                                               |
+| smartypants 기본값이 따옴표·대시를 바꿈                               | 끈다(`content` 검사가 잡는다)                                                                                                                                                                         |
+| 제목에 자동으로 붙는 `id`                                             | 추가만 되는 변화라 허용                                                                                                                                                                               |
+| 외부 리소스(폰트, 이미지) 때문에 스크린샷이 흔들림                    | 응답 캐시 재생으로 고정                                                                                                                                                                               |
+| Rust 컴파일러가 닫히지 않은 태그·잘못된 중첩을 오류로 처리            | 유효한 HTML로 작성, `astro check`를 게이트에 포함                                                                                                                                                     |
+| 한글·공백이 든 태그의 URL                                             | S5.1에서 슬러그 규칙을 정하고 `links`와 `verify:live`로 확인                                                                                                                                          |
+| 병렬 에이전트의 병합 충돌                                             | 파일 소유권 + 이음매 커밋으로 예방. 그래도 충돌하면 오케스트레이터가 해소하고, 같은 파일에서 두 번 나면 그 단계들을 다음부터 순차로 돌린다                                                            |
+| worktree 격리가 기대대로 동작하지 않음                                | S0.3 스파이크로 먼저 확인. 안 되면 같은 편성으로 순차 실행                                                                                                                                            |
+| 동시 빌드·브라우저 검사로 시각 검사가 불안정                          | 동시 구현 에이전트 5개 이하, 시각 검사 1회 재시도, 통합 검증은 다른 에이전트가 돌지 않을 때 실행                                                                                                      |
+| `actions/setup-node`가 `mise.toml`의 Node 버전을 읽지 못함            | `jdx/mise-action@v5`로 바꾼다(CI에 mise를 설치해 같은 파일을 읽는다). 워크플로에 버전을 직접 적지는 않는다                                                                                            |
+| 에이전트가 진행 이벤트를 기록하지 않음                                | `run.mjs`의 자동 기록과 오케스트레이터의 웨이브 이벤트로 최소한의 가시성 보장                                                                                                                         |
 
 ## Review Focus
 

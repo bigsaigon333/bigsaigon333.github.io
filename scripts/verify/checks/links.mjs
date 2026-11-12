@@ -7,7 +7,14 @@
 // One failed item per page.
 //
 // Allowlist item: "ref:<pathname>" (a trailing ** matches by prefix).
-import { allowances, candidateRoutes, internalPath, mutateFile, srcsetUrls, statusOf } from "../lib/html.mjs";
+import {
+  allowances,
+  candidateRoutes,
+  internalPath,
+  mutateFile,
+  srcsetUrls,
+  statusOf,
+} from "../lib/html.mjs";
 
 const SOURCES = [
   ["a[href]", "href", false],
@@ -47,7 +54,8 @@ export default {
     let references = 0;
 
     const pages = candidateRoutes(ctx);
-    if (pages.length === 0) failed.push({ route: "-", detail: "candidate has no HTML pages" });
+    if (pages.length === 0)
+      failed.push({ route: "-", detail: "candidate has no HTML pages" });
 
     for (const route of pages) {
       const $ = await ctx.dom("candidate", route);
@@ -72,8 +80,13 @@ export default {
         continue;
       }
       broken[route] = bad;
-      const shown = bad.slice(0, 5).join(", ") + (bad.length > 5 ? ` (+${bad.length - 5} more)` : "");
-      failed.push({ route, detail: `${bad.length} broken internal reference${bad.length > 1 ? "s" : ""}: ${shown}` });
+      const shown =
+        bad.slice(0, 5).join(", ") +
+        (bad.length > 5 ? ` (+${bad.length - 5} more)` : "");
+      failed.push({
+        route,
+        detail: `${bad.length} broken internal reference${bad.length > 1 ? "s" : ""}: ${shown}`,
+      });
       cells[route] = "fail";
     }
 
@@ -93,7 +106,10 @@ export default {
         name: "없는 페이지로 가는 링크 삽입",
         apply(dir) {
           mutateFile(dir, "index.html", (html) =>
-            html.replace("</footer>", '<a href="/posts/no-such-post"></a></footer>'),
+            html.replace(
+              "</footer>",
+              '<a href="/posts/no-such-post"></a></footer>',
+            ),
           );
         },
       },
@@ -101,7 +117,10 @@ export default {
         name: "없는 이미지 참조 삽입",
         apply(dir) {
           mutateFile(dir, "index.html", (html) =>
-            html.replace("</footer>", '<img src="/no-such-image.png" alt=""></footer>'),
+            html.replace(
+              "</footer>",
+              '<img src="/no-such-image.png" alt=""></footer>',
+            ),
           );
         },
       },

@@ -1,691 +1,1636 @@
 <!doctype html>
 <html lang="ko">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="color-scheme" content="light dark">
-<title>진행 대시보드</title>
-<style>
-  :root {
-    color-scheme: light dark;
-    --page: #f9f9f7;
-    --surface: #fcfcfb;
-    --sunken: #efeee9;
-    --ink: #0b0b0b;
-    --ink-2: #52514e;
-    --ink-3: #6f6d67;
-    --line: #e1e0d9;
-    --line-strong: #c3c2b7;
-    --border: rgba(11, 11, 11, 0.12);
-    --accent: #2a78d6;
-    --accent-ink: #1c5cab;
-    --good: #0ca30c;
-    --good-ink: #006300;
-    --warn: #fab219;
-    --warn-ink: #7a4f00;
-    --crit: #d03b3b;
-    --crit-ink: #b02a2a;
-    --tint: 13%;
-    --tint-warn: 26%;
-    --lift: 0 1px 2px rgba(11, 11, 11, 0.05);
-    --glow: 0 6px 18px rgba(42, 120, 214, 0.14);
-    --sans: system-ui, -apple-system, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
-    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --page: #0d0d0d;
-      --surface: #1a1a19;
-      --sunken: #242423;
-      --ink: #f0efec;
-      --ink-2: #c3c2b7;
-      --ink-3: #9a988f;
-      --line: #2c2c2a;
-      --line-strong: #454541;
-      --border: rgba(255, 255, 255, 0.12);
-      --accent: #3987e5;
-      --accent-ink: #86b6ef;
-      --good-ink: #2fc02f;
-      --warn-ink: #fab219;
-      --crit-ink: #ee7f7f;
-      --tint: 22%;
-      --tint-warn: 20%;
-      --lift: none;
-      --glow: 0 6px 18px rgba(57, 135, 229, 0.18);
-    }
-  }
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>진행 대시보드</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --page: #f9f9f7;
+        --surface: #fcfcfb;
+        --sunken: #efeee9;
+        --ink: #0b0b0b;
+        --ink-2: #52514e;
+        --ink-3: #6f6d67;
+        --line: #e1e0d9;
+        --line-strong: #c3c2b7;
+        --border: rgba(11, 11, 11, 0.12);
+        --accent: #2a78d6;
+        --accent-ink: #1c5cab;
+        --good: #0ca30c;
+        --good-ink: #006300;
+        --warn: #fab219;
+        --warn-ink: #7a4f00;
+        --crit: #d03b3b;
+        --crit-ink: #b02a2a;
+        --tint: 13%;
+        --tint-warn: 26%;
+        --lift: 0 1px 2px rgba(11, 11, 11, 0.05);
+        --glow: 0 6px 18px rgba(42, 120, 214, 0.14);
+        --sans:
+          system-ui, -apple-system, "Segoe UI", "Apple SD Gothic Neo",
+          "Malgun Gothic", sans-serif;
+        --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --page: #0d0d0d;
+          --surface: #1a1a19;
+          --sunken: #242423;
+          --ink: #f0efec;
+          --ink-2: #c3c2b7;
+          --ink-3: #9a988f;
+          --line: #2c2c2a;
+          --line-strong: #454541;
+          --border: rgba(255, 255, 255, 0.12);
+          --accent: #3987e5;
+          --accent-ink: #86b6ef;
+          --good-ink: #2fc02f;
+          --warn-ink: #fab219;
+          --crit-ink: #ee7f7f;
+          --tint: 22%;
+          --tint-warn: 20%;
+          --lift: none;
+          --glow: 0 6px 18px rgba(57, 135, 229, 0.18);
+        }
+      }
 
-  * { box-sizing: border-box; }
-  html { -webkit-text-size-adjust: 100%; }
-  body { margin: 0; background: var(--page); color: var(--ink); font: 14px/1.5 var(--sans); }
-  .wrap { max-width: 1680px; margin: 0 auto; padding: 20px 24px 56px; }
-  h1 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.01em; }
-  h2 { margin: 0 0 10px; font-size: 15px; font-weight: 700; }
-  h3 { margin: 16px 0 8px; font-size: 13px; font-weight: 600; color: var(--ink-2); }
-  .wrap > section { margin-top: 28px; }
-  a { color: var(--accent-ink); text-underline-offset: 2px; }
-  code { font-family: var(--mono); font-size: 12px; }
-  .empty { margin: 0; color: var(--ink-2); font-size: 13px; }
-  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        -webkit-text-size-adjust: 100%;
+      }
+      body {
+        margin: 0;
+        background: var(--page);
+        color: var(--ink);
+        font: 14px/1.5 var(--sans);
+      }
+      .wrap {
+        max-width: 1680px;
+        margin: 0 auto;
+        padding: 20px 24px 56px;
+      }
+      h1 {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+      }
+      h2 {
+        margin: 0 0 10px;
+        font-size: 15px;
+        font-weight: 700;
+      }
+      h3 {
+        margin: 16px 0 8px;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--ink-2);
+      }
+      .wrap > section {
+        margin-top: 28px;
+      }
+      a {
+        color: var(--accent-ink);
+        text-underline-offset: 2px;
+      }
+      code {
+        font-family: var(--mono);
+        font-size: 12px;
+      }
+      .empty {
+        margin: 0;
+        color: var(--ink-2);
+        font-size: 13px;
+      }
+      :focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
 
-  /* header */
-  .top { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 16px; }
-  .top .sub { margin-left: 8px; font-size: 13px; font-weight: 500; color: var(--ink-2); }
-  #title:empty + .sub { margin-left: 0; }
-  .h-sub { margin-left: 8px; font-size: 12px; font-weight: 500; color: var(--ink-2); }
-  .conn { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; color: var(--ink-2); }
-  .conn i { width: 8px; height: 8px; border-radius: 50%; background: var(--ink-3); }
-  .conn[data-state="live"] i { background: var(--good); }
-  .conn[data-state="poll"] i { background: var(--warn); }
-  .conn[data-state="down"] i { background: var(--crit); }
+      /* header */
+      .top {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 6px 16px;
+      }
+      .top .sub {
+        margin-left: 8px;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--ink-2);
+      }
+      #title:empty + .sub {
+        margin-left: 0;
+      }
+      .h-sub {
+        margin-left: 8px;
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--ink-2);
+      }
+      .conn {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 12px;
+        color: var(--ink-2);
+      }
+      .conn i {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--ink-3);
+      }
+      .conn[data-state="live"] i {
+        background: var(--good);
+      }
+      .conn[data-state="poll"] i {
+        background: var(--warn);
+      }
+      .conn[data-state="down"] i {
+        background: var(--crit);
+      }
 
-  /* badges: tinted pill + glyph + text label (state is never color alone) */
-  .badge {
-    --c: var(--ink-3); --ci: var(--ink-2); --t: var(--tint);
-    display: inline-flex; align-items: center; gap: 5px; padding: 0 8px 0 7px; border-radius: 999px;
-    font-size: 12px; font-weight: 600; line-height: 20px; white-space: nowrap; color: var(--ink);
-    background: var(--sunken);
-    background: color-mix(in srgb, var(--c) var(--t), var(--surface));
-  }
-  .badge .g { color: var(--ci); font-size: 11px; font-weight: 700; line-height: 1; }
-  .k-idle { background: transparent; box-shadow: inset 0 0 0 1px var(--line-strong); color: var(--ink-2); font-weight: 500; }
-  .k-active { --c: var(--accent); --ci: var(--accent-ink); }
-  .k-good { --c: var(--good); --ci: var(--good-ink); }
-  .k-crit { --c: var(--crit); --ci: var(--crit-ink); }
-  .k-warn { --c: var(--warn); --ci: var(--warn-ink); --t: var(--tint-warn); }
-  .pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); animation: pulse 1.6s ease-in-out infinite; }
-  @keyframes pulse { 50% { opacity: 0.35; } }
-  @media (prefers-reduced-motion: reduce) { .pulse { animation: none; } }
+      /* badges: tinted pill + glyph + text label (state is never color alone) */
+      .badge {
+        --c: var(--ink-3);
+        --ci: var(--ink-2);
+        --t: var(--tint);
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 0 8px 0 7px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 600;
+        line-height: 20px;
+        white-space: nowrap;
+        color: var(--ink);
+        background: var(--sunken);
+        background: color-mix(in srgb, var(--c) var(--t), var(--surface));
+      }
+      .badge .g {
+        color: var(--ci);
+        font-size: 11px;
+        font-weight: 700;
+        line-height: 1;
+      }
+      .k-idle {
+        background: transparent;
+        box-shadow: inset 0 0 0 1px var(--line-strong);
+        color: var(--ink-2);
+        font-weight: 500;
+      }
+      .k-active {
+        --c: var(--accent);
+        --ci: var(--accent-ink);
+      }
+      .k-good {
+        --c: var(--good);
+        --ci: var(--good-ink);
+      }
+      .k-crit {
+        --c: var(--crit);
+        --ci: var(--crit-ink);
+      }
+      .k-warn {
+        --c: var(--warn);
+        --ci: var(--warn-ink);
+        --t: var(--tint-warn);
+      }
+      .pulse {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--accent);
+        animation: pulse 1.6s ease-in-out infinite;
+      }
+      @keyframes pulse {
+        50% {
+          opacity: 0.35;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .pulse {
+          animation: none;
+        }
+      }
 
-  /* summary tiles */
-  .tiles { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
-  .tile { min-width: 0; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); box-shadow: var(--lift); }
-  .tile .k { font-size: 12px; color: var(--ink-2); }
-  .tile .v { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; margin-top: 2px; font-size: 24px; font-weight: 650; line-height: 1.3; letter-spacing: -0.01em; }
-  .tile .v .of { font-size: 15px; font-weight: 500; color: var(--ink-2); letter-spacing: 0; }
-  .tile .s { margin-top: 2px; font-size: 12px; color: var(--ink-2); overflow-wrap: anywhere; }
-  .meter { height: 6px; margin-top: 8px; border-radius: 3px; background: var(--sunken); overflow: hidden; }
-  .meter i { display: block; height: 100%; min-width: 0; border-radius: 3px; background: var(--accent); }
+      /* summary tiles */
+      .tiles {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 16px;
+      }
+      .tile {
+        min-width: 0;
+        padding: 12px 14px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: var(--surface);
+        box-shadow: var(--lift);
+      }
+      .tile .k {
+        font-size: 12px;
+        color: var(--ink-2);
+      }
+      .tile .v {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 4px 8px;
+        margin-top: 2px;
+        font-size: 24px;
+        font-weight: 650;
+        line-height: 1.3;
+        letter-spacing: -0.01em;
+      }
+      .tile .v .of {
+        font-size: 15px;
+        font-weight: 500;
+        color: var(--ink-2);
+        letter-spacing: 0;
+      }
+      .tile .s {
+        margin-top: 2px;
+        font-size: 12px;
+        color: var(--ink-2);
+        overflow-wrap: anywhere;
+      }
+      .meter {
+        height: 6px;
+        margin-top: 8px;
+        border-radius: 3px;
+        background: var(--sunken);
+        overflow: hidden;
+      }
+      .meter i {
+        display: block;
+        height: 100%;
+        min-width: 0;
+        border-radius: 3px;
+        background: var(--accent);
+      }
 
-  /* now */
-  .now-idle { margin: 0; padding: 10px 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--ink-2); font-size: 13px; }
-  .now-wait {
-    padding: 16px 18px 14px 22px; border-radius: 12px; border: 1px solid var(--line-strong);
-    background: var(--surface);
-    background: color-mix(in srgb, var(--warn) 14%, var(--surface));
-    box-shadow: inset 5px 0 0 var(--warn);
-  }
-  .now-wait + .now-wait { margin-top: 10px; }
-  .nw-kicker { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 12px; font-weight: 600; color: var(--ink-2); }
-  .nw-kicker .g { color: var(--warn-ink); }
-  .nw-title { margin-top: 2px; font-size: 20px; font-weight: 700; line-height: 1.35; letter-spacing: -0.01em; }
-  .nw-sub { margin-top: 10px; font-size: 12px; font-weight: 600; color: var(--ink-2); }
-  .nw-notes { margin: 4px 0 0; padding-left: 22px; font-size: 14px; }
-  .nw-notes li { padding: 2px 0; }
-  .nw-notes a { font-family: var(--mono); font-size: 13px; overflow-wrap: anywhere; }
-  .nw-hint { margin: 10px 0 0; font-size: 12px; color: var(--ink-2); }
+      /* now */
+      .now-idle {
+        margin: 0;
+        padding: 10px 14px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: var(--surface);
+        color: var(--ink-2);
+        font-size: 13px;
+      }
+      .now-wait {
+        padding: 16px 18px 14px 22px;
+        border-radius: 12px;
+        border: 1px solid var(--line-strong);
+        background: var(--surface);
+        background: color-mix(in srgb, var(--warn) 14%, var(--surface));
+        box-shadow: inset 5px 0 0 var(--warn);
+      }
+      .now-wait + .now-wait {
+        margin-top: 10px;
+      }
+      .nw-kicker {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px 10px;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--ink-2);
+      }
+      .nw-kicker .g {
+        color: var(--warn-ink);
+      }
+      .nw-title {
+        margin-top: 2px;
+        font-size: 20px;
+        font-weight: 700;
+        line-height: 1.35;
+        letter-spacing: -0.01em;
+      }
+      .nw-sub {
+        margin-top: 10px;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--ink-2);
+      }
+      .nw-notes {
+        margin: 4px 0 0;
+        padding-left: 22px;
+        font-size: 14px;
+      }
+      .nw-notes li {
+        padding: 2px 0;
+      }
+      .nw-notes a {
+        font-family: var(--mono);
+        font-size: 13px;
+        overflow-wrap: anywhere;
+      }
+      .nw-hint {
+        margin: 10px 0 0;
+        font-size: 12px;
+        color: var(--ink-2);
+      }
 
-  /* board */
-  .part h3 .part-count { margin-left: 4px; font-weight: 500; color: var(--ink-3); font-variant-numeric: tabular-nums; }
-  .lane { position: relative; display: flex; align-items: stretch; gap: 10px; padding: 3px 3px 12px; overflow-x: auto; scrollbar-width: thin; scroll-padding-left: 3px; }
-  .wave { flex: 1 0 216px; max-width: 360px; scroll-snap-align: start; min-width: 0; display: flex; flex-direction: column; gap: 8px; padding: 10px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
-  .wave-head { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
-  .wave-id { font-family: var(--mono); font-size: 13px; font-weight: 700; }
-  .wave-count { margin-left: auto; font-size: 12px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
-  .wave-title { flex-basis: 100%; font-size: 13px; font-weight: 650; line-height: 1.35; }
-  .w-running, .w-integrating { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), var(--glow); }
-  .w-pending { background: transparent; border-color: var(--line); }
-  .w-pending .wave-id, .w-pending .wave-title { color: var(--ink-2); font-weight: 600; }
+      /* board */
+      .part h3 .part-count {
+        margin-left: 4px;
+        font-weight: 500;
+        color: var(--ink-3);
+        font-variant-numeric: tabular-nums;
+      }
+      .lane {
+        position: relative;
+        display: flex;
+        align-items: stretch;
+        gap: 10px;
+        padding: 3px 3px 12px;
+        overflow-x: auto;
+        scrollbar-width: thin;
+        scroll-padding-left: 3px;
+      }
+      .wave {
+        flex: 1 0 216px;
+        max-width: 360px;
+        scroll-snap-align: start;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 10px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: var(--surface);
+      }
+      .wave-head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 4px 8px;
+      }
+      .wave-id {
+        font-family: var(--mono);
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .wave-count {
+        margin-left: auto;
+        font-size: 12px;
+        color: var(--ink-2);
+        font-variant-numeric: tabular-nums;
+      }
+      .wave-title {
+        flex-basis: 100%;
+        font-size: 13px;
+        font-weight: 650;
+        line-height: 1.35;
+      }
+      .w-running,
+      .w-integrating {
+        border-color: var(--accent);
+        box-shadow:
+          0 0 0 1px var(--accent),
+          var(--glow);
+      }
+      .w-pending {
+        background: transparent;
+        border-color: var(--line);
+      }
+      .w-pending .wave-id,
+      .w-pending .wave-title {
+        color: var(--ink-2);
+        font-weight: 600;
+      }
 
-  .stages { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
-  .stage { padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
-  .st-row { display: flex; align-items: center; gap: 6px; }
-  .st-id { font-family: var(--mono); font-size: 12px; font-weight: 700; }
-  .st-agent { padding: 0 6px; border-radius: 4px; background: var(--sunken); color: var(--ink-2); font-size: 11px; font-weight: 600; line-height: 18px; }
-  .st-row .badge { margin-left: auto; }
-  .st-title { margin-top: 3px; font-size: 13px; line-height: 1.35; overflow-wrap: anywhere; }
-  .steps { display: flex; gap: 3px; margin-top: 7px; }
-  .steps i { flex: 1; height: 3px; border-radius: 2px; background: var(--line); }
-  .steps i.on { background: var(--accent); }
-  .st-meta { display: flex; flex-wrap: wrap; gap: 2px 10px; margin-top: 6px; font-size: 12px; color: var(--ink-2); }
-  .st-msg { margin-top: 5px; font-size: 12px; line-height: 1.45; color: var(--ink); overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-  .st-note { margin-top: 4px; font-size: 12px; color: var(--ink-2); overflow-wrap: anywhere; }
-  .st-active { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
-  .st-fail { box-shadow: inset 3px 0 0 var(--crit); }
-  .st-blocked { box-shadow: inset 3px 0 0 var(--warn); }
-  .st-pending { background: transparent; border-color: var(--line); }
-  .st-pending .st-id, .st-pending .st-title { color: var(--ink-2); }
-  .st-pending .st-id { font-weight: 600; }
-  .w-pending .stage { padding: 6px 10px; }
+      .stages {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      .stage {
+        padding: 8px 10px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--surface);
+      }
+      .st-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .st-id {
+        font-family: var(--mono);
+        font-size: 12px;
+        font-weight: 700;
+      }
+      .st-agent {
+        padding: 0 6px;
+        border-radius: 4px;
+        background: var(--sunken);
+        color: var(--ink-2);
+        font-size: 11px;
+        font-weight: 600;
+        line-height: 18px;
+      }
+      .st-row .badge {
+        margin-left: auto;
+      }
+      .st-title {
+        margin-top: 3px;
+        font-size: 13px;
+        line-height: 1.35;
+        overflow-wrap: anywhere;
+      }
+      .steps {
+        display: flex;
+        gap: 3px;
+        margin-top: 7px;
+      }
+      .steps i {
+        flex: 1;
+        height: 3px;
+        border-radius: 2px;
+        background: var(--line);
+      }
+      .steps i.on {
+        background: var(--accent);
+      }
+      .st-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 2px 10px;
+        margin-top: 6px;
+        font-size: 12px;
+        color: var(--ink-2);
+      }
+      .st-msg {
+        margin-top: 5px;
+        font-size: 12px;
+        line-height: 1.45;
+        color: var(--ink);
+        overflow-wrap: anywhere;
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+      .st-note {
+        margin-top: 4px;
+        font-size: 12px;
+        color: var(--ink-2);
+        overflow-wrap: anywhere;
+      }
+      .st-active {
+        border-color: var(--accent);
+        box-shadow: inset 3px 0 0 var(--accent);
+      }
+      .st-fail {
+        box-shadow: inset 3px 0 0 var(--crit);
+      }
+      .st-blocked {
+        box-shadow: inset 3px 0 0 var(--warn);
+      }
+      .st-pending {
+        background: transparent;
+        border-color: var(--line);
+      }
+      .st-pending .st-id,
+      .st-pending .st-title {
+        color: var(--ink-2);
+      }
+      .st-pending .st-id {
+        font-weight: 600;
+      }
+      .w-pending .stage {
+        padding: 6px 10px;
+      }
 
-  /* checkpoint markers: a gate between columns, or a divider inside a column */
-  .gate { flex: 0 0 92px; display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; font-size: 12px; color: var(--ink-2); }
-  .gate::before, .gate::after { content: ""; width: 1px; background: var(--line-strong); }
-  .gate::before { flex: 0 0 12px; }
-  .gate::after { flex: 1 1 12px; min-height: 12px; }
-  .cp-mark { font-size: 14px; line-height: 1; color: var(--ink-3); }
-  .cp-id { font-family: var(--mono); font-weight: 700; color: var(--ink); }
-  .cp-title { line-height: 1.35; overflow-wrap: anywhere; }
-  .cp-waiting .cp-mark { color: var(--warn-ink); }
-  .cp-waiting .cp-title { color: var(--ink); font-weight: 600; }
-  .cp-approved .cp-mark { color: var(--good-ink); }
-  .cp-inline { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; padding: 6px 2px; border-top: 1px solid var(--line-strong); border-bottom: 1px solid var(--line-strong); font-size: 12px; color: var(--ink-2); }
-  .cp-inline .cp-title { flex-basis: 100%; }
+      /* checkpoint markers: a gate between columns, or a divider inside a column */
+      .gate {
+        flex: 0 0 92px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        text-align: center;
+        font-size: 12px;
+        color: var(--ink-2);
+      }
+      .gate::before,
+      .gate::after {
+        content: "";
+        width: 1px;
+        background: var(--line-strong);
+      }
+      .gate::before {
+        flex: 0 0 12px;
+      }
+      .gate::after {
+        flex: 1 1 12px;
+        min-height: 12px;
+      }
+      .cp-mark {
+        font-size: 14px;
+        line-height: 1;
+        color: var(--ink-3);
+      }
+      .cp-id {
+        font-family: var(--mono);
+        font-weight: 700;
+        color: var(--ink);
+      }
+      .cp-title {
+        line-height: 1.35;
+        overflow-wrap: anywhere;
+      }
+      .cp-waiting .cp-mark {
+        color: var(--warn-ink);
+      }
+      .cp-waiting .cp-title {
+        color: var(--ink);
+        font-weight: 600;
+      }
+      .cp-approved .cp-mark {
+        color: var(--good-ink);
+      }
+      .cp-inline {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 4px 6px;
+        padding: 6px 2px;
+        border-top: 1px solid var(--line-strong);
+        border-bottom: 1px solid var(--line-strong);
+        font-size: 12px;
+        color: var(--ink-2);
+      }
+      .cp-inline .cp-title {
+        flex-basis: 100%;
+      }
 
-  /* verify */
-  .v-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 13px; }
-  .v-head .v-meta { color: var(--ink-2); font-size: 12px; }
-  .v-note { margin: 6px 0 0; font-size: 12px; color: var(--ink-2); }
-  .checks { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 2px 20px; margin: 10px 0 0; padding: 0; list-style: none; }
-  .check { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto auto auto; align-items: baseline; gap: 10px; padding: 4px 2px; border-bottom: 1px solid var(--line); font-size: 13px; }
-  .check .g { font-weight: 700; color: var(--good-ink); }
-  .check.is-fail .g { color: var(--crit-ink); }
-  .check code { font-size: 13px; overflow-wrap: anywhere; }
-  .ck-n { color: var(--ink-2); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
-  .ck-n b { color: var(--ink); font-weight: 650; }
-  .ck-link { font-size: 12px; }
-  .matrix-wrap { width: fit-content; max-width: 100%; margin-top: 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); overflow-x: auto; }
-  table.matrix { border-collapse: separate; border-spacing: 0; font-size: 12px; }
-  .matrix th, .matrix td { padding: 3px; border-bottom: 1px solid var(--line); }
-  .matrix tr:last-child > * { border-bottom: 0; }
-  .matrix thead th { padding: 8px 8px 6px; font-family: var(--mono); font-weight: 600; color: var(--ink-2); white-space: nowrap; text-align: center; }
-  .matrix thead th:first-child, .matrix tbody th { position: sticky; left: 0; z-index: 1; background: var(--surface); border-right: 1px solid var(--line); text-align: left; }
-  .matrix thead th:first-child { font-family: var(--sans); padding-left: 12px; }
-  .matrix tbody th { min-width: min(240px, 44vw); max-width: min(420px, 46vw); padding: 4px 12px; font-family: var(--mono); font-weight: 500; line-height: 1.35; overflow-wrap: break-word; }
-  .matrix td { text-align: center; }
-  .cell { display: inline-grid; place-items: center; width: 100%; min-width: 36px; height: 26px; padding: 0; border: 0; border-radius: 5px; font: 700 13px/1 var(--sans); }
-  .c-pass { background: var(--sunken); background: color-mix(in srgb, var(--good) 12%, var(--surface)); color: var(--good-ink); }
-  .c-fail { background: var(--crit); color: #fff; cursor: pointer; }
-  .c-fail:hover, .c-fail[aria-pressed="true"] { outline: 2px solid var(--ink); outline-offset: 1px; }
-  .c-skip { background: var(--sunken); color: var(--ink-3); }
-  .c-none { color: var(--ink-3); font-weight: 400; }
-  .legend { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; margin: 8px 0 0; font-size: 12px; color: var(--ink-2); }
-  .legend span { display: inline-flex; align-items: center; gap: 6px; }
-  .legend .cell { display: inline-grid; width: 26px; min-width: 26px; height: 20px; font-size: 12px; cursor: default; }
-  .cell-detail { margin-top: 10px; padding: 12px 14px; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--surface); box-shadow: inset 4px 0 0 var(--crit); }
-  .cd-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 13px; }
-  .cd-head code { font-size: 13px; overflow-wrap: anywhere; }
-  .cd-close { margin-left: auto; padding: 2px 10px; border: 1px solid var(--line-strong); border-radius: 6px; background: transparent; color: var(--ink-2); font: inherit; font-size: 12px; cursor: pointer; }
-  .cd-body { margin: 8px 0; font-family: var(--mono); font-size: 12px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
-  .cd-link { font-size: 13px; }
-  .failed-list { margin: 10px 0 0; padding: 0; list-style: none; font-size: 12px; }
-  .failed-list li { padding: 4px 2px; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
-  .agents { display: flex; flex-wrap: wrap; gap: 6px 8px; margin: 6px 0 0; padding: 0; list-style: none; }
-  .agents li { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 3px 10px 3px 4px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); font-size: 12px; color: var(--ink-2); }
-  .agents b { color: var(--ink); font-family: var(--mono); font-weight: 700; }
+      /* verify */
+      .v-head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px 10px;
+        font-size: 13px;
+      }
+      .v-head .v-meta {
+        color: var(--ink-2);
+        font-size: 12px;
+      }
+      .v-note {
+        margin: 6px 0 0;
+        font-size: 12px;
+        color: var(--ink-2);
+      }
+      .checks {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 2px 20px;
+        margin: 10px 0 0;
+        padding: 0;
+        list-style: none;
+      }
+      .check {
+        display: grid;
+        grid-template-columns: 16px minmax(0, 1fr) auto auto auto;
+        align-items: baseline;
+        gap: 10px;
+        padding: 4px 2px;
+        border-bottom: 1px solid var(--line);
+        font-size: 13px;
+      }
+      .check .g {
+        font-weight: 700;
+        color: var(--good-ink);
+      }
+      .check.is-fail .g {
+        color: var(--crit-ink);
+      }
+      .check code {
+        font-size: 13px;
+        overflow-wrap: anywhere;
+      }
+      .ck-n {
+        color: var(--ink-2);
+        font-size: 12px;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+      }
+      .ck-n b {
+        color: var(--ink);
+        font-weight: 650;
+      }
+      .ck-link {
+        font-size: 12px;
+      }
+      .matrix-wrap {
+        width: fit-content;
+        max-width: 100%;
+        margin-top: 14px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: var(--surface);
+        overflow-x: auto;
+      }
+      table.matrix {
+        border-collapse: separate;
+        border-spacing: 0;
+        font-size: 12px;
+      }
+      .matrix th,
+      .matrix td {
+        padding: 3px;
+        border-bottom: 1px solid var(--line);
+      }
+      .matrix tr:last-child > * {
+        border-bottom: 0;
+      }
+      .matrix thead th {
+        padding: 8px 8px 6px;
+        font-family: var(--mono);
+        font-weight: 600;
+        color: var(--ink-2);
+        white-space: nowrap;
+        text-align: center;
+      }
+      .matrix thead th:first-child,
+      .matrix tbody th {
+        position: sticky;
+        left: 0;
+        z-index: 1;
+        background: var(--surface);
+        border-right: 1px solid var(--line);
+        text-align: left;
+      }
+      .matrix thead th:first-child {
+        font-family: var(--sans);
+        padding-left: 12px;
+      }
+      .matrix tbody th {
+        min-width: min(240px, 44vw);
+        max-width: min(420px, 46vw);
+        padding: 4px 12px;
+        font-family: var(--mono);
+        font-weight: 500;
+        line-height: 1.35;
+        overflow-wrap: break-word;
+      }
+      .matrix td {
+        text-align: center;
+      }
+      .cell {
+        display: inline-grid;
+        place-items: center;
+        width: 100%;
+        min-width: 36px;
+        height: 26px;
+        padding: 0;
+        border: 0;
+        border-radius: 5px;
+        font: 700 13px/1 var(--sans);
+      }
+      .c-pass {
+        background: var(--sunken);
+        background: color-mix(in srgb, var(--good) 12%, var(--surface));
+        color: var(--good-ink);
+      }
+      .c-fail {
+        background: var(--crit);
+        color: #fff;
+        cursor: pointer;
+      }
+      .c-fail:hover,
+      .c-fail[aria-pressed="true"] {
+        outline: 2px solid var(--ink);
+        outline-offset: 1px;
+      }
+      .c-skip {
+        background: var(--sunken);
+        color: var(--ink-3);
+      }
+      .c-none {
+        color: var(--ink-3);
+        font-weight: 400;
+      }
+      .legend {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px 16px;
+        margin: 8px 0 0;
+        font-size: 12px;
+        color: var(--ink-2);
+      }
+      .legend span {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .legend .cell {
+        display: inline-grid;
+        width: 26px;
+        min-width: 26px;
+        height: 20px;
+        font-size: 12px;
+        cursor: default;
+      }
+      .cell-detail {
+        margin-top: 10px;
+        padding: 12px 14px;
+        border: 1px solid var(--line-strong);
+        border-radius: 10px;
+        background: var(--surface);
+        box-shadow: inset 4px 0 0 var(--crit);
+      }
+      .cd-head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px 10px;
+        font-size: 13px;
+      }
+      .cd-head code {
+        font-size: 13px;
+        overflow-wrap: anywhere;
+      }
+      .cd-close {
+        margin-left: auto;
+        padding: 2px 10px;
+        border: 1px solid var(--line-strong);
+        border-radius: 6px;
+        background: transparent;
+        color: var(--ink-2);
+        font: inherit;
+        font-size: 12px;
+        cursor: pointer;
+      }
+      .cd-body {
+        margin: 8px 0;
+        font-family: var(--mono);
+        font-size: 12px;
+        line-height: 1.5;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+      }
+      .cd-link {
+        font-size: 13px;
+      }
+      .failed-list {
+        margin: 10px 0 0;
+        padding: 0;
+        list-style: none;
+        font-size: 12px;
+      }
+      .failed-list li {
+        padding: 4px 2px;
+        border-bottom: 1px solid var(--line);
+        overflow-wrap: anywhere;
+      }
+      .agents {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 8px;
+        margin: 6px 0 0;
+        padding: 0;
+        list-style: none;
+      }
+      .agents li {
+        display: inline-flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px;
+        padding: 3px 10px 3px 4px;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        background: var(--surface);
+        font-size: 12px;
+        color: var(--ink-2);
+      }
+      .agents b {
+        color: var(--ink);
+        font-family: var(--mono);
+        font-weight: 700;
+      }
 
-  /* event log */
-  .log { margin: 0; padding: 0; list-style: none; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
-  .log li { display: grid; grid-template-columns: 66px 74px minmax(0, 1fr); align-items: baseline; gap: 10px; padding: 6px 12px; border-bottom: 1px solid var(--line); font-size: 13px; }
-  .log li:last-child { border-bottom: 0; }
-  .log time { font-family: var(--mono); font-size: 12px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
-  .log .etype { font-size: 12px; font-weight: 600; color: var(--ink-2); }
-  .log .etext { overflow-wrap: anywhere; }
-  .log .is-bad .etext::before { content: "✕ "; color: var(--crit-ink); font-weight: 700; }
-  footer { margin-top: 24px; font-size: 12px; color: var(--ink-3); overflow-wrap: anywhere; }
+      /* event log */
+      .log {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: var(--surface);
+      }
+      .log li {
+        display: grid;
+        grid-template-columns: 66px 74px minmax(0, 1fr);
+        align-items: baseline;
+        gap: 10px;
+        padding: 6px 12px;
+        border-bottom: 1px solid var(--line);
+        font-size: 13px;
+      }
+      .log li:last-child {
+        border-bottom: 0;
+      }
+      .log time {
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--ink-2);
+        font-variant-numeric: tabular-nums;
+      }
+      .log .etype {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--ink-2);
+      }
+      .log .etext {
+        overflow-wrap: anywhere;
+      }
+      .log .is-bad .etext::before {
+        content: "✕ ";
+        color: var(--crit-ink);
+        font-weight: 700;
+      }
+      footer {
+        margin-top: 24px;
+        font-size: 12px;
+        color: var(--ink-3);
+        overflow-wrap: anywhere;
+      }
 
-  @media (max-width: 1180px) { .tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-  @media (max-width: 640px) {
-    .wrap { padding: 14px 12px 40px; }
-    .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-    .tile .v { font-size: 21px; }
-    .nw-title { font-size: 18px; }
-    /* waves stay side by side and swipe horizontally, one column per screen */
-    .lane { scroll-snap-type: x proximity; }
-    .wave { flex: 0 0 min(80vw, 320px); }
-    .gate { flex: 0 0 84px; }
-    .log li { grid-template-columns: auto minmax(0, 1fr); gap: 2px 10px; }
-    .log .etext { grid-column: 1 / -1; }
-  }
-</style>
-</head>
-<body>
-<div class="wrap">
-  <header class="top">
-    <h1><span id="title"></span><span class="sub">진행 대시보드</span></h1>
-    <div class="conn" id="conn" data-state="connecting" role="status"><i aria-hidden="true"></i><span id="conn-text">연결 중…</span></div>
-  </header>
+      @media (max-width: 1180px) {
+        .tiles {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+      }
+      @media (max-width: 640px) {
+        .wrap {
+          padding: 14px 12px 40px;
+        }
+        .tiles {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 8px;
+        }
+        .tile .v {
+          font-size: 21px;
+        }
+        .nw-title {
+          font-size: 18px;
+        }
+        /* waves stay side by side and swipe horizontally, one column per screen */
+        .lane {
+          scroll-snap-type: x proximity;
+        }
+        .wave {
+          flex: 0 0 min(80vw, 320px);
+        }
+        .gate {
+          flex: 0 0 84px;
+        }
+        .log li {
+          grid-template-columns: auto minmax(0, 1fr);
+          gap: 2px 10px;
+        }
+        .log .etext {
+          grid-column: 1 / -1;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="top">
+        <h1><span id="title"></span><span class="sub">진행 대시보드</span></h1>
+        <div class="conn" id="conn" data-state="connecting" role="status">
+          <i aria-hidden="true"></i><span id="conn-text">연결 중…</span>
+        </div>
+      </header>
 
-  <div class="tiles" id="summary" aria-label="요약"></div>
+      <div class="tiles" id="summary" aria-label="요약"></div>
 
-  <section aria-labelledby="h-now">
-    <h2 id="h-now">지금 볼 것</h2>
-    <div id="now" role="status"></div>
-  </section>
+      <section aria-labelledby="h-now">
+        <h2 id="h-now">지금 볼 것</h2>
+        <div id="now" role="status"></div>
+      </section>
 
-  <section aria-labelledby="h-board">
-    <h2 id="h-board">단계 보드</h2>
-    <div id="board"></div>
-  </section>
+      <section aria-labelledby="h-board">
+        <h2 id="h-board">단계 보드</h2>
+        <div id="board"></div>
+      </section>
 
-  <section aria-labelledby="h-verify">
-    <h2 id="h-verify">검증 매트릭스</h2>
-    <div id="verify"></div>
-  </section>
+      <section aria-labelledby="h-verify">
+        <h2 id="h-verify">검증 매트릭스</h2>
+        <div id="verify"></div>
+      </section>
 
-  <section aria-labelledby="h-log">
-    <h2 id="h-log">이벤트 로그<span class="h-sub">최근 50건 · 최신순</span></h2>
-    <div id="log"></div>
-  </section>
+      <section aria-labelledby="h-log">
+        <h2 id="h-log">
+          이벤트 로그<span class="h-sub">최근 50건 · 최신순</span>
+        </h2>
+        <div id="log"></div>
+      </section>
 
-  <footer id="foot"></footer>
-</div>
+      <footer id="foot"></footer>
+    </div>
 
-<script>
-(() => {
-  'use strict';
+    <script>
+      (() => {
+        "use strict";
 
-  // ------------------------------------------------------------------ labels
-  const ACTIVE = ['start', 'ground', 'red', 'impl', 'verify'];
-  const STAGE_LABEL = { pending: '대기', start: '시작', ground: '근거', red: 'Red', impl: '구현', verify: '검증', pass: '통과', fail: '실패', blocked: '차단' };
-  const WAVE_LABEL = { pending: '대기', running: '진행 중', integrating: '통합 중', done: '완료' };
-  const CP_LABEL = { pending: '예정', waiting: '확인 대기', approved: '승인됨' };
-  const TYPE_LABEL = { stage: '단계', wave: '웨이브', verify: '검증', checkpoint: '체크포인트', usage: '사용량', log: '로그', ruling: '판정', merge: '병합', deploy: '배포' };
-  const SCOPE_LABEL = { integration: '통합 검증', agent: '에이전트 검증', selftest: '셀프테스트' };
-  const CELL = { pass: ['c-pass', '✓', '통과'], fail: ['c-fail', '✕', '실패'], skip: ['c-skip', '–', '건너뜀'] };
-  const GLYPH = { idle: '○', good: '✓', crit: '✕', warn: '!' };
-  const NOTES_PREFIX = 'docs/astro-notes/';
+        // ------------------------------------------------------------------ labels
+        const ACTIVE = ["start", "ground", "red", "impl", "verify"];
+        const STAGE_LABEL = {
+          pending: "대기",
+          start: "시작",
+          ground: "근거",
+          red: "Red",
+          impl: "구현",
+          verify: "검증",
+          pass: "통과",
+          fail: "실패",
+          blocked: "차단",
+        };
+        const WAVE_LABEL = {
+          pending: "대기",
+          running: "진행 중",
+          integrating: "통합 중",
+          done: "완료",
+        };
+        const CP_LABEL = {
+          pending: "예정",
+          waiting: "확인 대기",
+          approved: "승인됨",
+        };
+        const TYPE_LABEL = {
+          stage: "단계",
+          wave: "웨이브",
+          verify: "검증",
+          checkpoint: "체크포인트",
+          usage: "사용량",
+          log: "로그",
+          ruling: "판정",
+          merge: "병합",
+          deploy: "배포",
+        };
+        const SCOPE_LABEL = {
+          integration: "통합 검증",
+          agent: "에이전트 검증",
+          selftest: "셀프테스트",
+        };
+        const CELL = {
+          pass: ["c-pass", "✓", "통과"],
+          fail: ["c-fail", "✕", "실패"],
+          skip: ["c-skip", "–", "건너뜀"],
+        };
+        const GLYPH = { idle: "○", good: "✓", crit: "✕", warn: "!" };
+        const NOTES_PREFIX = "docs/astro-notes/";
 
-  // ----------------------------------------------------------------- helpers
-  const $ = (id) => document.getElementById(id);
-  const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
-  const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (ch) => ESC[ch]);
-  const lc = (value) => String(value ?? '').toLowerCase();
-  const pad2 = (n) => String(n).padStart(2, '0');
+        // ----------------------------------------------------------------- helpers
+        const $ = (id) => document.getElementById(id);
+        const ESC = {
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#39;",
+        };
+        const esc = (value) =>
+          String(value ?? "").replace(/[&<>"']/g, (ch) => ESC[ch]);
+        const lc = (value) => String(value ?? "").toLowerCase();
+        const pad2 = (n) => String(n).padStart(2, "0");
 
-  function clock(ts) {
-    const d = new Date(ts);
-    return Number.isNaN(d.getTime()) ? '--:--:--' : `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
-  }
-  function relative(ts) {
-    const t = Date.parse(ts);
-    if (!Number.isFinite(t)) return '';
-    const s = Math.max(0, Math.round((Date.now() - t) / 1000));
-    if (s < 5) return '방금';
-    if (s < 60) return `${s}초 전`;
-    const m = Math.floor(s / 60);
-    if (m < 60) return `${m}분 전`;
-    const h = Math.floor(m / 60);
-    if (h < 24) return m % 60 ? `${h}시간 ${m % 60}분 전` : `${h}시간 전`;
-    return `${Math.floor(h / 24)}일 전`;
-  }
-  function span(ms) {
-    if (!Number.isFinite(ms) || ms < 0) return '–';
-    const s = Math.floor(ms / 1000);
-    const h = Math.floor(s / 3600);
-    const m = Math.floor((s % 3600) / 60);
-    return h ? `${h}시간 ${m}분` : m ? `${m}분 ${s % 60}초` : `${s}초`;
-  }
-  function duration(ms) {
-    const n = Number(ms);
-    if (!Number.isFinite(n) || n < 0) return '';
-    return n < 1000 ? `${Math.round(n)}ms` : n < 60000 ? `${(n / 1000).toFixed(1)}초` : span(n);
-  }
-  const relTime = (ts) => (ts ? `<time data-rel="${esc(ts)}" datetime="${esc(ts)}" title="${esc(new Date(ts).toLocaleString('ko-KR'))}"></time>` : '');
+        function clock(ts) {
+          const d = new Date(ts);
+          return Number.isNaN(d.getTime())
+            ? "--:--:--"
+            : `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
+        }
+        function relative(ts) {
+          const t = Date.parse(ts);
+          if (!Number.isFinite(t)) return "";
+          const s = Math.max(0, Math.round((Date.now() - t) / 1000));
+          if (s < 5) return "방금";
+          if (s < 60) return `${s}초 전`;
+          const m = Math.floor(s / 60);
+          if (m < 60) return `${m}분 전`;
+          const h = Math.floor(m / 60);
+          if (h < 24) return m % 60 ? `${h}시간 ${m % 60}분 전` : `${h}시간 전`;
+          return `${Math.floor(h / 24)}일 전`;
+        }
+        function span(ms) {
+          if (!Number.isFinite(ms) || ms < 0) return "–";
+          const s = Math.floor(ms / 1000);
+          const h = Math.floor(s / 3600);
+          const m = Math.floor((s % 3600) / 60);
+          return h ? `${h}시간 ${m}분` : m ? `${m}분 ${s % 60}초` : `${s}초`;
+        }
+        function duration(ms) {
+          const n = Number(ms);
+          if (!Number.isFinite(n) || n < 0) return "";
+          return n < 1000
+            ? `${Math.round(n)}ms`
+            : n < 60000
+              ? `${(n / 1000).toFixed(1)}초`
+              : span(n);
+        }
+        const relTime = (ts) =>
+          ts
+            ? `<time data-rel="${esc(ts)}" datetime="${esc(ts)}" title="${esc(new Date(ts).toLocaleString("ko-KR"))}"></time>`
+            : "";
 
-  function badge(kind, label) {
-    const glyph = kind === 'active' ? '<span class="pulse" aria-hidden="true"></span>' : `<span class="g" aria-hidden="true">${GLYPH[kind] ?? ''}</span>`;
-    return `<span class="badge k-${kind}">${glyph}${esc(label)}</span>`;
-  }
-  const stageKind = (st) => (ACTIVE.includes(st) ? 'active' : st === 'pass' ? 'good' : st === 'fail' ? 'crit' : st === 'blocked' ? 'warn' : 'idle');
-  const stageBadge = (st) => badge(stageKind(st), STAGE_LABEL[st] ?? st);
-  const waveBadge = (st) => badge(st === 'done' ? 'good' : st === 'running' || st === 'integrating' ? 'active' : 'idle', WAVE_LABEL[st] ?? st);
-  const cpBadge = (st) => badge(st === 'approved' ? 'good' : st === 'waiting' ? 'warn' : 'idle', CP_LABEL[st] ?? st);
+        function badge(kind, label) {
+          const glyph =
+            kind === "active"
+              ? '<span class="pulse" aria-hidden="true"></span>'
+              : `<span class="g" aria-hidden="true">${GLYPH[kind] ?? ""}</span>`;
+          return `<span class="badge k-${kind}">${glyph}${esc(label)}</span>`;
+        }
+        const stageKind = (st) =>
+          ACTIVE.includes(st)
+            ? "active"
+            : st === "pass"
+              ? "good"
+              : st === "fail"
+                ? "crit"
+                : st === "blocked"
+                  ? "warn"
+                  : "idle";
+        const stageBadge = (st) => badge(stageKind(st), STAGE_LABEL[st] ?? st);
+        const waveBadge = (st) =>
+          badge(
+            st === "done"
+              ? "good"
+              : st === "running" || st === "integrating"
+                ? "active"
+                : "idle",
+            WAVE_LABEL[st] ?? st,
+          );
+        const cpBadge = (st) =>
+          badge(
+            st === "approved" ? "good" : st === "waiting" ? "warn" : "idle",
+            CP_LABEL[st] ?? st,
+          );
 
-  /** A note path in any spelling -> its path relative to docs/astro-notes/. */
-  function notePath(note) {
-    let p = String(note).trim();
-    const at = p.lastIndexOf(NOTES_PREFIX);
-    if (at >= 0) p = p.slice(at + NOTES_PREFIX.length);
-    return p.replace(/^(\.?\/)+/, '');
-  }
-  const noteHref = (note) => '/notes/' + notePath(note).split('/').map(encodeURIComponent).join('/');
-  const looksLikeFile = (text) => /^\S+\.(md|mdx|markdown|txt)$/i.test(String(text).trim());
-  const reportHref = (check) => `/report/${encodeURIComponent(check)}.json`;
+        /** A note path in any spelling -> its path relative to docs/astro-notes/. */
+        function notePath(note) {
+          let p = String(note).trim();
+          const at = p.lastIndexOf(NOTES_PREFIX);
+          if (at >= 0) p = p.slice(at + NOTES_PREFIX.length);
+          return p.replace(/^(\.?\/)+/, "");
+        }
+        const noteHref = (note) =>
+          "/notes/" +
+          notePath(note).split("/").map(encodeURIComponent).join("/");
+        const looksLikeFile = (text) =>
+          /^\S+\.(md|mdx|markdown|txt)$/i.test(String(text).trim());
+        const reportHref = (check) =>
+          `/report/${encodeURIComponent(check)}.json`;
 
-  // ----------------------------------------------------------------- summary
-  function tile(label, value, sub, extra = '') {
-    return `<div class="tile"><div class="k">${label}</div><div class="v">${value}</div>${extra}<div class="s">${sub}</div></div>`;
-  }
-  function renderSummary(s) {
-    const sm = s.summary;
-    const wave = sm.currentWave;
-    const cp = sm.nextCheckpoint;
-    const total = sm.totalStages || 0;
-    const pct = total ? Math.round((sm.doneStages / total) * 100) : 0;
-    const allDone = total > 0 && sm.doneStages === total;
-    const meter = `<div class="meter" role="progressbar" aria-label="완료 단계" aria-valuemin="0" aria-valuemax="${total}" aria-valuenow="${sm.doneStages}"><i style="width:${pct}%"></i></div>`;
-    const active = Array.isArray(sm.activeStages) ? sm.activeStages : [];
-    return [
-      tile('현재 웨이브', wave ? `${esc(wave.id)} ${waveBadge(wave.state)}` : '완료', wave ? esc(wave.title) : '모든 웨이브가 끝났습니다'),
-      tile('완료 단계', `${sm.doneStages} <span class="of">/ ${total}</span>`, `${pct}% 완료`, meter),
-      tile('다음 체크포인트', cp ? `${esc(cp.id)} ${cpBadge(cp.state)}` : '없음', cp ? esc(cp.title) : '모든 체크포인트 승인됨'),
-      tile('경과 시간', `<span id="elapsed" data-start="${esc(sm.startedAt ?? '')}" data-end="${esc(allDone ? sm.lastEventAt ?? '' : '')}">–</span>`,
-        sm.startedAt ? `시작 ${esc(clock(sm.startedAt))}` : '아직 이벤트 없음'),
-      tile('실행 중 에이전트', String(sm.agentsRunning ?? 0), active.length ? esc(active.join(', ')) : '작업 중인 단계 없음'),
-      tile('누적 토큰', esc(Number(sm.tokens || 0).toLocaleString('ko-KR')), '에이전트 보고 합계'),
-    ].join('');
-  }
+        // ----------------------------------------------------------------- summary
+        function tile(label, value, sub, extra = "") {
+          return `<div class="tile"><div class="k">${label}</div><div class="v">${value}</div>${extra}<div class="s">${sub}</div></div>`;
+        }
+        function renderSummary(s) {
+          const sm = s.summary;
+          const wave = sm.currentWave;
+          const cp = sm.nextCheckpoint;
+          const total = sm.totalStages || 0;
+          const pct = total ? Math.round((sm.doneStages / total) * 100) : 0;
+          const allDone = total > 0 && sm.doneStages === total;
+          const meter = `<div class="meter" role="progressbar" aria-label="완료 단계" aria-valuemin="0" aria-valuemax="${total}" aria-valuenow="${sm.doneStages}"><i style="width:${pct}%"></i></div>`;
+          const active = Array.isArray(sm.activeStages) ? sm.activeStages : [];
+          return [
+            tile(
+              "현재 웨이브",
+              wave ? `${esc(wave.id)} ${waveBadge(wave.state)}` : "완료",
+              wave ? esc(wave.title) : "모든 웨이브가 끝났습니다",
+            ),
+            tile(
+              "완료 단계",
+              `${sm.doneStages} <span class="of">/ ${total}</span>`,
+              `${pct}% 완료`,
+              meter,
+            ),
+            tile(
+              "다음 체크포인트",
+              cp ? `${esc(cp.id)} ${cpBadge(cp.state)}` : "없음",
+              cp ? esc(cp.title) : "모든 체크포인트 승인됨",
+            ),
+            tile(
+              "경과 시간",
+              `<span id="elapsed" data-start="${esc(sm.startedAt ?? "")}" data-end="${esc(allDone ? (sm.lastEventAt ?? "") : "")}">–</span>`,
+              sm.startedAt
+                ? `시작 ${esc(clock(sm.startedAt))}`
+                : "아직 이벤트 없음",
+            ),
+            tile(
+              "실행 중 에이전트",
+              String(sm.agentsRunning ?? 0),
+              active.length ? esc(active.join(", ")) : "작업 중인 단계 없음",
+            ),
+            tile(
+              "누적 토큰",
+              esc(Number(sm.tokens || 0).toLocaleString("ko-KR")),
+              "에이전트 보고 합계",
+            ),
+          ].join("");
+        }
 
-  // --------------------------------------------------------------------- now
-  function renderNow(s) {
-    const waiting = s.checkpoints.filter((c) => c.state === 'waiting');
-    if (!waiting.length) return '<p class="now-idle">대기 중인 체크포인트 없음</p>';
-    return waiting.map((cp) => {
-      const notes = Array.isArray(cp.notes) ? cp.notes : [];
-      const list = notes.length
-        ? `<div class="nw-sub">읽을 노트 (순서대로)</div><ol class="nw-notes">${notes.map((n) => `<li><a href="${esc(noteHref(n))}" target="_blank" rel="noopener">${esc(notePath(n))}</a></li>`).join('')}</ol>`
-        : '<div class="nw-sub">첨부된 노트가 없습니다</div>';
-      return `<div class="now-wait">
+        // --------------------------------------------------------------------- now
+        function renderNow(s) {
+          const waiting = s.checkpoints.filter((c) => c.state === "waiting");
+          if (!waiting.length)
+            return '<p class="now-idle">대기 중인 체크포인트 없음</p>';
+          return waiting
+            .map((cp) => {
+              const notes = Array.isArray(cp.notes) ? cp.notes : [];
+              const list = notes.length
+                ? `<div class="nw-sub">읽을 노트 (순서대로)</div><ol class="nw-notes">${notes.map((n) => `<li><a href="${esc(noteHref(n))}" target="_blank" rel="noopener">${esc(notePath(n))}</a></li>`).join("")}</ol>`
+                : '<div class="nw-sub">첨부된 노트가 없습니다</div>';
+              return `<div class="now-wait">
         <div class="nw-kicker"><span><span class="g" aria-hidden="true">◆</span> 체크포인트 확인 대기</span>${relTime(cp.updatedAt)}</div>
         <div class="nw-title">${esc(cp.id)} · ${esc(cp.title)}</div>
         ${list}
         <p class="nw-hint">검토를 마치면 오케스트레이터 세션에서 “계속”이라고 답해 주세요.</p>
       </div>`;
-    }).join('');
-  }
+            })
+            .join("");
+        }
 
-  // ------------------------------------------------------------------- board
-  function stageHtml(st) {
-    const kind = stageKind(st.state);
-    const cls = st.state === 'pending' ? 'st-pending' : kind === 'active' ? 'st-active' : `st-${esc(st.state)}`;
-    let html = `<li class="stage ${cls}" data-stage="${esc(st.id)}"><div class="st-row"><span class="st-id">${esc(st.id)}</span>`;
-    if (st.agent) html += `<span class="st-agent" title="담당 에이전트">${esc(st.agent)}</span>`;
-    html += `${stageBadge(st.state)}</div><div class="st-title">${esc(st.title)}</div>`;
-    if (st.state !== 'pending') {
-      if (kind === 'active') {
-        const at = ACTIVE.indexOf(st.state);
-        html += `<div class="steps" role="img" aria-label="닫힌 고리 ${at + 1}/${ACTIVE.length}단계: ${esc(STAGE_LABEL[st.state])}">${ACTIVE.map((_, i) => `<i${i <= at ? ' class="on"' : ''}></i>`).join('')}</div>`;
-      }
-      const meta = [`<span>시도 ${Number(st.attempt) || 1}</span>`];
-      if (st.commit) meta.push(`<code title="커밋 ${esc(st.commit)}">${esc(String(st.commit).slice(0, 7))}</code>`);
-      if (st.updatedAt) meta.push(relTime(st.updatedAt));
-      if (st.note && looksLikeFile(st.note)) meta.push(`<a href="${esc(noteHref(st.note))}" target="_blank" rel="noopener" title="${esc(notePath(st.note))}">노트</a>`);
-      html += `<div class="st-meta">${meta.join('')}</div>`;
-      if (st.msg) html += `<div class="st-msg" title="${esc(st.msg)}">${esc(st.msg)}</div>`;
-      if (st.note && !looksLikeFile(st.note)) html += `<div class="st-note">${esc(st.note)}</div>`;
-    }
-    return html + '</li>';
-  }
-  const cpMark = (cp) => `<span class="cp-mark" aria-hidden="true">${cp.state === 'pending' ? '◇' : '◆'}</span><span class="cp-id">${esc(cp.id)}</span>${cpBadge(cp.state)}<span class="cp-title">${esc(cp.title)}</span>`;
-  const gateHtml = (cp) => `<div class="gate cp-${esc(cp.state)}" role="group" aria-label="체크포인트 ${esc(cp.id)}">${cpMark(cp)}</div>`;
-  const cpInlineHtml = (cp) => `<li class="cp-inline cp-${esc(cp.state)}" aria-label="체크포인트 ${esc(cp.id)}">${cpMark(cp)}</li>`;
+        // ------------------------------------------------------------------- board
+        function stageHtml(st) {
+          const kind = stageKind(st.state);
+          const cls =
+            st.state === "pending"
+              ? "st-pending"
+              : kind === "active"
+                ? "st-active"
+                : `st-${esc(st.state)}`;
+          let html = `<li class="stage ${cls}" data-stage="${esc(st.id)}"><div class="st-row"><span class="st-id">${esc(st.id)}</span>`;
+          if (st.agent)
+            html += `<span class="st-agent" title="담당 에이전트">${esc(st.agent)}</span>`;
+          html += `${stageBadge(st.state)}</div><div class="st-title">${esc(st.title)}</div>`;
+          if (st.state !== "pending") {
+            if (kind === "active") {
+              const at = ACTIVE.indexOf(st.state);
+              html += `<div class="steps" role="img" aria-label="닫힌 고리 ${at + 1}/${ACTIVE.length}단계: ${esc(STAGE_LABEL[st.state])}">${ACTIVE.map((_, i) => `<i${i <= at ? ' class="on"' : ""}></i>`).join("")}</div>`;
+            }
+            const meta = [`<span>시도 ${Number(st.attempt) || 1}</span>`];
+            if (st.commit)
+              meta.push(
+                `<code title="커밋 ${esc(st.commit)}">${esc(String(st.commit).slice(0, 7))}</code>`,
+              );
+            if (st.updatedAt) meta.push(relTime(st.updatedAt));
+            if (st.note && looksLikeFile(st.note))
+              meta.push(
+                `<a href="${esc(noteHref(st.note))}" target="_blank" rel="noopener" title="${esc(notePath(st.note))}">노트</a>`,
+              );
+            html += `<div class="st-meta">${meta.join("")}</div>`;
+            if (st.msg)
+              html += `<div class="st-msg" title="${esc(st.msg)}">${esc(st.msg)}</div>`;
+            if (st.note && !looksLikeFile(st.note))
+              html += `<div class="st-note">${esc(st.note)}</div>`;
+          }
+          return html + "</li>";
+        }
+        const cpMark = (cp) =>
+          `<span class="cp-mark" aria-hidden="true">${cp.state === "pending" ? "◇" : "◆"}</span><span class="cp-id">${esc(cp.id)}</span>${cpBadge(cp.state)}<span class="cp-title">${esc(cp.title)}</span>`;
+        const gateHtml = (cp) =>
+          `<div class="gate cp-${esc(cp.state)}" role="group" aria-label="체크포인트 ${esc(cp.id)}">${cpMark(cp)}</div>`;
+        const cpInlineHtml = (cp) =>
+          `<li class="cp-inline cp-${esc(cp.state)}" aria-label="체크포인트 ${esc(cp.id)}">${cpMark(cp)}</li>`;
 
-  function renderBoard(s) {
-    if (!s.waves.length) return `<p class="empty">${esc(s.meta?.planError ?? 'plan.json에 웨이브가 없습니다.')}</p>`;
-    const after = new Map();
-    for (const cp of s.checkpoints) {
-      const k = lc(cp.after);
-      if (!after.has(k)) after.set(k, []);
-      after.get(k).push(cp);
-    }
-    const placed = new Set();
-    const take = (id) => {
-      const list = after.get(lc(id)) ?? [];
-      for (const cp of list) placed.add(cp);
-      return list;
-    };
-    const parts = [];
-    for (const wave of s.waves) {
-      const last = parts[parts.length - 1];
-      if (last && last.part === wave.part) last.waves.push(wave);
-      else parts.push({ part: wave.part, waves: [wave] });
-    }
-    return parts.map((part, index) => {
-      const done = part.waves.reduce((n, w) => n + w.doneStages, 0);
-      const total = part.waves.reduce((n, w) => n + w.totalStages, 0);
-      let lane = '';
-      for (const w of part.waves) {
-        const stages = w.stages.map((st) => stageHtml(st) + take(st.id).map(cpInlineHtml).join('')).join('');
-        lane += `<section class="wave w-${esc(w.state)}" data-wave="${esc(w.id)}" aria-label="웨이브 ${esc(w.id)} ${esc(w.title)}">
+        function renderBoard(s) {
+          if (!s.waves.length)
+            return `<p class="empty">${esc(s.meta?.planError ?? "plan.json에 웨이브가 없습니다.")}</p>`;
+          const after = new Map();
+          for (const cp of s.checkpoints) {
+            const k = lc(cp.after);
+            if (!after.has(k)) after.set(k, []);
+            after.get(k).push(cp);
+          }
+          const placed = new Set();
+          const take = (id) => {
+            const list = after.get(lc(id)) ?? [];
+            for (const cp of list) placed.add(cp);
+            return list;
+          };
+          const parts = [];
+          for (const wave of s.waves) {
+            const last = parts[parts.length - 1];
+            if (last && last.part === wave.part) last.waves.push(wave);
+            else parts.push({ part: wave.part, waves: [wave] });
+          }
+          return parts
+            .map((part, index) => {
+              const done = part.waves.reduce((n, w) => n + w.doneStages, 0);
+              const total = part.waves.reduce((n, w) => n + w.totalStages, 0);
+              let lane = "";
+              for (const w of part.waves) {
+                const stages = w.stages
+                  .map(
+                    (st) =>
+                      stageHtml(st) + take(st.id).map(cpInlineHtml).join(""),
+                  )
+                  .join("");
+                lane += `<section class="wave w-${esc(w.state)}" data-wave="${esc(w.id)}" aria-label="웨이브 ${esc(w.id)} ${esc(w.title)}">
           <div class="wave-head"><span class="wave-id">${esc(w.id)}</span>${waveBadge(w.state)}<span class="wave-count">${w.doneStages}/${w.totalStages}</span><div class="wave-title">${esc(w.title)}</div></div>
           <ol class="stages">${stages}</ol></section>`;
-        lane += take(w.id).map(gateHtml).join('');
-      }
-      // a checkpoint whose `after` names nothing on the board still gets drawn, at the very end
-      if (index === parts.length - 1) lane += s.checkpoints.filter((cp) => !placed.has(cp)).map(gateHtml).join('');
-      return `<div class="part"><h3>${esc(part.part)} <span class="part-count">${done}/${total} 단계</span></h3><div class="lane">${lane}</div></div>`;
-    }).join('');
-  }
-
-  // ------------------------------------------------------------------ verify
-  let selectedCell = null; // "<route>|<check>" of the failed cell whose detail is open
-
-  const counts = (r) => ({ pass: Number(r?.pass) || 0, fail: Number(r?.fail) || (Array.isArray(r?.failed) ? r.failed.length : 0) });
-  const isOk = (v) => (typeof v.ok === 'boolean' ? v.ok : Array.isArray(v.results) && v.results.every((r) => r?.ok !== false));
-  const detailText = (d) => (d == null ? '' : typeof d === 'string' ? d : JSON.stringify(d, null, 2));
-  function failDetail(results, route, check) {
-    const result = results.find((r) => r && r.check === check);
-    const failed = result && Array.isArray(result.failed) ? result.failed.filter((f) => f && f.route === route) : [];
-    return failed.map((f) => detailText(f.detail)).filter(Boolean).join('\n');
-  }
-  /** Escape, then turn `.verify/report/<file>` mentions into links to the same file under /report/. */
-  function linkify(text) {
-    return esc(text).replace(/\.verify\/report\/([\w\-./%]+\.(?:png|json|txt|html))/g, (match, file) => `<a href="/report/${file}" target="_blank" rel="noopener">${match}</a>`);
-  }
-  function whoOf(v) {
-    return [...new Set([v.agent, v.stage].filter(Boolean).map(String))].join(' · ');
-  }
-
-  function matrixHtml(v, results) {
-    const m = v.matrix;
-    if (!m || !Array.isArray(m.routes) || !Array.isArray(m.checks) || !m.routes.length || !m.checks.length) {
-      const failed = results.flatMap((r) => (Array.isArray(r?.failed) ? r.failed.map((f) => ({ check: r.check, ...f })) : []));
-      const list = failed.length
-        ? `<ul class="failed-list">${failed.map((f) => `<li><code>${esc(f.check)}</code> · <code>${esc(f.route ?? '')}</code> — ${linkify(detailText(f.detail))} <a href="${esc(reportHref(f.check))}" target="_blank" rel="noopener">리포트</a></li>`).join('')}</ul>`
-        : '';
-      return `${list}<p class="v-note">${results.length ? '이 검증 결과에는 라우트 × 검사 매트릭스가 없습니다.' : '이 검증에서 실행된 검사가 없습니다.'}</p>`;
-    }
-    const cells = m.cells && typeof m.cells === 'object' ? m.cells : {};
-    if (selectedCell && cells[selectedCell] !== 'fail') selectedCell = null;
-    const head = `<tr><th scope="col">라우트</th>${m.checks.map((c) => `<th scope="col">${esc(c)}</th>`).join('')}</tr>`;
-    const body = m.routes.map((route) => {
-      const tds = m.checks.map((check) => {
-        const k = `${route}|${check}`;
-        const [cls, glyph, label] = CELL[cells[k]] ?? ['c-none', '·', '결과 없음'];
-        if (cells[k] === 'fail') {
-          const detail = failDetail(results, route, check);
-          return `<td><button type="button" class="cell ${cls}" data-cell="${esc(k)}" aria-pressed="${selectedCell === k}" title="${esc(detail || '실패')}" aria-label="${esc(route)} × ${esc(check)}: 실패. ${esc(detail)}">${glyph}</button></td>`;
+                lane += take(w.id).map(gateHtml).join("");
+              }
+              // a checkpoint whose `after` names nothing on the board still gets drawn, at the very end
+              if (index === parts.length - 1)
+                lane += s.checkpoints
+                  .filter((cp) => !placed.has(cp))
+                  .map(gateHtml)
+                  .join("");
+              return `<div class="part"><h3>${esc(part.part)} <span class="part-count">${done}/${total} 단계</span></h3><div class="lane">${lane}</div></div>`;
+            })
+            .join("");
         }
-        return `<td><span class="cell ${cls}" role="img" title="${esc(route)} × ${esc(check)}: ${label}" aria-label="${label}">${glyph}</span></td>`;
-      }).join('');
-      return `<tr><th scope="row" title="${esc(route)}">${esc(route)}</th>${tds}</tr>`;
-    }).join('');
-    let html = `<div class="matrix-wrap"><table class="matrix"><thead>${head}</thead><tbody>${body}</tbody></table></div>
+
+        // ------------------------------------------------------------------ verify
+        let selectedCell = null; // "<route>|<check>" of the failed cell whose detail is open
+
+        const counts = (r) => ({
+          pass: Number(r?.pass) || 0,
+          fail:
+            Number(r?.fail) || (Array.isArray(r?.failed) ? r.failed.length : 0),
+        });
+        const isOk = (v) =>
+          typeof v.ok === "boolean"
+            ? v.ok
+            : Array.isArray(v.results) &&
+              v.results.every((r) => r?.ok !== false);
+        const detailText = (d) =>
+          d == null
+            ? ""
+            : typeof d === "string"
+              ? d
+              : JSON.stringify(d, null, 2);
+        function failDetail(results, route, check) {
+          const result = results.find((r) => r && r.check === check);
+          const failed =
+            result && Array.isArray(result.failed)
+              ? result.failed.filter((f) => f && f.route === route)
+              : [];
+          return failed
+            .map((f) => detailText(f.detail))
+            .filter(Boolean)
+            .join("\n");
+        }
+        /** Escape, then turn `.verify/report/<file>` mentions into links to the same file under /report/. */
+        function linkify(text) {
+          return esc(text).replace(
+            /\.verify\/report\/([\w\-./%]+\.(?:png|json|txt|html))/g,
+            (match, file) =>
+              `<a href="/report/${file}" target="_blank" rel="noopener">${match}</a>`,
+          );
+        }
+        function whoOf(v) {
+          return [
+            ...new Set([v.agent, v.stage].filter(Boolean).map(String)),
+          ].join(" · ");
+        }
+
+        function matrixHtml(v, results) {
+          const m = v.matrix;
+          if (
+            !m ||
+            !Array.isArray(m.routes) ||
+            !Array.isArray(m.checks) ||
+            !m.routes.length ||
+            !m.checks.length
+          ) {
+            const failed = results.flatMap((r) =>
+              Array.isArray(r?.failed)
+                ? r.failed.map((f) => ({ check: r.check, ...f }))
+                : [],
+            );
+            const list = failed.length
+              ? `<ul class="failed-list">${failed.map((f) => `<li><code>${esc(f.check)}</code> · <code>${esc(f.route ?? "")}</code> — ${linkify(detailText(f.detail))} <a href="${esc(reportHref(f.check))}" target="_blank" rel="noopener">리포트</a></li>`).join("")}</ul>`
+              : "";
+            return `${list}<p class="v-note">${results.length ? "이 검증 결과에는 라우트 × 검사 매트릭스가 없습니다." : "이 검증에서 실행된 검사가 없습니다."}</p>`;
+          }
+          const cells = m.cells && typeof m.cells === "object" ? m.cells : {};
+          if (selectedCell && cells[selectedCell] !== "fail")
+            selectedCell = null;
+          const head = `<tr><th scope="col">라우트</th>${m.checks.map((c) => `<th scope="col">${esc(c)}</th>`).join("")}</tr>`;
+          const body = m.routes
+            .map((route) => {
+              const tds = m.checks
+                .map((check) => {
+                  const k = `${route}|${check}`;
+                  const [cls, glyph, label] = CELL[cells[k]] ?? [
+                    "c-none",
+                    "·",
+                    "결과 없음",
+                  ];
+                  if (cells[k] === "fail") {
+                    const detail = failDetail(results, route, check);
+                    return `<td><button type="button" class="cell ${cls}" data-cell="${esc(k)}" aria-pressed="${selectedCell === k}" title="${esc(detail || "실패")}" aria-label="${esc(route)} × ${esc(check)}: 실패. ${esc(detail)}">${glyph}</button></td>`;
+                  }
+                  return `<td><span class="cell ${cls}" role="img" title="${esc(route)} × ${esc(check)}: ${label}" aria-label="${label}">${glyph}</span></td>`;
+                })
+                .join("");
+              return `<tr><th scope="row" title="${esc(route)}">${esc(route)}</th>${tds}</tr>`;
+            })
+            .join("");
+          let html = `<div class="matrix-wrap"><table class="matrix"><thead>${head}</thead><tbody>${body}</tbody></table></div>
       <p class="legend"><span><span class="cell c-pass" aria-hidden="true">✓</span>통과</span><span><span class="cell c-fail" aria-hidden="true">✕</span>실패 · 누르면 상세</span><span><span class="cell c-skip" aria-hidden="true">–</span>건너뜀</span></p>`;
-    if (selectedCell) {
-      const at = selectedCell.lastIndexOf('|');
-      const route = selectedCell.slice(0, at);
-      const check = selectedCell.slice(at + 1);
-      const detail = failDetail(results, route, check);
-      html += `<div class="cell-detail" id="cell-detail">
-        <div class="cd-head">${badge('crit', '실패')}<code>${esc(route)}</code><span aria-hidden="true">×</span><code>${esc(check)}</code><button type="button" class="cd-close" data-close>닫기</button></div>
-        <div class="cd-body">${detail ? linkify(detail) : '상세 내용이 기록되지 않았습니다.'}</div>
+          if (selectedCell) {
+            const at = selectedCell.lastIndexOf("|");
+            const route = selectedCell.slice(0, at);
+            const check = selectedCell.slice(at + 1);
+            const detail = failDetail(results, route, check);
+            html += `<div class="cell-detail" id="cell-detail">
+        <div class="cd-head">${badge("crit", "실패")}<code>${esc(route)}</code><span aria-hidden="true">×</span><code>${esc(check)}</code><button type="button" class="cd-close" data-close>닫기</button></div>
+        <div class="cd-body">${detail ? linkify(detail) : "상세 내용이 기록되지 않았습니다."}</div>
         <a class="cd-link" href="${esc(reportHref(check))}" target="_blank" rel="noopener">리포트 열기 · ${esc(reportHref(check))}</a>
       </div>`;
-    }
-    return html;
-  }
+          }
+          return html;
+        }
 
-  function renderVerify(s) {
-    const v = s.verify || {};
-    let html = '';
-    if (v.type !== 'verify') {
-      html += '<p class="empty">아직 검증 결과가 없습니다.</p>';
-    } else {
-      const results = Array.isArray(v.results) ? v.results.filter(Boolean) : [];
-      const ok = isOk(v);
-      const who = whoOf(v);
-      const meta = [clock(v.ts), relTime(v.ts), duration(v.durationMs) && `소요 ${duration(v.durationMs)}`].filter(Boolean).join(' · ');
-      html += `<div class="v-head">${badge(ok ? 'good' : 'crit', ok ? '통과' : '실패')}<strong>${esc(SCOPE_LABEL[v.scope] ?? '검증')}${who ? ` · ${esc(who)}` : ''}</strong><span class="v-meta">${meta}</span></div>`;
-      if (v.scope !== 'integration') html += '<p class="v-note">통합 검증 결과가 아직 없어 가장 최근 검증을 보여 줍니다.</p>';
-      if (results.length) {
-        html += `<ul class="checks">${results.map((r) => {
-          const { pass, fail } = counts(r);
-          const bad = r.ok === false || fail > 0;
-          return `<li class="check${bad ? ' is-fail' : ''}"><span class="g" aria-hidden="true">${bad ? '✕' : '✓'}</span><code>${esc(r.check)}</code><span class="ck-n">통과 <b>${pass}</b></span><span class="ck-n">실패 <b>${fail}</b></span>${bad ? `<a class="ck-link" href="${esc(reportHref(r.check))}" target="_blank" rel="noopener">리포트</a>` : '<span></span>'}</li>`;
-        }).join('')}</ul>`;
-      }
-      html += matrixHtml(v, results);
-    }
-    const agents = Object.values(v.latestByAgent || {}).filter(Boolean).sort((a, b) => String(b.ts).localeCompare(String(a.ts)));
-    if (agents.length) {
-      html += `<h3>에이전트별 최근 검증</h3><ul class="agents">${agents.map((a) => {
-        const ok = isOk(a);
-        const results = Array.isArray(a.results) ? a.results.filter(Boolean) : [];
-        const failing = results.filter((r) => r.ok === false || counts(r).fail > 0).map((r) => r.check);
-        return `<li>${badge(ok ? 'good' : 'crit', ok ? '통과' : '실패')}<b>${esc(a.agent)}</b>${a.stage && a.stage !== a.agent ? `<span>${esc(a.stage)}</span>` : ''}<span>${failing.length ? `실패: ${esc(failing.join(', '))}` : `검사 ${results.length}개`}</span>${relTime(a.ts)}</li>`;
-      }).join('')}</ul>`;
-    }
-    return html;
-  }
+        function renderVerify(s) {
+          const v = s.verify || {};
+          let html = "";
+          if (v.type !== "verify") {
+            html += '<p class="empty">아직 검증 결과가 없습니다.</p>';
+          } else {
+            const results = Array.isArray(v.results)
+              ? v.results.filter(Boolean)
+              : [];
+            const ok = isOk(v);
+            const who = whoOf(v);
+            const meta = [
+              clock(v.ts),
+              relTime(v.ts),
+              duration(v.durationMs) && `소요 ${duration(v.durationMs)}`,
+            ]
+              .filter(Boolean)
+              .join(" · ");
+            html += `<div class="v-head">${badge(ok ? "good" : "crit", ok ? "통과" : "실패")}<strong>${esc(SCOPE_LABEL[v.scope] ?? "검증")}${who ? ` · ${esc(who)}` : ""}</strong><span class="v-meta">${meta}</span></div>`;
+            if (v.scope !== "integration")
+              html +=
+                '<p class="v-note">통합 검증 결과가 아직 없어 가장 최근 검증을 보여 줍니다.</p>';
+            if (results.length) {
+              html += `<ul class="checks">${results
+                .map((r) => {
+                  const { pass, fail } = counts(r);
+                  const bad = r.ok === false || fail > 0;
+                  return `<li class="check${bad ? " is-fail" : ""}"><span class="g" aria-hidden="true">${bad ? "✕" : "✓"}</span><code>${esc(r.check)}</code><span class="ck-n">통과 <b>${pass}</b></span><span class="ck-n">실패 <b>${fail}</b></span>${bad ? `<a class="ck-link" href="${esc(reportHref(r.check))}" target="_blank" rel="noopener">리포트</a>` : "<span></span>"}</li>`;
+                })
+                .join("")}</ul>`;
+            }
+            html += matrixHtml(v, results);
+          }
+          const agents = Object.values(v.latestByAgent || {})
+            .filter(Boolean)
+            .sort((a, b) => String(b.ts).localeCompare(String(a.ts)));
+          if (agents.length) {
+            html += `<h3>에이전트별 최근 검증</h3><ul class="agents">${agents
+              .map((a) => {
+                const ok = isOk(a);
+                const results = Array.isArray(a.results)
+                  ? a.results.filter(Boolean)
+                  : [];
+                const failing = results
+                  .filter((r) => r.ok === false || counts(r).fail > 0)
+                  .map((r) => r.check);
+                return `<li>${badge(ok ? "good" : "crit", ok ? "통과" : "실패")}<b>${esc(a.agent)}</b>${a.stage && a.stage !== a.agent ? `<span>${esc(a.stage)}</span>` : ""}<span>${failing.length ? `실패: ${esc(failing.join(", "))}` : `검사 ${results.length}개`}</span>${relTime(a.ts)}</li>`;
+              })
+              .join("")}</ul>`;
+          }
+          return html;
+        }
 
-  // --------------------------------------------------------------------- log
-  function renderLog(s) {
-    if (!s.events.length) return '<p class="empty">아직 이벤트가 없습니다.</p>';
-    return `<ol class="log">${s.events.map((e) => {
-      const bad = (e.type === 'stage' && (e.state === 'fail' || e.state === 'blocked')) || (e.type === 'verify' && !isOk(e));
-      return `<li${bad ? ' class="is-bad"' : ''}><time datetime="${esc(e.ts ?? '')}" title="${esc(e.ts ?? '')}">${esc(clock(e.ts))}</time><span class="etype">${esc(TYPE_LABEL[e.type] ?? e.type)}</span><span class="etext">${esc(e._text ?? e.msg ?? '')}</span></li>`;
-    }).join('')}</ol>`;
-  }
+        // --------------------------------------------------------------------- log
+        function renderLog(s) {
+          if (!s.events.length)
+            return '<p class="empty">아직 이벤트가 없습니다.</p>';
+          return `<ol class="log">${s.events
+            .map((e) => {
+              const bad =
+                (e.type === "stage" &&
+                  (e.state === "fail" || e.state === "blocked")) ||
+                (e.type === "verify" && !isOk(e));
+              return `<li${bad ? ' class="is-bad"' : ""}><time datetime="${esc(e.ts ?? "")}" title="${esc(e.ts ?? "")}">${esc(clock(e.ts))}</time><span class="etype">${esc(TYPE_LABEL[e.type] ?? e.type)}</span><span class="etext">${esc(e._text ?? e.msg ?? "")}</span></li>`;
+            })
+            .join("")}</ol>`;
+        }
 
-  // ------------------------------------------------------------------ render
-  let state = null;
-  let lastWaveId;
-  const cache = {};
-  function setHtml(id, html) {
-    if (cache[id] === html) return false; // untouched sections keep their DOM (scroll, focus, hover)
-    cache[id] = html;
-    $(id).innerHTML = html;
-    return true;
-  }
+        // ------------------------------------------------------------------ render
+        let state = null;
+        let lastWaveId;
+        const cache = {};
+        function setHtml(id, html) {
+          if (cache[id] === html) return false; // untouched sections keep their DOM (scroll, focus, hover)
+          cache[id] = html;
+          $(id).innerHTML = html;
+          return true;
+        }
 
-  function tick() {
-    for (const el of document.querySelectorAll('[data-rel]')) {
-      const text = relative(el.dataset.rel);
-      if (el.textContent !== text) el.textContent = text;
-    }
-    const el = $('elapsed');
-    if (el) {
-      const start = Date.parse(el.dataset.start);
-      const end = el.dataset.end ? Date.parse(el.dataset.end) : Date.now();
-      const text = Number.isFinite(start) ? span(end - start) : '–';
-      if (el.textContent !== text) el.textContent = text;
-    }
-  }
+        function tick() {
+          for (const el of document.querySelectorAll("[data-rel]")) {
+            const text = relative(el.dataset.rel);
+            if (el.textContent !== text) el.textContent = text;
+          }
+          const el = $("elapsed");
+          if (el) {
+            const start = Date.parse(el.dataset.start);
+            const end = el.dataset.end
+              ? Date.parse(el.dataset.end)
+              : Date.now();
+            const text = Number.isFinite(start) ? span(end - start) : "–";
+            if (el.textContent !== text) el.textContent = text;
+          }
+        }
 
-  function render() {
-    const s = state;
-    if (!s) return;
-    $('title').textContent = s.title || '';
-    const waitingCount = s.checkpoints.filter((c) => c.state === 'waiting').length;
-    document.title = `${waitingCount ? '◆ 확인 대기 · ' : ''}${s.summary.doneStages}/${s.summary.totalStages} · ${s.title || '진행 대시보드'}`;
+        function render() {
+          const s = state;
+          if (!s) return;
+          $("title").textContent = s.title || "";
+          const waitingCount = s.checkpoints.filter(
+            (c) => c.state === "waiting",
+          ).length;
+          document.title = `${waitingCount ? "◆ 확인 대기 · " : ""}${s.summary.doneStages}/${s.summary.totalStages} · ${s.title || "진행 대시보드"}`;
 
-    setHtml('summary', renderSummary(s));
-    setHtml('now', renderNow(s));
+          setHtml("summary", renderSummary(s));
+          setHtml("now", renderNow(s));
 
-    const lanes = [...document.querySelectorAll('#board .lane')].map((lane) => lane.scrollLeft);
-    if (setHtml('board', renderBoard(s))) {
-      document.querySelectorAll('#board .lane').forEach((lane, i) => { lane.scrollLeft = lanes[i] ?? 0; });
-      // bring the current wave into view when it changes (horizontal scroll inside its lane only)
-      const waveId = s.summary.currentWave?.id;
-      if (waveId !== lastWaveId) {
-        lastWaveId = waveId;
-        const el = waveId && document.querySelector(`#board .wave[data-wave="${CSS.escape(waveId)}"]`);
-        const lane = el && el.closest('.lane');
-        const hidden = lane && (el.offsetLeft < lane.scrollLeft || el.offsetLeft + el.offsetWidth > lane.scrollLeft + lane.clientWidth);
-        if (hidden) lane.scrollLeft = Math.max(0, el.offsetLeft - 12);
-      }
-    }
+          const lanes = [...document.querySelectorAll("#board .lane")].map(
+            (lane) => lane.scrollLeft,
+          );
+          if (setHtml("board", renderBoard(s))) {
+            document.querySelectorAll("#board .lane").forEach((lane, i) => {
+              lane.scrollLeft = lanes[i] ?? 0;
+            });
+            // bring the current wave into view when it changes (horizontal scroll inside its lane only)
+            const waveId = s.summary.currentWave?.id;
+            if (waveId !== lastWaveId) {
+              lastWaveId = waveId;
+              const el =
+                waveId &&
+                document.querySelector(
+                  `#board .wave[data-wave="${CSS.escape(waveId)}"]`,
+                );
+              const lane = el && el.closest(".lane");
+              const hidden =
+                lane &&
+                (el.offsetLeft < lane.scrollLeft ||
+                  el.offsetLeft + el.offsetWidth >
+                    lane.scrollLeft + lane.clientWidth);
+              if (hidden) lane.scrollLeft = Math.max(0, el.offsetLeft - 12);
+            }
+          }
 
-    const focused = document.activeElement?.dataset?.cell;
-    if (setHtml('verify', renderVerify(s)) && focused) {
-      document.querySelector(`#verify [data-cell="${CSS.escape(focused)}"]`)?.focus({ preventScroll: true });
-    }
-    setHtml('log', renderLog(s));
+          const focused = document.activeElement?.dataset?.cell;
+          if (setHtml("verify", renderVerify(s)) && focused) {
+            document
+              .querySelector(`#verify [data-cell="${CSS.escape(focused)}"]`)
+              ?.focus({ preventScroll: true });
+          }
+          setHtml("log", renderLog(s));
 
-    const meta = s.meta || {};
-    $('foot').textContent = [
-      `이벤트 ${meta.eventCount ?? 0}건`,
-      meta.malformedLines ? `읽을 수 없는 줄 ${meta.malformedLines}건 무시` : '',
-      meta.planError || '',
-      meta.eventsFile || '',
-    ].filter(Boolean).join(' · ');
-    tick();
-  }
+          const meta = s.meta || {};
+          $("foot").textContent = [
+            `이벤트 ${meta.eventCount ?? 0}건`,
+            meta.malformedLines
+              ? `읽을 수 없는 줄 ${meta.malformedLines}건 무시`
+              : "",
+            meta.planError || "",
+            meta.eventsFile || "",
+          ]
+            .filter(Boolean)
+            .join(" · ");
+          tick();
+        }
 
-  $('verify').addEventListener('click', (event) => {
-    const cell = event.target.closest('[data-cell]');
-    if (cell) selectedCell = selectedCell === cell.dataset.cell ? null : cell.dataset.cell;
-    else if (event.target.closest('[data-close]')) selectedCell = null;
-    else return;
-    render();
-  });
+        $("verify").addEventListener("click", (event) => {
+          const cell = event.target.closest("[data-cell]");
+          if (cell)
+            selectedCell =
+              selectedCell === cell.dataset.cell ? null : cell.dataset.cell;
+          else if (event.target.closest("[data-close]")) selectedCell = null;
+          else return;
+          render();
+        });
 
-  // -------------------------------------------------------------- data + SSE
-  const CONN_TEXT = { connecting: '연결 중…', live: '실시간 연결됨', poll: '스트림 끊김 · 3초마다 폴링', down: '서버 응답 없음 · 재시도 중' };
-  let stream = 'connecting'; // connecting | open | lost
-  let lastOk = null;
-  function setConn(kind) {
-    $('conn').dataset.state = kind;
-    $('conn-text').textContent = CONN_TEXT[kind] + (lastOk ? ` · 마지막 갱신 ${clock(lastOk)}` : '');
-  }
+        // -------------------------------------------------------------- data + SSE
+        const CONN_TEXT = {
+          connecting: "연결 중…",
+          live: "실시간 연결됨",
+          poll: "스트림 끊김 · 3초마다 폴링",
+          down: "서버 응답 없음 · 재시도 중",
+        };
+        let stream = "connecting"; // connecting | open | lost
+        let lastOk = null;
+        function setConn(kind) {
+          $("conn").dataset.state = kind;
+          $("conn-text").textContent =
+            CONN_TEXT[kind] + (lastOk ? ` · 마지막 갱신 ${clock(lastOk)}` : "");
+        }
 
-  let loading = false;
-  let queued = false;
-  async function load() {
-    if (loading) { queued = true; return; }
-    loading = true;
-    try {
-      const response = await fetch('/api/state', { cache: 'no-store' });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      state = await response.json();
-      lastOk = Date.now();
-      setConn(stream === 'open' ? 'live' : stream === 'lost' ? 'poll' : 'connecting');
-      render();
-    } catch {
-      setConn('down'); // keep showing the last good render
-    } finally {
-      loading = false;
-      if (queued) { queued = false; load(); }
-    }
-  }
+        let loading = false;
+        let queued = false;
+        async function load() {
+          if (loading) {
+            queued = true;
+            return;
+          }
+          loading = true;
+          try {
+            const response = await fetch("/api/state", { cache: "no-store" });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            state = await response.json();
+            lastOk = Date.now();
+            setConn(
+              stream === "open"
+                ? "live"
+                : stream === "lost"
+                  ? "poll"
+                  : "connecting",
+            );
+            render();
+          } catch {
+            setConn("down"); // keep showing the last good render
+          } finally {
+            loading = false;
+            if (queued) {
+              queued = false;
+              load();
+            }
+          }
+        }
 
-  let pollTimer = null;
-  function startPolling() {
-    if (!pollTimer) pollTimer = setInterval(load, 3000);
-  }
-  function stopPolling() {
-    clearInterval(pollTimer);
-    pollTimer = null;
-  }
-  function connect() {
-    if (!('EventSource' in window)) { stream = 'lost'; startPolling(); return; }
-    const source = new EventSource('/api/stream');
-    source.onopen = () => {
-      stream = 'open';
-      stopPolling();
-      load(); // catch up on anything missed while disconnected
-    };
-    source.addEventListener('update', load);
-    source.onerror = () => {
-      stream = 'lost';
-      setConn('poll');
-      startPolling(); // fall back to polling until the stream is back
-      if (source.readyState === EventSource.CLOSED) {
-        source.close();
-        setTimeout(connect, 5000); // the browser gave up; open a fresh stream later
-      }
-    };
-  }
+        let pollTimer = null;
+        function startPolling() {
+          if (!pollTimer) pollTimer = setInterval(load, 3000);
+        }
+        function stopPolling() {
+          clearInterval(pollTimer);
+          pollTimer = null;
+        }
+        function connect() {
+          if (!("EventSource" in window)) {
+            stream = "lost";
+            startPolling();
+            return;
+          }
+          const source = new EventSource("/api/stream");
+          source.onopen = () => {
+            stream = "open";
+            stopPolling();
+            load(); // catch up on anything missed while disconnected
+          };
+          source.addEventListener("update", load);
+          source.onerror = () => {
+            stream = "lost";
+            setConn("poll");
+            startPolling(); // fall back to polling until the stream is back
+            if (source.readyState === EventSource.CLOSED) {
+              source.close();
+              setTimeout(connect, 5000); // the browser gave up; open a fresh stream later
+            }
+          };
+        }
 
-  setInterval(tick, 1000);
-  load();
-  connect();
+        setInterval(tick, 1000);
+        load();
+        connect();
 
-  // test hook: render an arbitrary state object
-  window.__progress = { render(next) { state = next; render(); }, get state() { return state; } };
-})();
-</script>
-</body>
+        // test hook: render an arbitrary state object
+        window.__progress = {
+          render(next) {
+            state = next;
+            render();
+          },
+          get state() {
+            return state;
+          },
+        };
+      })();
+    </script>
+  </body>
 </html>

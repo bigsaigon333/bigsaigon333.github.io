@@ -8,7 +8,11 @@
       "stages": [
         { "id": "S0.0", "title": "진행 대시보드", "agent": "DB" },
         { "id": "S0.1", "title": "저장소 초기화·의존성", "agent": "ORC" },
-        { "id": "S0.2", "title": "검증 골격(기준선, serve, run)", "agent": "ORC" },
+        {
+          "id": "S0.2",
+          "title": "검증 골격(기준선, serve, run)",
+          "agent": "ORC"
+        },
         { "id": "S0.3", "title": "오케스트레이션 스파이크", "agent": "ORC" },
         { "id": "SCOUT1", "title": "Part 1 문서 스카우트 ×6", "agent": "SCOUT" }
       ]
@@ -86,7 +90,11 @@
       "title": "인터랙션",
       "stages": [
         { "id": "S6.1", "title": "다크 모드", "agent": "H1" },
-        { "id": "S6.3", "title": "스크립트 패턴(커스텀 엘리먼트)", "agent": "H2" },
+        {
+          "id": "S6.3",
+          "title": "스크립트 패턴(커스텀 엘리먼트)",
+          "agent": "H2"
+        },
         { "id": "S6.2", "title": "View Transitions", "agent": "H3" }
       ]
     },
@@ -96,7 +104,11 @@
       "title": "플랫폼",
       "stages": [
         { "id": "S7.1", "title": "astro:env", "agent": "J1" },
-        { "id": "S7.3", "title": "커스텀 통합(Integration API)", "agent": "J2" },
+        {
+          "id": "S7.3",
+          "title": "커스텀 통합(Integration API)",
+          "agent": "J2"
+        },
         { "id": "S7.4", "title": "Vitest·Container API", "agent": "J3" },
         { "id": "S7.2", "title": "CSP", "agent": "J4" }
       ]
@@ -110,7 +122,11 @@
         { "id": "S8.1", "title": "on-demand 렌더링·API·쿠키", "agent": "L1" },
         { "id": "S8.2", "title": "Actions·세션", "agent": "L2" },
         { "id": "S8.3", "title": "서버/클라이언트 아일랜드", "agent": "L3" },
-        { "id": "S8.4", "title": "미들웨어·redirects·i18n·paginate", "agent": "L4" },
+        {
+          "id": "S8.4",
+          "title": "미들웨어·redirects·i18n·paginate",
+          "agent": "L4"
+        },
         { "id": "S8.5", "title": "v7 신규·live 컬렉션·toolbar", "agent": "L5" }
       ]
     },
@@ -125,7 +141,11 @@
     }
   ],
   "checkpoints": [
-    { "id": "CP1", "after": "W1", "title": "검증 장치·프로젝트 구조·컬렉션·라우팅" },
+    {
+      "id": "CP1",
+      "after": "W1",
+      "title": "검증 장치·프로젝트 구조·컬렉션·라우팅"
+    },
     { "id": "CP2", "after": "W3", "title": "1:1 재현 완료" },
     { "id": "CP3", "after": "S3.1", "title": "운영 전환 승인" },
     { "id": "CP4", "after": "W6", "title": "네이티브 파이프라인·콘텐츠 모델" },
