@@ -6,6 +6,9 @@
 //
 // A failing comparison leaves baseline.png, candidate.png, diff.png and crops of the differing region in
 // .verify/report/visual/<route>-<width>/.
+//
+// visual.config.json holds the viewports and the two tolerances (colorThreshold, maxDiffRatio), both 0:
+// two screenshots match when no pixel differs at all. See the comments on the constants below.
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -14,6 +17,7 @@ import pixelmatch from "pixelmatch";
 import { PNG } from "pngjs";
 
 import { mapLimit, MAX_PAGES, openBrowser } from "../lib/browser.mjs";
+import { editPages, postRoutesWith } from "../lib/html.mjs";
 import { repoRoot } from "../lib/paths.mjs";
 
 const NAME = "visual";
@@ -22,17 +26,33 @@ const configFile = fileURLToPath(
   new URL("../visual.config.json", import.meta.url),
 );
 
-/** The smallest tolerance calibration will ever write: 0.05% of the pixels. */
-// Baseline-vs-baseline captures are byte-identical on this machine (measured noise 0), so the floor is 0:
-// any pixel beyond pixelmatch's colour tolerance is a difference. A looser floor of 0.05% let a reworded
-// heading and recoloured code keywords through. Raise it only with evidence of irreducible rendering noise.
+// Two tolerances, both 0 unless visual.config.json says otherwise. Baseline-vs-baseline captures are
+// byte-identical on this machine (measured noise 0), so nothing has to be forgiven.
+//
+//   maxDiffRatio    share of the pixels that may differ. A floor of 0.05% let a reworded heading and
+//                   recoloured code keywords through.
+//   colorThreshold  how far apart two colours may be and still count as the same pixel (pixelmatch's
+//                   `threshold`, 0–1). At the library default of 0.1 a grey shift of 22–28 levels was "equal":
+//                   the tint behind inline code (first seen at 0.055) and the zebra rows of a table (0.025)
+//                   could both be switched off unnoticed. 0 means any pixel that is not identical differs.
+//
+// Raise either only with evidence of irreducible rendering noise (`--calibrate` measures it).
 const MIN_DIFF_RATIO = 0;
-const PIXEL_THRESHOLD = 0.1;
+const STRICTEST_COLOR_THRESHOLD = 0;
 const CROP_MAX_HEIGHT = 1200;
 const CROP_MARGIN = 16;
 
+// At least one width inside every band the site's media rules (max-width 375px, 600px, 767px) cut out:
+//   up to 375 │ 376 … 600 │ 601 … 767 │ 768 and up
+//      375    │ 414   600 │    700    │ 768   1280
+// With only 375, 768 and 1280 the two middle bands were never drawn, so a rule that applies there alone could
+// change freely. 414 is what most phones are. 600 is the last width a "max-width: 600px" rule applies at: a
+// rule moved to a narrower breakpoint (420px, say) shows there, while at 414 it still applies on both sides.
 const DEFAULT_VIEWPORTS = [
   { width: 375, height: 812 },
+  { width: 414, height: 896 },
+  { width: 600, height: 960 },
+  { width: 700, height: 1024 },
   { width: 768, height: 1024 },
   { width: 1280, height: 900 },
 ];
@@ -56,10 +76,21 @@ function readConfig() {
     if (error.code !== "ENOENT")
       throw new Error(`visual.config.json is unreadable: ${error.message}`);
   }
-  return {
+  const config = {
     maxDiffRatio: stored.maxDiffRatio ?? MIN_DIFF_RATIO,
+    colorThreshold: stored.colorThreshold ?? STRICTEST_COLOR_THRESHOLD,
     viewports: stored.viewports ?? DEFAULT_VIEWPORTS,
   };
+  for (const name of ["maxDiffRatio", "colorThreshold"]) {
+    const value = config[name];
+    if (typeof value !== "number" || !(value >= 0 && value <= 1))
+      throw new Error(
+        `visual.config.json: ${name} must be a number from 0 to 1`,
+      );
+  }
+  if (!Array.isArray(config.viewports) || config.viewports.length === 0)
+    throw new Error("visual.config.json: viewports must not be empty");
+  return config;
 }
 
 const slug = (route) =>
@@ -128,9 +159,51 @@ function boundingBox(diff) {
 }
 
 /**
- * @returns {{ ok: boolean, ratio: number, sizes: object[], sameSize: boolean, bbox: object|null, images: object|null }}
+ * Every pixel that is not identical in two RGBA buffers of the same size: how many there are, the box around
+ * them and the largest difference in one colour channel (0–255).
  */
-function compare(baselinePng, candidatePng, maxDiffRatio) {
+function exactDifference(a, b, width, height) {
+  // Whole pixels are compared as 32-bit words, which needs the bytes to start on a 4-byte boundary.
+  const words = (bytes) => {
+    const aligned = bytes.byteOffset % 4 === 0 ? bytes : Uint8Array.from(bytes);
+    return new Uint32Array(aligned.buffer, aligned.byteOffset, width * height);
+  };
+  const a32 = words(a);
+  const b32 = words(b);
+  let count = 0;
+  let maxChannelDelta = 0;
+  let left = width;
+  let top = height;
+  let right = -1;
+  let bottom = -1;
+  for (let y = 0, index = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1, index += 1) {
+      if (a32[index] === b32[index]) continue;
+      count += 1;
+      if (x < left) left = x;
+      if (x > right) right = x;
+      if (y < top) top = y;
+      bottom = y;
+      for (let channel = index * 4; channel < index * 4 + 4; channel += 1) {
+        const delta = Math.abs(a[channel] - b[channel]);
+        if (delta > maxChannelDelta) maxChannelDelta = delta;
+      }
+    }
+  }
+  return {
+    count,
+    maxChannelDelta,
+    bbox: count
+      ? { x: left, y: top, w: right - left + 1, h: bottom - top + 1 }
+      : null,
+  };
+}
+
+/**
+ * @returns {{ ok: boolean, ratio: number, differing: number, maxChannelDelta: number, identical: boolean,
+ *             sizes: object[], sameSize: boolean, bbox: object|null, images: object|null }}
+ */
+function compare(baselinePng, candidatePng, { maxDiffRatio, colorThreshold }) {
   const sizeOf = (png) => ({
     width: png.readUInt32BE(16),
     height: png.readUInt32BE(20),
@@ -141,6 +214,9 @@ function compare(baselinePng, candidatePng, maxDiffRatio) {
     return {
       ok: true,
       ratio: 0,
+      differing: 0,
+      maxChannelDelta: 0,
+      identical: true, // the two files are the same bytes
       sizes: [size, size],
       sameSize: true,
       bbox: null,
@@ -154,24 +230,35 @@ function compare(baselinePng, candidatePng, maxDiffRatio) {
     baseline.width === candidate.width && baseline.height === candidate.height;
   const width = Math.max(baseline.width, candidate.width);
   const height = Math.max(baseline.height, candidate.height);
+  const before = onCanvas(baseline, width, height).data;
+  const after = onCanvas(candidate, width, height).data;
 
+  // Anti-aliased pixels count like any other (includeAA): both sides are drawn by the same browser on the
+  // same machine, so an edge that is smoothed differently is a difference in the page, not in the renderer.
   const diff = new PNG({ width, height });
-  const differing = pixelmatch(
-    onCanvas(baseline, width, height).data,
-    onCanvas(candidate, width, height).data,
-    diff.data,
-    width,
-    height,
-    { threshold: PIXEL_THRESHOLD },
-  );
+  const beyondThreshold = pixelmatch(before, after, diff.data, width, height, {
+    threshold: colorThreshold,
+    includeAA: true,
+  });
+  const exact = exactDifference(before, after, width, height);
+  // At threshold 0 the count does not depend on colour arithmetic at all: a pixel is the same or it is not.
+  const differing = colorThreshold === 0 ? exact.count : beyondThreshold;
   const ratio = differing / (width * height);
 
   return {
     ok: sameSize && ratio <= maxDiffRatio,
     ratio,
+    differing,
+    maxChannelDelta: exact.maxChannelDelta,
+    identical: false,
     sizes: [sizeOf(baselinePng), sizeOf(candidatePng)],
     sameSize,
-    bbox: differing ? boundingBox(diff) : null,
+    bbox:
+      colorThreshold === 0
+        ? exact.bbox
+        : beyondThreshold
+          ? boundingBox(diff)
+          : null,
     images: { baseline, candidate, diff },
   };
 }
@@ -228,7 +315,10 @@ function describe(result, selector) {
   const box = result.bbox
     ? ` bbox ${result.bbox.x},${result.bbox.y},${result.bbox.w},${result.bbox.h}`
     : "";
-  if (result.sameSize) return `diff ${percent(result.ratio)}${box}`;
+  // The pixel count and the largest step in one colour channel (of 255): a faint tint over a large area
+  // and a single stray pixel are both 0.00% of a long page.
+  if (result.sameSize)
+    return `diff ${percent(result.ratio)} (${result.differing} px, max channel Δ${result.maxChannelDelta})${box}`;
   if (selector || baseline.width !== candidate.width) {
     return `size ${baseline.width}x${baseline.height} ≠ ${candidate.width}x${candidate.height}${box}`;
   }
@@ -291,7 +381,7 @@ async function run(ctx) {
       )
         return previous;
 
-      const result = compare(baseline, candidate, config.maxDiffRatio);
+      const result = compare(baseline, candidate, config);
       if (result.sameSize) noise = Math.max(noise, result.ratio);
       return { ...result, pngs: { baseline, candidate } };
     };
@@ -313,6 +403,9 @@ async function run(ctx) {
       const [baseline, candidate] = result.sizes;
       Object.assign(outcome, {
         ratio: result.ratio,
+        differing: result.differing,
+        maxChannelDelta: result.maxChannelDelta,
+        identical: result.identical,
         sameSize: result.sameSize,
         baseline,
         candidate,
@@ -348,6 +441,7 @@ async function run(ctx) {
       !selector &&
       outcomes.length > 0 &&
       outcomes.every((outcome) => outcome.sameSize),
+    colorThreshold: config.colorThreshold,
     viewports: config.viewports,
   };
 
@@ -359,9 +453,12 @@ async function run(ctx) {
     cells,
     extra: {
       maxDiffRatio: config.maxDiffRatio,
+      colorThreshold: config.colorThreshold,
       viewports: config.viewports,
       selector,
       noise,
+      // Comparisons whose two pictures are the same file, byte for byte. The rest passed within the tolerances.
+      identical: outcomes.filter((outcome) => outcome.identical).length,
       flaky: flaky.map(({ route, width }) => `${route}@${width}`), // passed, but only on the second look
       comparisons: outcomes,
       allowed,
@@ -385,9 +482,11 @@ export default {
   run,
 
   selftest: {
+    // `routes` names a page the mutation shows on: that page is compared at every viewport instead of all pages.
     mutations: [
       {
         name: "스타일시트의 CSS 값 변경",
+        routes: (dir) => postRoutesWith(dir, /<pre>/),
         apply(dir) {
           const cssDir = path.join(dir, "_next", "static", "css");
           const [stylesheet] = fs
@@ -403,6 +502,7 @@ export default {
       },
       {
         name: "글에서 문단 하나 삭제",
+        routes: ["/posts/proxy-to-built-in-objects"],
         apply(dir) {
           // Inside the post body, which React leaves alone when it hydrates. Anywhere else the baseline's own
           // JavaScript would put the paragraph back from __NEXT_DATA__ before the screenshot is taken.
@@ -414,13 +514,80 @@ export default {
           edit(post, /(<main[^>]*>[\s\S]*?)<p>[\s\S]*?<\/p>/, "$1");
         },
       },
+
+      // Faint colours. Both were "equal" at pixelmatch's default colour threshold of 0.1. The rules belong to
+      // a styled component, so hydration keeps the edit (confirmed in the browser: the computed background
+      // goes from rgba(255, 229, 100, 0.2) and rgb(246, 248, 250) to transparent).
+      {
+        name: "문장 안 code 의 옅은 배경색 끄기",
+        routes: (dir) => postRoutesWith(dir, /<p>[^<]*<code>/),
+        apply(dir) {
+          editPages(
+            dir,
+            /(:not\(pre\) > code\{[^}]*?)background:rgb\(255 229 100 \/ 20%\)/,
+            "$1background:transparent",
+          );
+        },
+      },
+      {
+        name: "표 짝수 줄의 옅은 배경색 끄기",
+        routes: (dir) => postRoutesWith(dir, /<table/),
+        apply(dir) {
+          editPages(
+            dir,
+            /(tr:nth-child\(2n\)\{)background-color:#f6f8fa/,
+            "$1background-color:transparent",
+          );
+        },
+      },
+
+      // Media rules between the phone and the tablet widths. The first shows at 414 and 600 only, the second
+      // at 600 only (a rule narrowed to 420px still applies at 414): neither at 375, 768 or 1280.
+      {
+        name: "600px 미디어 규칙의 값 변경 (글 제목 2rem → 5rem)",
+        routes: ["/"],
+        apply(dir) {
+          editPages(
+            dir,
+            /(@media \(max-width:600px\)\{\.\w+ h2\{font-size:)2rem/,
+            "$15rem",
+          );
+        },
+      },
+      {
+        name: "600px 미디어 규칙의 경계 변경 (600px → 420px)",
+        routes: ["/"],
+        apply(dir) {
+          editPages(
+            dir,
+            /@media \(max-width:600px\)/g,
+            "@media (max-width:420px)",
+          );
+        },
+      },
+      {
+        // Shows at 700 only: 768 and 1280 are outside the rule, 600 and below inside it either way.
+        name: "767px 미디어 규칙의 경계 변경 (767px → 620px)",
+        routes: ["/"],
+        apply(dir) {
+          editPages(
+            dir,
+            /@media \(max-width:767px\)/g,
+            "@media (max-width:620px)",
+          );
+        },
+      },
     ],
 
-    /** Baseline against itself differs only by rendering noise: the tolerance is derived from it. */
+    /**
+     * Baseline against itself differs only by rendering noise: the tolerance is derived from it. The noise is
+     * counted at the colour threshold of the config, which calibration never loosens by itself.
+     */
     async afterIdentical(ctx) {
       if (!ctx.args.calibrate || !lastRun?.measurable) return;
       const measuredNoise = Math.ceil(lastRun.noise * 1e6) / 1e6;
       const config = {
+        colorThreshold: lastRun.colorThreshold,
         maxDiffRatio: Math.max(measuredNoise * 2, MIN_DIFF_RATIO),
         measuredNoise,
         viewports: lastRun.viewports,

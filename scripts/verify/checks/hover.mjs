@@ -14,10 +14,8 @@
 // inside them is paired by tag path, e.g. div[2] > span: the first <span> of the second <div>.
 //
 // Allowlist item: route:<route> skips the route.
-import fs from "node:fs";
-import path from "node:path";
-
 import { mapLimit, MAX_PAGES, openBrowser } from "../lib/browser.mjs";
+import { editPages, postRoutesWith } from "../lib/html.mjs";
 
 const NAME = "hover";
 const VIEWPORT = { width: 1280, height: 900 };
@@ -458,30 +456,8 @@ async function run(ctx) {
 
 // ── selftest ────────────────────────────────────────────────────────────────────────────────────
 
-/**
- * Apply `pattern → replacement` to every page of a Next.js build. Throws when nothing matched.
- *
- * The styled-components rules are inlined in the HTML. Hydration takes the rules of a component over from there
- * as they are, so an edit to one of those is what the browser ends up with. It writes the global rules (a, h1,
- * …) anew from JavaScript: an edit to one of those is undone and proves nothing.
- */
-function editPages(dir, pattern, replacement) {
-  let edited = 0;
-  for (const name of fs.readdirSync(dir, { recursive: true })) {
-    const file = path.join(dir, name);
-    if (!file.endsWith(".html")) continue;
-    const before = fs.readFileSync(file, "utf8");
-    const after = before.replace(pattern, replacement);
-    if (after === before) continue;
-    fs.writeFileSync(file, after);
-    edited += 1;
-  }
-  if (edited === 0)
-    throw new Error(
-      `mutation did not apply: ${pattern} not found in any page under ${dir}`,
-    );
-}
-
+// The mutations edit the styled-components rules inlined in every page (editPages in lib/html.mjs says which
+// of those survive hydration). `routes` names a page the mutated rule shows on, so that one is measured, not all.
 export default {
   name: NAME,
   kind: "browser",
@@ -491,6 +467,7 @@ export default {
     mutations: [
       {
         name: "홈 목록 링크의 hover 밑줄 제거",
+        routes: ["/"],
         apply(dir) {
           editPages(
             dir,
@@ -501,12 +478,14 @@ export default {
       },
       {
         name: "헤더 아이콘 링크의 hover 투명도 변경",
+        routes: ["/"],
         apply(dir) {
           editPages(dir, /(?<=li a:hover\{opacity:)0\.4/, "0.8");
         },
       },
       {
         name: "글 본문 링크의 hover box-shadow 제거",
+        routes: (dir) => postRoutesWith(dir, /<main[\s\S]*?<a href=/),
         apply(dir) {
           editPages(
             dir,
@@ -519,6 +498,7 @@ export default {
         // On the baseline this rule matches nothing (the title holds no <p>). Matching the <span>s inside
         // the link is a difference that only shows in a descendant of the hovered element.
         name: "헤더 제목 링크 안쪽 요소의 hover box-shadow 추가",
+        routes: ["/"],
         apply(dir) {
           editPages(dir, /:hover p span\{/, ":hover div span{");
         },
