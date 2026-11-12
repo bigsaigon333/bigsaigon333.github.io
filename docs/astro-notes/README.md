@@ -37,3 +37,82 @@ Next.js 13 블로그를 Astro 7로 옮기면서 단계마다 하나씩 쓴 노�
   [구조·설정](_refs/structure-config.md) · [컴포넌트·레이아웃·스타일](_refs/components-layouts-styles.md) · [콘텐츠 컬렉션](_refs/content-collections.md) · [라우팅·엔드포인트](_refs/routing-endpoints.md) · [마크다운](_refs/markdown-pipeline.md) · [스크립트·배포](_refs/scripts-deploy.md)
 - [PLAN.md](PLAN.md): 개편 계획. 단계 id, 검증 장치 설계, 노트 형식이 여기서 왔다.
 - [`scripts/verify/README.md`](../../scripts/verify/README.md): 실험에 쓰는 `npm run verify`의 플래그와 검사 목록.
+
+## 작업 브랜치(astro)
+
+이 노트, 검증 장치, 진행 대시보드는 Next.js에서 Astro로 옮기는 작업에만 쓰는 도구라서 `main`에 들어가지 않는다. 저장소 루트의 README와 CI·배포 워크플로는 제품(사이트)만 다루고 두 브랜치에서 같다. 그래서 이 절의 명령은 루트 README에 없고, CI도 돌리지 않는다. `astro`에서 직접 돌린다.
+
+### 브랜치
+
+| 브랜치           | 담은 것                                                                                                                                                                                                                        | `main`에 머지                                        |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------- |
+| `main`           | 제품만. push하면 GitHub Pages에 배포된다                                                                                                                                                                                       | —                                                    |
+| `astro`          | 제품과 작업 도구: `docs/`, `scripts/`, 그 아래를 돌리는 npm 스크립트(`verify`, `verify:*`, `progress`, `progress:watch`), 그것들만 쓰는 devDependencies(`playwright`, `pixelmatch`, `pngjs`, `cheerio`), 그 경로의 ignore 항목 | 하지 않는다. 작업 브랜치이자 학습 기록으로 남는다    |
+| `release/<이름>` | `scripts/release.mjs`가 `astro`에서 작업 도구를 빼고 만든 제품 트리. `origin/main` 위의 커밋 하나다                                                                                                                            | 이것만 한다. PR로 올리고 체크포인트 승인 뒤 머지한다 |
+
+### 릴리스 만들기
+
+깨끗한 `astro` 트리에서 돌린다(`git status --short`가 비어 있어야 한다). 스크립트는 push하지 않는다.
+
+```sh
+node scripts/release.mjs --branch=release/<이름> --dry-run   # 예행연습: 끝까지 검증하고 브랜치를 지운다
+node scripts/release.mjs --branch=release/<이름>             # 같은 일을 하고 브랜치를 남긴다
+git push -u origin release/<이름>                            # 그다음 main 으로 PR 을 연다
+```
+
+`--from=<ref>`(기본 `HEAD`)로 릴리스할 커밋을, `--message=<메시지>`(기본 `feat: 블로그를 Astro 로 옮긴다`)로 커밋 메시지를 고른다. 메시지 뒤에는 `Co-Authored-By` 줄이 붙는다. 한 단계에 한 줄을 찍고, 첫 실패에서 이유 한 줄과 함께 0이 아닌 코드로 끝난다. 일은 `os.tmpdir()` 아래의 임시 worktree에서 한다.
+
+1. 작업 트리가 더럽거나 브랜치가 이미 있으면 거부한다. `git fetch origin main`.
+2. `origin/main`에서 새 브랜치를 만들고, 추적 파일을 모두 지운 뒤 `git archive <from> | tar -x`로 `--from`의 트리를 푼다(트리 해시가 같은지 확인한다).
+3. `docs/`, `scripts/`를 지운다. `package.json`에서 `scripts/` 아래를 돌리는 npm 스크립트를 빼고, devDependencies와 `package-lock.json`은 `npm uninstall --package-lock-only`로 고친다. 그 네 패키지와 그것들만 쓰던 패키지가 빠지고 다른 패키지는 다시 풀리지 않는다(풀리면 실패). `.gitignore`·`.prettierignore`·`.oxlintrc.json`에서 작업 도구 항목과 Playwright 콜백 때문에 켠 browser 전역을 뺀다.
+4. 검증한다.
+   - (a) 뺀 경로·npm 스크립트·devDependency·ignore 항목이 남지 않았다.
+   - (b) 어떤 추적 파일(`package-lock.json` 포함)도 작업 도구를 언급하지 않는다. 찾는 이름과, 제품 글에서 오탐이 나지 않게 좁힌 방법은 스크립트의 `MENTIONS` 주석에 있다(예: `docs/`는 저장소 경로일 때만 찾고 MDN 주소 속 `/docs/`는 건너뛴다).
+   - (c) 릴리스 트리에서 `npm ci`, `npm run lint`, `npm run typecheck`, `npm run check`, `npm run build`, `npx prettier --check .`가 통과한다.
+   - (d) 릴리스 트리의 `dist/`가 `--from`을 따로 체크아웃해 같은 명령으로 빌드한 `dist/`와 바이트 단위로 같다(`diff -r`).
+5. 통과하면 커밋하고 브랜치, 커밋, `origin/main...<브랜치>`의 변경 요약, 최상위 경로를 찍는다. 임시 worktree는 성공해도 실패해도 지운다. npm 로그는 실패했을 때 남기고 경로를 찍는다.
+
+`--compare-from=<ref>`는 (d)가 정말 차이를 잡는지 보는 자기 검사용이다. 비교 빌드만 다른 커밋으로 하고, `--dry-run`과 함께만 받는다.
+
+### 릴리스가 머지된 뒤
+
+`origin/main`을 `astro`에 다시 머지한다. 그래야 다음 릴리스 PR의 차이가 그 사이에 바뀐 것만 담는다.
+
+```sh
+git switch astro
+git fetch origin
+git merge origin/main
+```
+
+첫 머지에서는 릴리스가 바꾼 다섯 파일(`package.json`, `package-lock.json`, `.gitignore`, `.prettierignore`, `.oxlintrc.json`)이 충돌한다. 두 브랜치가 갈라진 곳(Next.js 시절의 `main`)에서 양쪽이 같은 줄을 다르게 바꿨기 때문이다. 릴리스 쪽은 `astro`의 것에서 기계적으로 만든 것이므로 `astro` 쪽을 남긴다. 그 밖의 파일은 충돌 없이 `astro`와 같아진다(`git merge-tree`로 확인했다).
+
+```sh
+git checkout --ours -- package.json package-lock.json .gitignore .prettierignore .oxlintrc.json
+git add package.json package-lock.json .gitignore .prettierignore .oxlintrc.json
+git commit --no-edit
+```
+
+`main`에 릴리스가 아닌 커밋(예: 의존성 자동 업데이트)이 들어왔다면 그 파일은 `--ours`로 덮지 말고 손으로 합친다.
+
+### 검증
+
+현재 배포본(`origin/gh-pages`)을 기준선으로 삼아 새 빌드(`dist/`)와 비교한다.
+
+```sh
+npm run verify:setup      # node_modules 와 기준선(.verify/baseline) 준비
+npm run verify            # npm run check → astro build --force → 기준선과 비교하는 검사와 새 빌드에만 거는 검사
+npm run verify:selftest   # 기준선이나 빌드를 일부러 망가뜨려 검사기가 차이를 잡는지 확인
+```
+
+자세한 내용은 [scripts/verify/README.md](../../scripts/verify/README.md)에 있다. CI는 제품 검사만 돌리므로, 예전에 CI가 돌리던 `npm run verify -- --static`과 `node scripts/notes-lint.mjs`는 여기서 돌린다.
+
+### 진행 대시보드
+
+```sh
+npm run progress         # http://localhost:4400 에서 진행 상황 보기
+npm run progress:watch   # 진행 기록을 터미널에서 따라 보기
+```
+
+### 학습 노트
+
+Next.js에서 Astro로 옮기며 배운 것을 이 디렉터리(`docs/astro-notes/`)에 적어 둔다. 위의 [읽는 순서](#읽는-순서)대로 읽는다.

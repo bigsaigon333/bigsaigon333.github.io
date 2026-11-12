@@ -14,7 +14,7 @@ env:
   ASTRO_TELEMETRY_DISABLED: 1
 
 jobs:
-  verify:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -25,7 +25,6 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
-      - run: npm run verify:setup
-      - run: npm run verify -- --static
-      - run: node scripts/notes-lint.mjs
+      - run: npm run check
+      - run: npm run build
       - run: npx prettier --check .

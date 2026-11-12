@@ -24,7 +24,7 @@ export const SITE = {
   lang: "ko",
   locale: "ko_KR",
   ogImage: `${url}/main-og-image.jpg`,
-  // public/main-og-image.jpg 의 실제 값. 파일을 바꾸면 함께 고친다(seo 검사가 파일 헤더와 대조한다).
+  // public/main-og-image.jpg 의 실제 크기와 형식(파일 헤더에 적힌 값). 이미지를 바꾸면 이 값도 함께 고친다.
   ogImageWidth: 380,
   ogImageHeight: 240,
   ogImageType: "image/jpeg",

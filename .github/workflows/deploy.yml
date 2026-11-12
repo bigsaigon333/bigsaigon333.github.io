@@ -28,6 +28,7 @@ jobs:
           node-version-file: mise.toml
           package-manager-cache: false
       - run: npm ci
+      - run: npm run check
       - run: npm run build
       - uses: actions/upload-pages-artifact@v5
         with:
