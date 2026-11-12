@@ -5,7 +5,12 @@ import { render } from "astro:content";
 import Comments from "../../components/Comments.astro";
 import PostHeader from "../../components/PostHeader.astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import { getPublishedPosts, postUrl } from "../../lib/posts";
+import {
+  displayTitle,
+  getVisiblePosts,
+  isDraft,
+  postUrl,
+} from "../../lib/posts";
 
 // 글 페이지에만 실리는 전역 CSS 두 개. 이 페이지만 import 하므로 홈과 404 에는 나가지 않는다.
 // 다른 import 뒤에 둔다. 이 둘은 한 묶음이 되고, 묶음은 그 안에서 가장 먼저 import 된 파일의 자리에 놓인다.
@@ -16,8 +21,9 @@ import "../../styles/code.css";
 // 2. 본문(<main class="prose"> 아래): <Content /> 가 그린 요소에는 scoped <style> 이 닿지 않아 전역 CSS 로 둔다.
 import "../../styles/prose.css";
 
+// 운영 빌드에서는 발행된 글만, astro dev 에서는 초안도(lib/posts.ts 의 getVisiblePosts).
 export const getStaticPaths = (async () => {
-  const posts = await getPublishedPosts();
+  const posts = await getVisiblePosts();
 
   return posts.map((post) => ({ params: { id: post.id }, props: { post } }));
 }) satisfies GetStaticPaths;
@@ -41,9 +47,12 @@ const { Content } = await render(post);
     publishedTime: date,
   }}
 >
-  <PostHeader title={title} date={date} />
+  <PostHeader title={displayTitle(post)} date={date} />
   <main class="prose">
     <Content />
   </main>
-  <Comments />
+  {
+    // 초안(dev 에서만 그려진다)에는 댓글을 싣지 않는다. utterances 가 초안 제목으로 이슈를 만들면 안 된다.
+    !isDraft(post) && <Comments />
+  }
 </BaseLayout>
