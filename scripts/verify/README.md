@@ -12,6 +12,7 @@ npm run verify -- --route=/posts/foo      # 라우트 고르기(쉼표로 여러
 npm run verify -- --static                # 브라우저가 필요 없는 검사만
 npm run verify -- --no-build              # 이미 있는 dist/ 를 그대로 검사
 npm run verify -- --no-check              # astro check 를 건너뛴다
+npm run verify -- --no-cache              # 기준선 캡처 캐시를 읽지도 쓰지도 않는다(아래 "속도")
 npm run verify -- --candidate=<dir>       # dist/ 대신 다른 디렉터리를 검사(빌드하지 않는다)
 npm run verify -- --candidate-url=<url>   # 디렉터리 대신 서빙 중인 사이트를 검사(빌드하지 않는다)
 npm run verify -- --write-accept=<이름> --reason="<사유>"   # 지금의 parity 실패를 accepted/<이름>.json 으로 허용
@@ -111,6 +112,22 @@ FAIL  build     0/1  -: [InvalidContentEntryDataError] posts → foo data does n
 - **없는 것을 고르면 거부한다.** 모르는 플래그, `--only`의 없는 검사 이름, `--route`의 기준선에 없는 라우트(`posts/foo`처럼 앞 슬래시를 빠뜨린 것 포함), 값이 빠진 `--only=`, `--only`로 이름을 준 브라우저 검사가 `--static`에 걸러지는 경우, `--feature`와 함께 준 parity 검사·플래그. 무엇이 틀렸는지 말하고 **아무것도 빌드하기 전에** 2로 끝난다. 세 명령 모두 같다. 하나만 빌드 뒤에 본다: `--feature`의 `--route`가 새 빌드에 있는지(빌드하기 전에는 새 빌드의 라우트를 알 수 없다. 모양은 빌드 전에 본다).
 - **0개를 본 검사는 실패다.** 통과한 항목이 하나도 없으면 `0/0 PASS`가 아니라 `nothing was examined` 로 실패한다. 고른 라우트가 그 검사에서 모두 허용 목록에 있을 때도 그렇다(예: `--route=/404 --only=visual`). `--route`를 넓히거나 `--only`로 그 검사를 빼면 된다.
 - **빌드는 처음부터 렌더한다.** 게이트는 `astro build --force`로 빌드한다. 그냥 `astro build`는 원본이 그대로인 글의 HTML을 `node_modules/.astro/data-store.json`에서 꺼내 쓰는데, 이 저장소는 렌더하는 패키지가 바뀐 것을 알아채지 못한다. 배포 워크플로는 늘 빈 상태에서 렌더하므로, 게이트만 예전 HTML로 통과할 수 있었다.
+
+## 속도
+
+검사를 줄이지 않고 같은 일을 덜 하거나 겹쳐서 한다.
+
+- **check 는 검사들과 함께 돈다.** `astro build --force`가 끝나면 `npm run check`를 띄우고 기다리지 않은 채 검사를 돌린다. 검사는 `dist/`와 `.verify/`만 읽고 astro check 는 소스와 `.astro/`만 읽어 서로 닿지 않는다. build 와 함께 돌리지 않는 이유: 둘 다 `astro sync`를 돌려 `.astro/`의 생성 타입과 `node_modules/.astro/`의 내용 저장소를 다시 쓰고, build 는 저장소를 비웠다가 채운다(함께 돌린 70번쯤 중 한 번 build 가 실패했고, 다시 일으키지 못했다). 결과 줄은 전처럼 `check`, `build` 순서의 두 줄이고 실패한 단계의 한 줄도 같다. `--write-accept`와 출력은 check 가 끝난 뒤다. build 가 실패해도 check 는 돈다.
+- **브라우저 검사는 둘씩 함께 돈다**(`lib/runner.mjs`의 `BROWSER_LANES`). 지난번에 오래 걸린 검사부터 시작한다. 결과 줄의 순서는 그대로다. 정적 검사는 하나씩 돈다.
+- **기준선 캡처 캐시.** 기준선은 그 hash 가 같으면 바뀌지 않으므로 `visual`의 기준선 스크린샷과 `a11y`·`embeds`·`hover`의 기준선 쪽 측정을 메인 체크아웃의 `.verify/capture-cache/<검사>/`에 두고 다음 실행(어느 worktree든)이 다시 쓴다. 후보 쪽은 언제나 새로 잰다.
+  - 키: 기준선 hash, Playwright·Chromium 버전, `visual.config.json`, 찍는 코드의 sha(`lib/browser.mjs`, 그 검사 파일, `visual`은 `lib/accept.mjs`도), `a11y`는 axe-core 버전, 플랫폼(OS 릴리스 포함), `.verify/cache` 응답 기록본 전체의 sha, 항목마다 라우트·뷰포트·mask·selector. 하나라도 다르면 다른 항목이다.
+  - 가드 a: 캐시한 기준선으로 비교가 실패하면 기준선을 새로 찍어 다시 본다(`visual`은 원래의 두 번째 시도가 양쪽을 새로 찍는다). 새로 찍은 것이 캐시와 바이트까지 같지 않으면 캐시가 틀린 것이다. 그래서 캐시가 실패를 만들 수 없다.
+  - 가드 b: 실행마다 적중한 항목 중 1–2개를 무작위로 골라 새로 찍고 바이트까지 같아야 한다. 통과를 숨기는 틀린 항목은 이것으로 잡는다.
+  - a나 b가 틀린 항목을 찾으면 캐시 디렉터리를 통째로 지우고 그 검사를 캐시를 읽지 않고 처음부터 다시 돌려 그 결과를 보고한다(리포트 `cache.droppedBy`).
+  - 가드 c: `--no-cache`. 쓰기는 임시 파일을 만든 뒤 rename 하므로 다른 worktree 가 반쯤 쓴 항목을 읽지 않는다. 리포트 JSON 의 `cache`에 적중·누락·표본 재확인·저장 수가 남는다.
+  - 자기 검사: 변이한 쪽은 캐시를 쓰지 않는다(후보는 원래 안 쓰고, `baseline(dir)`로 고친 기준선 사본은 캐시 대상이 아니다). 기준선 ↔ 기준선 실행은 적중과 표본 재확인이 실제로 일어나야 통과한다(캐시가 비어 있으면 한 번 더 돈다). 검사마다 따로 만든 캐시로 두 사례를 더 돈다: 항목끼리 내용을 바꿔 넣으면 표본 재확인 없이도 가드 a가, 같은 그림을 다르게 인코딩(JSON 은 끝에 공백)하면 모든 적중을 표본으로 삼아 가드 b가 찾아 캐시를 버리고, 검사는 통과해야 한다.
+
+이 기기(10코어, 다른 에이전트와 함께 써서 부하 4–6)에서 브라우저 검사만 잰 값(3번의 중앙값): `visual` 48.6s → 40.0s(캐시, 84개 비교 중 72개가 의도한 차이라 두 번 찍는 상태), 브라우저 검사 넷 47.0s → 43.1s(둘씩).
 
 ## 검사 목록
 

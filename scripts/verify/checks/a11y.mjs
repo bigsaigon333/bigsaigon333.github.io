@@ -9,11 +9,19 @@
 // once, the baseline's absolute count per rule.
 //
 // Third-party requests go through the same blocking and replay as `visual` (lib/browser.mjs).
-import { mapLimit, MAX_PAGES, openBrowser } from "../lib/browser.mjs";
+import {
+  baselineValue,
+  mapLimit,
+  MAX_PAGES,
+  openBrowser,
+  openCaptureCache,
+  packageVersion,
+  recheck,
+  withCaptureCache,
+} from "../lib/browser.mjs";
 import { editPages } from "../lib/html.mjs";
 
 const NAME = "a11y";
-const SIDES = ["baseline", "candidate"];
 const VIEWPORT = { width: 1280, height: 900 };
 const TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"];
 
@@ -46,7 +54,9 @@ function audit(browser, url, route, AxeBuilder) {
   });
 }
 
-async function run(ctx) {
+const run = (ctx) => withCaptureCache(ctx, (mode) => runOnce(ctx, mode));
+
+async function runOnce(ctx, cacheMode) {
   // Loaded here rather than at the top: every check module is imported even when only static checks run.
   const { AxeBuilder } = await import("@axe-core/playwright");
 
@@ -65,19 +75,49 @@ async function run(ctx) {
 
   const browser = await openBrowser(ctx);
   let outcomes;
+  let cache;
   try {
     const urls = {
       baseline: await ctx.serve("baseline"),
       candidate: await ctx.serve("candidate"),
     };
+    // The baseline's audits, kept from an earlier run (lib/browser.mjs openCaptureCache). axe-core decides them too.
+    cache = openCaptureCache(ctx, browser, {
+      check: NAME,
+      sources: [import.meta.url],
+      extra: {
+        axe: packageVersion("axe-core"),
+        axePlaywright: packageVersion("@axe-core/playwright"),
+      },
+      mode: cacheMode,
+    });
+    const plan = cache.plan(
+      routes.map((route) => ({ id: route, route, viewport: VIEWPORT })),
+    );
+
     outcomes = await mapLimit(routes, MAX_PAGES, async (route) => {
-      const results = await Promise.all(
-        SIDES.map((side) =>
-          audit(browser, urls[side] + route, route, AxeBuilder).catch(
-            (error) => new Error(`${side}: ${oneLine(error)}`),
-          ),
+      const takeBaseline = () =>
+        audit(browser, urls.baseline + route, route, AxeBuilder);
+      let cached = false;
+      const results = await Promise.all([
+        baselineValue(cache, plan, route, takeBaseline).then(
+          (got) => {
+            cached = got.cached;
+            return got.value;
+          },
+          (error) => new Error(`baseline: ${oneLine(error)}`),
         ),
-      );
+        audit(browser, urls.candidate + route, route, AxeBuilder).catch(
+          (error) => new Error(`candidate: ${oneLine(error)}`),
+        ),
+      ]);
+      // Guard a: a failure against a cached baseline audits the baseline again (lib/browser.mjs recheck).
+      const failing =
+        results.some((result) => result instanceof Error) ||
+        results[1].violations.some(
+          (key) => !results[0].violations.includes(key),
+        );
+      if (failing && cached) await recheck(cache, plan, route, takeBaseline);
       const broken = results.find((result) => result instanceof Error);
       if (broken) return { route, ok: false, detail: broken.message };
 
@@ -126,6 +166,7 @@ async function run(ctx) {
       baselineRules,
       routes: outcomes.map(({ baselineRules: _rules, ...outcome }) => outcome),
       allowed,
+      cache: cache.stats,
     },
   };
 }

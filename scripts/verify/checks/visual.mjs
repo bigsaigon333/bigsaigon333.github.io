@@ -20,7 +20,13 @@ import pixelmatch from "pixelmatch";
 import { PNG } from "pngjs";
 
 import { paintMasks } from "../lib/accept.mjs";
-import { mapLimit, MAX_PAGES, openBrowser } from "../lib/browser.mjs";
+import {
+  mapLimit,
+  MAX_PAGES,
+  openBrowser,
+  openCaptureCache,
+  withCaptureCache,
+} from "../lib/browser.mjs";
 import { editPages, postRoutesWith } from "../lib/html.mjs";
 import { repoRoot } from "../lib/paths.mjs";
 
@@ -339,7 +345,9 @@ function describe(result, selector) {
 /** What the last run measured; selftest.afterIdentical() turns it into visual.config.json. */
 let lastRun = null;
 
-async function run(ctx) {
+const run = (ctx) => withCaptureCache(ctx, (mode) => runOnce(ctx, mode));
+
+async function runOnce(ctx, cacheMode) {
   const config = readConfig();
   const selector =
     typeof ctx.args.selector === "string" ? ctx.args.selector : null;
@@ -363,21 +371,44 @@ async function run(ctx) {
   let noise = 0; // largest difference ratio between two same-sized captures, over every attempt
   const browser = await openBrowser(ctx);
   let outcomes;
+  let cache;
   try {
     const urls = {
       baseline: await ctx.serve("baseline"),
       candidate: await ctx.serve("candidate"),
     };
 
-    const attempt = async ({ route, viewport }, previous) => {
+    // The baseline's screenshots, kept from an earlier run (lib/browser.mjs openCaptureCache). paintMasks is in
+    // lib/accept.mjs: its source decides the pictures too.
+    cache = openCaptureCache(ctx, browser, {
+      check: NAME,
+      sources: [import.meta.url, new URL("../lib/accept.mjs", import.meta.url)],
+      mode: cacheMode,
+    });
+    const idOf = ({ route, viewport }) =>
+      `${route}@${viewport.width}x${viewport.height}`;
+    const plan = cache.plan(
+      jobs.map((job) => ({
+        id: idOf(job),
+        route: job.route,
+        viewport: job.viewport,
+        selector,
+        masks: ctx.masks(NAME, job.route),
+      })),
+    );
+
+    /** `cached`: the baseline's picture to use instead of taking it, or null to take it. */
+    const attempt = async ({ route, viewport }, previous, cached = null) => {
       const shots = await Promise.all(
         SIDES.map((side) =>
-          capture(browser, urls[side] + route, viewport, {
-            route,
-            selector,
-            masks: ctx.masks(NAME, route),
-            onMasked: () => ctx.masked(NAME, route),
-          }).catch((error) => new Error(`${side}: ${oneLine(error)}`)),
+          side === "baseline" && cached
+            ? cached
+            : capture(browser, urls[side] + route, viewport, {
+                route,
+                selector,
+                masks: ctx.masks(NAME, route),
+                onMasked: () => ctx.masked(NAME, route),
+              }).catch((error) => new Error(`${side}: ${oneLine(error)}`)),
         ),
       );
       const broken = shots.find((shot) => shot instanceof Error);
@@ -397,13 +428,32 @@ async function run(ctx) {
     };
 
     outcomes = await mapLimit(jobs, MAX_PAGES, async (job) => {
-      let result = await attempt(job);
+      const id = idOf(job);
+      const entry = plan.get(id);
+      const useCached = entry.cached && !entry.spot ? entry.cached : null;
+      let result = await attempt(job, undefined, useCached);
+      const first = result.pngs?.baseline ?? null;
+      // Guard b: a hit taken fresh anyway must come out the same.
+      if (entry.spot && first && !first.equals(entry.cached))
+        cache.mismatch(id, "spot check: a fresh capture differs");
       let attempts = 1;
       if (!result.ok) {
-        // Flake guard: a difference has to show up twice before it counts.
+        // Flake guard: a difference has to show up twice before it counts. The second look always takes both
+        // pictures fresh, so a cached baseline can neither cause nor hide a failure (guard a).
         result = await attempt(job, result);
         attempts = 2;
+        const fresh = result.pngs?.baseline;
+        if (entry.cached && fresh && !fresh.equals(entry.cached))
+          cache.mismatch(id, "a fresh capture after a failure differs");
       }
+      // A picture taken now is kept when nothing suggests it was a bad one: it passed, or a second capture came out
+      // the same.
+      if (
+        !entry.cached &&
+        first &&
+        (attempts === 1 || result.pngs?.baseline.equals(first))
+      )
+        cache.store(id, first);
 
       const { route, viewport } = job;
       const outcome = { route, width: viewport.width, ok: result.ok, attempts };
@@ -472,6 +522,7 @@ async function run(ctx) {
       flaky: flaky.map(({ route, width }) => `${route}@${width}`), // passed, but only on the second look
       comparisons: outcomes,
       allowed,
+      cache: cache.stats,
     },
   };
 }

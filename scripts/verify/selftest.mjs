@@ -23,6 +23,8 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { PNG } from "pngjs";
+
 import { cliCases } from "./lib/cli-cases.mjs";
 import { baselineDir, distDir, verifyDir } from "./lib/paths.mjs";
 import { listRoutes } from "./lib/resolve.mjs";
@@ -166,6 +168,9 @@ if (needsBuild && !fs.existsSync(path.join(distDir, "index.html"))) {
   process.exit(2);
 }
 
+/** check name → what its capture cache did in the identical run (lib/browser.mjs openCaptureCache). */
+const identicalCache = new Map();
+
 // 1. unmutated: parity checks against the baseline itself, feature checks against the build
 for (const [group, candidateDir, name] of [
   [parityChecks, baselineDir, "identical"],
@@ -176,6 +181,8 @@ for (const [group, candidateDir, name] of [
   const ctx = createContext({ candidateDir, args, accept: false });
   try {
     const results = await runChecks(ctx, group);
+    for (const result of results)
+      if (result.cache) identicalCache.set(result.check, result.cache);
     for (const [index, result] of results.entries()) {
       cases.push({
         check: result.check,
@@ -190,8 +197,135 @@ for (const [group, candidateDir, name] of [
   }
 }
 
-// 2. mutations (the check must FAIL) and accepted changes (the check must still PASS)
 const scratch = (prefix) => fs.mkdtempSync(path.join(verifyDir, prefix));
+
+// 1b. the capture cache of the browser checks (lib/browser.mjs openCaptureCache)
+for (const check of parityChecks.filter((one) =>
+  identicalCache.has(one.name),
+)) {
+  for (const item of await cacheCases(check, identicalCache.get(check.name)))
+    cases.push({ check: check.name, ...item });
+}
+
+/** Run `check` on the baseline against itself. → its normalized result (with `cache`) */
+async function identicalRun(check, options) {
+  const ctx = createContext({
+    candidateDir: baselineDir,
+    accept: false,
+    ...options,
+  });
+  try {
+    return (await runChecks(ctx, [check]))[0];
+  } finally {
+    await ctx.close();
+  }
+}
+
+/**
+ * The identical run used the cache with hits and spot checks, and a cache that holds wrong captures can neither
+ * fail nor pass a check by itself: entries made to differ from what the baseline looks like now are found and
+ * dropped, and the check comes out as it would without the cache. Those two cases use a cache of their own.
+ */
+async function cacheCases(check, identical) {
+  const found = [];
+  const hitAndSpot = (cache) =>
+    cache.enabled &&
+    !cache.invalidated &&
+    !cache.droppedBy &&
+    cache.spotChecked > 0 &&
+    (cache.hits > 0 || cache.misses + cache.spotChecked === 1);
+  // A cold cache (another baseline, changed capturing code) is filled by the identical run: the next one hits.
+  let cache = identical;
+  for (let again = 0; again < 2 && !hitAndSpot(cache); again += 1)
+    cache = (await identicalRun(check, { args })).cache ?? cache;
+  found.push({
+    name: "cache: 기준선 ↔ 기준선에서 캐시 적중과 표본 재확인",
+    ok: hitAndSpot(cache),
+    detail: hitAndSpot(cache)
+      ? ""
+      : `cache not exercised: ${JSON.stringify(cache)}`,
+  });
+
+  // Few routes, but more than one entry, so that entries can be swapped. Not narrowed by --route.
+  const route =
+    check.name === "visual" ? ["/"] : ["/", "/posts/proxy-to-built-in-objects"];
+  for (const [name, poison, spotChecks, why] of [
+    [
+      "cache: 실패 뒤 다시 찍은 기준선이 캐시와 다르면 캐시를 버린다",
+      swapEntries,
+      0, // guard a alone
+      /after a failure/,
+    ],
+    [
+      "cache: 표본으로 다시 찍은 기준선이 캐시와 바이트까지 같지 않으면 캐시를 버린다",
+      reencodeEntries,
+      Number.POSITIVE_INFINITY, // every hit is a spot check; the entries still compare equal
+      /spot check/,
+    ],
+  ]) {
+    const dir = scratch("capture-cache-");
+    try {
+      const options = { args: { ...args, route }, captureCache: dir };
+      const filled = await identicalRun(check, options);
+      if (!filled.cache?.stored)
+        throw new Error(`nothing was stored: ${JSON.stringify(filled.cache)}`);
+      poison(path.join(dir, check.name));
+      const result = await identicalRun(check, {
+        ...options,
+        captureSpotChecks: spotChecks,
+      });
+      const dropped = result.cache?.droppedBy?.invalidated ?? "";
+      let detail = "";
+      if (!result.ok)
+        detail = `the wrong cache failed the check: ${result.failed[0]?.detail ?? "failed"}`;
+      else if (!why.test(dropped))
+        detail = `the wrong entries were not found (${why}): ${JSON.stringify(result.cache)}`;
+      else if (result.cache.mode !== "refill" || result.cache.hits)
+        detail = `the check did not run again without reading the cache: ${JSON.stringify(result.cache)}`;
+      found.push({ name, ok: !detail, detail });
+    } catch (error) {
+      found.push({
+        name,
+        ok: false,
+        detail: `could not be run: ${String(error?.message ?? error).split("\n")[0]}`,
+      });
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  }
+  return found;
+}
+
+/** Every entry gets the bytes of the next one: each is a capture of something else. */
+function swapEntries(dir) {
+  const files = fs
+    .readdirSync(dir)
+    .sort()
+    .map((name) => path.join(dir, name));
+  if (files.length < 2)
+    throw new Error(`${files.length} entry, nothing to swap`);
+  const contents = files.map((file) => fs.readFileSync(file));
+  for (const [index, file] of files.entries())
+    fs.writeFileSync(file, contents[(index + 1) % files.length]);
+}
+
+/** Every entry gets other bytes for the same thing: a PNG encoded again, JSON with a space after it. */
+function reencodeEntries(dir) {
+  for (const name of fs.readdirSync(dir)) {
+    const file = path.join(dir, name);
+    const bytes = fs.readFileSync(file);
+    let other = Buffer.concat([bytes, Buffer.from(" ")]);
+    if (bytes.subarray(1, 4).toString() === "PNG") {
+      const image = PNG.sync.read(bytes);
+      other = [0, 1, 2, 3, 4]
+        .map((filterType) => PNG.sync.write(image, { filterType }))
+        .find((encoded) => !encoded.equals(bytes));
+    }
+    fs.writeFileSync(file, other);
+  }
+}
+
+// 2. mutations (the check must FAIL) and accepted changes (the check must still PASS)
 
 for (const check of checks) {
   for (const { mutation, label, mustFail } of variantsOf(check)) {
@@ -223,6 +357,9 @@ for (const check of checks) {
         args: { ...args, route },
         accept: false,
         allowlist: mutation.allowlist,
+        // The mutated side is never taken from the capture cache: the candidate never is, and a mutated
+        // reference is not the baseline the cache holds.
+        captureCache: !reference,
       });
       try {
         const [result] = await runChecks(ctx, [check]);

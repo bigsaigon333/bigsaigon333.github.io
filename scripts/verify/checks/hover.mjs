@@ -15,7 +15,15 @@
 //
 // Allowlist item: route:<route> skips the route.
 // An accept entry with "mask" (lib/accept.mjs) leaves out every link inside an element the mask selects, on both sides.
-import { mapLimit, MAX_PAGES, openBrowser } from "../lib/browser.mjs";
+import {
+  baselineValue,
+  mapLimit,
+  MAX_PAGES,
+  openBrowser,
+  openCaptureCache,
+  recheck,
+  withCaptureCache,
+} from "../lib/browser.mjs";
 import { editPages, postRoutesWith } from "../lib/html.mjs";
 
 const NAME = "hover";
@@ -407,7 +415,9 @@ function verdict(route, baseline, candidate) {
 
 // ── the check ───────────────────────────────────────────────────────────────────────────────────
 
-async function run(ctx) {
+const run = (ctx) => withCaptureCache(ctx, (mode) => runOnce(ctx, mode));
+
+async function runOnce(ctx, cacheMode) {
   const cells = {};
   const allowed = [];
   const routes = [];
@@ -422,38 +432,65 @@ async function run(ctx) {
   }
 
   const browser = await openBrowser(ctx);
-  let measured;
+  let outcomes;
+  let cache;
   try {
     const urls = {
       baseline: await ctx.serve("baseline"),
       candidate: await ctx.serve("candidate"),
     };
+    const maskOf = (route) => ctx.masks(NAME, route).join(",");
+    // The baseline's measurements, kept from an earlier run (lib/browser.mjs openCaptureCache).
+    cache = openCaptureCache(ctx, browser, {
+      check: NAME,
+      sources: [import.meta.url],
+      mode: cacheMode,
+    });
+    const plan = cache.plan(
+      routes.map((route) => ({
+        id: route,
+        route,
+        viewport: VIEWPORT,
+        mask: maskOf(route),
+      })),
+    );
+
+    const take = (route, side) => () =>
+      measure(browser, urls[side] + route, route, maskOf(route));
     const pages = routes.flatMap((route) => [
       { route, side: "baseline" },
       { route, side: "candidate" },
     ]);
-    measured = await mapLimit(pages, MAX_PAGES, async ({ route, side }) => {
-      try {
-        const mask = ctx.masks(NAME, route).join(",");
-        const { elements, masked } = await measure(
-          browser,
-          urls[side] + route,
-          route,
-          mask,
-        );
-        if (masked > 0) ctx.masked(NAME, route);
-        return { elements };
-      } catch (error) {
-        return { error };
-      }
-    });
+    const measured = await mapLimit(
+      pages,
+      MAX_PAGES,
+      async ({ route, side }) => {
+        try {
+          const { value, cached } =
+            side === "baseline"
+              ? await baselineValue(cache, plan, route, take(route, side))
+              : { value: await take(route, side)(), cached: false };
+          if (value.masked > 0) ctx.masked(NAME, route);
+          return { elements: value.elements, cached };
+        } catch (error) {
+          return { error };
+        }
+      },
+    );
+    outcomes = routes.map((route, index) =>
+      verdict(route, measured[2 * index], measured[2 * index + 1]),
+    );
+    // Guard a: a route that fails against a cached baseline has its baseline measured again (lib/browser.mjs recheck).
+    await mapLimit(
+      routes.filter(
+        (route, index) => !outcomes[index].ok && measured[2 * index].cached,
+      ),
+      MAX_PAGES,
+      (route) => recheck(cache, plan, route, take(route, "baseline")),
+    );
   } finally {
     await browser.close();
   }
-
-  const outcomes = routes.map((route, index) =>
-    verdict(route, measured[2 * index], measured[2 * index + 1]),
-  );
 
   const failed = [];
   for (const outcome of outcomes) {
@@ -468,7 +505,7 @@ async function run(ctx) {
     fail: failed.length,
     failed,
     cells,
-    extra: { routes: outcomes, allowed },
+    extra: { routes: outcomes, allowed, cache: cache.stats },
   };
 }
 

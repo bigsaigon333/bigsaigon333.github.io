@@ -43,6 +43,7 @@ export const FLAGS = {
     static: "flag",
     "no-build": "flag",
     "no-check": "flag",
+    "no-cache": "flag",
     candidate: "value",
     "candidate-url": "value",
     selector: "value",
@@ -188,6 +189,12 @@ function loadAllowlist() {
  * @param {object[]} [options.allowlist]  entries added to allowlist.json (a self-test variant declares its own)
  * @param {boolean} [options.accept]       apply the accept files (scripts/verify/accepted, or $VERIFY_ACCEPTED_DIR)
  *                                         that were written for this baseline. The self-test's mutations run without.
+ * @param {boolean|string} [options.captureCache]  let the browser checks reuse their captures of the baseline
+ *                                         (lib/browser.mjs openCaptureCache), kept in <main checkout>/.verify/capture-cache
+ *                                         or in the directory given. Only ever for .verify/baseline itself, never with
+ *                                         --no-cache.
+ * @param {number} [options.captureSpotChecks]  cache hits captured fresh anyway in each check run (guard b). Only the
+ *                                         self-test changes it, to test one guard without the other.
  */
 export function createContext({
   candidateDir = distDir,
@@ -196,6 +203,8 @@ export function createContext({
   args = {},
   accept = true,
   allowlist: extraAllowlist = [],
+  captureCache = true,
+  captureSpotChecks = 2,
 } = {}) {
   if (baseline === null && candidateUrl)
     throw new Error(
@@ -228,9 +237,27 @@ export function createContext({
     return dirs[side];
   };
 
+  // A copy of the baseline (a self-test reference) is not what the cache holds captures of.
+  const cachable =
+    captureCache !== false &&
+    !args.noCache &&
+    baseline !== null &&
+    path.resolve(baseline) === path.resolve(baselineDir);
+
   const ctx = {
     args,
     baselineDir: baseline,
+    /** Where the browser checks keep their captures of the baseline, or null when this run may not use them. */
+    captureCacheDir: cachable
+      ? typeof captureCache === "string"
+        ? captureCache
+        : path.join(mainRoot, ".verify", "capture-cache")
+      : null,
+    captureSpotChecks,
+    /** Hash of the baseline's files (lib/accept.mjs), computed on first use. */
+    get baselineHash() {
+      return cachedBaselineHash(dirOf("baseline"));
+    },
     candidateDir,
     candidateUrl,
     reportDir,
@@ -311,8 +338,13 @@ export function createContext({
     /** Base URL of a server for `side`, started on first use on an ephemeral port. */
     async serve(side) {
       if (side === "candidate" && candidateUrl) return candidateUrl;
-      if (!servers.has(side)) servers.set(side, await startServer(dirOf(side)));
-      return servers.get(side).url;
+      // The promise is kept, not the server: checks running at the same time share one server per side.
+      if (!servers.has(side)) {
+        const starting = startServer(dirOf(side));
+        starting.catch(() => servers.delete(side)); // the next call tries again
+        servers.set(side, starting);
+      }
+      return (await servers.get(side)).url;
     },
 
     /** Write a JSON report to .verify/report/<name>.json and return its path. */
@@ -324,7 +356,14 @@ export function createContext({
     },
 
     async close() {
-      await Promise.all([...servers.values()].map((server) => server.close()));
+      await Promise.all(
+        [...servers.values()].map((starting) =>
+          starting.then(
+            (server) => server.close(),
+            () => {}, // never started: nothing to close
+          ),
+        ),
+      );
       servers.clear();
     },
   };
@@ -378,52 +417,95 @@ function nothingExamined(ctx, result) {
   return `nothing was examined: ${why}`;
 }
 
-export async function runChecks(ctx, checks) {
-  const results = [];
-  for (const check of checks) {
-    const started = performance.now();
-    let result;
-    try {
-      result = await check.run(ctx);
-    } catch (error) {
-      result = {
-        ok: false,
-        pass: 0,
-        fail: 1,
-        failed: [
-          { route: "-", detail: `check crashed: ${error.stack ?? error}` },
-        ],
-      };
-    }
-    const failed = [...(result.failed ?? [])];
-    let ok = Boolean(result.ok);
-    let fail = result.fail ?? failed.length;
-    const pass = result.pass ?? 0;
-    // "0 of 0" is a filter that matched nothing or a route that is exempt, not a verified page.
-    const vacuous = ok && pass === 0;
-    if (vacuous) {
-      ok = false;
-      fail += 1;
-      failed.push({ route: "-", detail: nothingExamined(ctx, result) });
-    }
-    const normalized = {
-      check: check.name,
-      kind: check.kind,
-      ok,
-      pass,
-      fail,
-      failed,
-      // Failed for having looked at nothing. The self-test must not take this for a noticed mutation.
-      vacuous,
-      cells: result.cells ?? null,
-      durationMs: Math.round(performance.now() - started),
-    };
-    // Failures an accept file declares as intended become accepted ones (ACCEPT, not PASS).
-    if (ctx.accepts) applyAccepts(ctx.accepts.entries, normalized);
-    ctx.report(check.name, { ...normalized, extra: result.extra ?? null });
-    results.push(normalized);
+/**
+ * Browser checks that run at the same time, each with its own browser of MAX_PAGES pages (lib/browser.mjs). Measured
+ * on this machine with the four browser checks (warm capture cache, 3 runs each, load 4–6): 1 lane 47.0s, 2 lanes
+ * 43.1s, 4 lanes 42.4s (medians). Two take most of the gain at half the pages.
+ */
+const BROWSER_LANES = 2;
+
+/** How long `check` took last time (its report), to start the longest first. 0 when unknown. */
+function lastDuration(check) {
+  try {
+    return (
+      JSON.parse(
+        fs.readFileSync(path.join(reportDir, `${check.name}.json`), "utf8"),
+      ).durationMs ?? 0
+    );
+  } catch {
+    return 0;
   }
-  return results;
+}
+
+/**
+ * Run `checks` and return their results in the order given. Static checks run one after another, then the browser
+ * checks, BROWSER_LANES at a time, the longest first. They share nothing but the servers of `ctx`.
+ */
+export async function runChecks(ctx, checks) {
+  const results = new Map();
+  for (const check of checks.filter((one) => one.kind !== "browser"))
+    results.set(check, await runCheck(ctx, check));
+  const queue = checks
+    .filter((one) => one.kind === "browser")
+    .map((check) => ({ check, last: lastDuration(check) }))
+    .sort((a, b) => b.last - a.last)
+    .map(({ check }) => check);
+  await Promise.all(
+    Array.from({ length: Math.min(BROWSER_LANES, queue.length) }, async () => {
+      while (queue.length) {
+        const check = queue.shift();
+        results.set(check, await runCheck(ctx, check));
+      }
+    }),
+  );
+  return checks.map((check) => results.get(check));
+}
+
+/** One check, its result normalized, accepted where an accept file says so, and reported. */
+async function runCheck(ctx, check) {
+  const started = performance.now();
+  let result;
+  try {
+    result = await check.run(ctx);
+  } catch (error) {
+    result = {
+      ok: false,
+      pass: 0,
+      fail: 1,
+      failed: [
+        { route: "-", detail: `check crashed: ${error.stack ?? error}` },
+      ],
+    };
+  }
+  const failed = [...(result.failed ?? [])];
+  let ok = Boolean(result.ok);
+  let fail = result.fail ?? failed.length;
+  const pass = result.pass ?? 0;
+  // "0 of 0" is a filter that matched nothing or a route that is exempt, not a verified page.
+  const vacuous = ok && pass === 0;
+  if (vacuous) {
+    ok = false;
+    fail += 1;
+    failed.push({ route: "-", detail: nothingExamined(ctx, result) });
+  }
+  const normalized = {
+    check: check.name,
+    kind: check.kind,
+    ok,
+    pass,
+    fail,
+    failed,
+    // Failed for having looked at nothing. The self-test must not take this for a noticed mutation.
+    vacuous,
+    cells: result.cells ?? null,
+    // What the capture cache of a browser check did (lib/browser.mjs openCaptureCache). The self-test asserts on it.
+    ...(result.extra?.cache ? { cache: result.extra.cache } : {}),
+    durationMs: Math.round(performance.now() - started),
+  };
+  // Failures an accept file declares as intended become accepted ones (ACCEPT, not PASS).
+  if (ctx.accepts) applyAccepts(ctx.accepts.entries, normalized);
+  ctx.report(check.name, { ...normalized, extra: result.extra ?? null });
+  return normalized;
 }
 
 const clip = (text, max = 110) => {

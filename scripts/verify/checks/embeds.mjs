@@ -10,7 +10,15 @@
 //                stands: the tag names of its parent and of the elements before and after it. The widget is
 //                inserted right after the script, so a script that has moved is comments in another place. Or null.
 
-import { mapLimit, MAX_PAGES, openBrowser } from "../lib/browser.mjs";
+import {
+  baselineValue,
+  mapLimit,
+  MAX_PAGES,
+  openBrowser,
+  openCaptureCache,
+  recheck,
+  withCaptureCache,
+} from "../lib/browser.mjs";
 import { editPages, postFiles, routeOfPage } from "../lib/html.mjs";
 
 const NAME = "embeds";
@@ -135,7 +143,9 @@ function differences(baseline, candidate) {
   return found;
 }
 
-async function run(ctx) {
+const run = (ctx) => withCaptureCache(ctx, (mode) => runOnce(ctx, mode));
+
+async function runOnce(ctx, cacheMode) {
   const cells = {};
   const allowed = [];
   const routes = [];
@@ -151,26 +161,44 @@ async function run(ctx) {
 
   const browser = await openBrowser(ctx);
   let outcomes;
+  let cache;
   try {
     const urls = {
       baseline: await ctx.serve("baseline"),
       candidate: await ctx.serve("candidate"),
     };
 
-    // One page at a time per route, so MAX_PAGES routes in flight are MAX_PAGES pages.
-    outcomes = await mapLimit(routes, MAX_PAGES, async (route) => {
+    // The baseline's embeds, kept from an earlier run (lib/browser.mjs openCaptureCache).
+    cache = openCaptureCache(ctx, browser, {
+      check: NAME,
+      sources: [import.meta.url],
+      mode: cacheMode,
+    });
+    const plan = cache.plan(
+      routes.map((route) => ({ id: route, route, viewport: VIEWPORT })),
+    );
+
+    /** One route. → { outcome, cached }: cached when the baseline's embeds came from the cache. */
+    const examine = async (route, takeBaseline) => {
       let baseline;
+      let cached = false;
       let candidate;
       try {
-        baseline = await collect(
-          browser,
-          urls.baseline + route,
+        ({ value: baseline, cached } = await baselineValue(
+          cache,
+          plan,
           route,
-          hasAnalytics,
-          BASELINE_WAIT_MS,
-        );
+          takeBaseline,
+        ));
       } catch (error) {
-        return { route, ok: false, problems: [`baseline: ${oneLine(error)}`] };
+        return {
+          cached,
+          outcome: {
+            route,
+            ok: false,
+            problems: [`baseline: ${oneLine(error)}`],
+          },
+        };
       }
       try {
         candidate = await collect(
@@ -182,20 +210,43 @@ async function run(ctx) {
         );
       } catch (error) {
         return {
-          route,
-          ok: false,
-          baseline,
-          problems: [`candidate: ${oneLine(error)}`],
+          cached,
+          outcome: {
+            route,
+            ok: false,
+            baseline,
+            problems: [`candidate: ${oneLine(error)}`],
+          },
         };
       }
       const problems = differences(baseline, candidate);
       return {
-        route,
-        ok: problems.length === 0,
-        baseline,
-        candidate,
-        problems,
+        cached,
+        outcome: {
+          route,
+          ok: problems.length === 0,
+          baseline,
+          candidate,
+          problems,
+        },
       };
+    };
+
+    // One page at a time per route, so MAX_PAGES routes in flight are MAX_PAGES pages.
+    outcomes = await mapLimit(routes, MAX_PAGES, async (route) => {
+      const takeBaseline = () =>
+        collect(
+          browser,
+          urls.baseline + route,
+          route,
+          hasAnalytics,
+          BASELINE_WAIT_MS,
+        );
+      const { outcome, cached } = await examine(route, takeBaseline);
+      // Guard a: a failure against a cached baseline reads the baseline again (lib/browser.mjs recheck).
+      if (!outcome.ok && cached)
+        await recheck(cache, plan, route, takeBaseline);
+      return outcome;
     });
   } finally {
     await browser.close();
@@ -217,7 +268,7 @@ async function run(ctx) {
     fail: failed.length,
     failed,
     cells,
-    extra: { routes: outcomes, allowed },
+    extra: { routes: outcomes, allowed, cache: cache.stats },
   };
 }
 

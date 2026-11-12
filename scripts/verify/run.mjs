@@ -3,7 +3,7 @@
 //                    [--write-accept=<name> --reason=<text>]
 // npm run verify -- --feature [--only=seo,links] [--route=/posts/x] [--no-build] [--no-check] [--candidate=<dir>]
 //
-// astro check → astro build --force → checks in scripts/verify/checks/*.mjs.
+// astro build --force → checks in scripts/verify/checks/*.mjs, with astro check beside them.
 // Without --feature every check runs, and the parity checks compare the build with the baseline
 // (.verify/baseline, the build of the previous production made by `npm run verify:setup`). Differences declared in
 // scripts/verify/accepted/*.json for this baseline are accepted (lib/accept.mjs); --write-accept=<name> writes
@@ -13,7 +13,7 @@
 // Prints one line per check; details go to .verify/report/. Exit code 0 only if everything passed or was accepted,
 // 1 when a check failed, 2 when the command line asks for something that does not exist.
 // A summary of the run goes to the reporter module, if there is one (VERIFY_REPORTER, see lib/runner.mjs report()).
-import { spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { stripVTControlCharacters } from "node:util";
@@ -50,7 +50,7 @@ import {
 } from "./lib/runner.mjs";
 
 const USAGE =
-  "usage: npm run verify -- [--only=<check,…>] [--route=<route,…>] [--static] [--no-build] [--no-check]\n" +
+  "usage: npm run verify -- [--only=<check,…>] [--route=<route,…>] [--static] [--no-build] [--no-check] [--no-cache]\n" +
   "                         [--candidate=<dir> | --candidate-url=<url>] [--selector=<css>]\n" +
   '                         [--write-accept=<name> --reason="<why the difference is intended>"]\n' +
   "       npm run verify -- --feature [--only=<check,…>] [--route=<route,…>] [--no-build] [--no-check]\n" +
@@ -210,13 +210,34 @@ function firstError(log) {
   return { error: lines[at].trim(), explanation };
 }
 
-function step(name, command) {
-  const begun = performance.now();
-  const run = spawnSync(command[0], command.slice(1), {
-    cwd: repoRoot,
-    encoding: "utf8",
-    env: { ...process.env, ASTRO_TELEMETRY_DISABLED: "1", FORCE_COLOR: "0" },
+/** Run `command` to its end: { stdout, stderr, status, signal, error }, like spawnSync, without blocking. */
+function spawnAsync(command) {
+  return new Promise((done) => {
+    const out = { stdout: "", stderr: "", status: null, signal: null };
+    let child;
+    try {
+      child = spawn(command[0], command.slice(1), {
+        cwd: repoRoot,
+        env: {
+          ...process.env,
+          ASTRO_TELEMETRY_DISABLED: "1",
+          FORCE_COLOR: "0",
+        },
+      });
+    } catch (error) {
+      done({ ...out, error });
+      return;
+    }
+    child.stdout.setEncoding("utf8").on("data", (text) => (out.stdout += text));
+    child.stderr.setEncoding("utf8").on("data", (text) => (out.stderr += text));
+    child.on("error", (error) => (out.error = error));
+    child.on("close", (status, signal) => done({ ...out, status, signal }));
   });
+}
+
+async function step(name, command) {
+  const begun = performance.now();
+  const run = await spawnAsync(command);
   const log = `${run.stdout ?? ""}\n${run.stderr ?? ""}`;
   fs.writeFileSync(path.join(reportDir, `${name}.log`), log);
   const ok = run.status === 0;
@@ -266,20 +287,30 @@ function checkCandidateRoutes() {
 // A candidate that is not built here is there already: its routes are known before anything runs.
 if (!builds) checkCandidateRoutes();
 
+/** The astro check step, while it runs beside the checks. */
+let checking = null;
+
 if (builds) {
-  // `npm run check`, not `npx astro check`: Astro 7.4 refuses `astro check` when the project's TypeScript is 7.
-  // The script runs the same checker from tools/astro-check, which carries its own TypeScript 6.
-  if (!args.noCheck) results.push(step("check", ["npm", "run", "-s", "check"]));
   // --force: render every page from its source. A plain build takes the HTML of unchanged posts from
   // node_modules/.astro/data-store.json, and that store does not notice a changed renderer package, so the
   // gate could pass on pages the deploy workflow (a clean checkout, nothing stored) would render differently.
-  results.push(step("build", ["npx", "astro", "build", "--force"]));
+  const BUILD = ["npx", "astro", "build", "--force"];
+  results.push(await step("build", BUILD));
 }
 
 const buildFailed = results.some(
   (result) => result.check === "build" && !result.ok,
 );
 if (builds && !buildFailed) checkCandidateRoutes();
+// astro check runs beside the checks, not before the build: the checks read dist/ and .verify/ only, and astro check
+// reads its sources and the generated types under .astro/. Beside the build it would not be independent: both run
+// `astro sync`, which rewrites those types and the content store under node_modules/.astro/ that the build clears and
+// fills. It starts once the routes are known to exist, so a run refused with 2 leaves nothing running behind it; its
+// result line still comes first, and it is awaited before anything is accepted or printed.
+// `npm run check`, not `npx astro check`: Astro 7.4 refuses `astro check` when the project's TypeScript is 7.
+// The script runs the same checker from tools/astro-check, which carries its own TypeScript 6.
+if (builds && !args.noCheck)
+  checking = step("check", ["npm", "run", "-s", "check"]);
 
 const ctx = createContext({
   candidateDir,
@@ -294,6 +325,7 @@ try {
 } finally {
   await ctx.close();
 }
+if (checking) results.unshift(await checking);
 
 /**
  * --write-accept: scripts/verify/accepted/<name>.json with one entry per parity check that failed, for the routes it

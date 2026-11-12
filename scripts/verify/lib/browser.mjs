@@ -13,7 +13,11 @@
 // driven by conditions rather than by sleeping.
 import { createHash, randomBytes } from "node:crypto";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+import { repoRoot } from "./paths.mjs";
 
 /** Never requested: they would make runs depend on the network and count visits. */
 const BLOCKED_HOSTS = [
@@ -360,10 +364,290 @@ export async function openBrowser(ctx, { maxPages = MAX_PAGES } = {}) {
       }
     },
 
+    /** The Chromium build that draws the pages: part of what a cached capture depends on. */
+    version: browser.version(),
+
     async close() {
       await browser.close();
     },
   };
+}
+
+// ── baseline capture cache ──────────────────────────────────────────────────────────────────────
+//
+// The baseline never changes for a given baseline hash, so what a browser check captures of it (a screenshot, an
+// axe audit, a hover measurement) can be kept and reused by the next run, in this worktree or another one. Only the
+// baseline side is ever cached: the candidate is captured fresh every time.
+//
+// An entry is found by a key over everything that decides what the capture looks like: the baseline hash, the
+// Playwright and Chromium versions, visual.config.json, the source of the capturing code (this file, the check, and
+// whatever else the check names), the platform, the recorded third-party responses (ctx.cacheDir) and, per entry, the
+// route, the viewport and the mask or selector. A change to any of those is a different key, so a miss.
+//
+// Three guards keep a cached capture from deciding a result:
+//   a  a comparison that fails with a cached baseline is redone with a fresh one (the check does that); when the
+//      fresh capture is not the cached one byte for byte, the cache is wrong
+//   b  every run captures 1–2 of its hits fresh anyway (spot check) and requires the same bytes
+//   c  `--no-cache` turns it off
+// When a or b finds a wrong entry the whole cache is dropped and the check runs again without reading it.
+// Entries are written to a temporary file and renamed into place: other worktrees read the same directory.
+
+const CACHE_FORMAT = 1;
+const visualConfigFile = fileURLToPath(
+  new URL("../visual.config.json", import.meta.url),
+);
+const SPOT_CHECKS = 2;
+
+const sha256 = (data) => createHash("sha256").update(data).digest("hex");
+
+const sourceHashes = new Map();
+function sourceHash(file) {
+  if (!sourceHashes.has(file))
+    sourceHashes.set(file, sha256(fs.readFileSync(file)));
+  return sourceHashes.get(file);
+}
+
+/** sha256 over the names and contents of the recorded third-party responses: they are part of every page drawn. */
+const storeHashes = new Map();
+function responseStoreHash(dir) {
+  if (!storeHashes.has(dir)) {
+    const hash = createHash("sha256");
+    let files = [];
+    try {
+      files = fs
+        .readdirSync(dir)
+        .filter((name) => name.endsWith(".json"))
+        .sort();
+    } catch {
+      // no store yet: nothing recorded
+    }
+    for (const name of files) {
+      hash.update(`${name}\0`);
+      hash.update(fs.readFileSync(path.join(dir, name)));
+      hash.update("\0");
+    }
+    storeHashes.set(dir, hash.digest("hex"));
+  }
+  return storeHashes.get(dir);
+}
+
+export function packageVersion(name) {
+  try {
+    return JSON.parse(
+      fs.readFileSync(
+        path.join(repoRoot, "node_modules", name, "package.json"),
+        "utf8",
+      ),
+    ).version;
+  } catch {
+    return null;
+  }
+}
+
+/** Replace `dir` with nothing, in a way a reader in another process sees either the old entries or none. */
+function dropDirectory(dir) {
+  const trash = `${dir}.dropped-${process.pid}-${randomBytes(4).toString("hex")}`;
+  try {
+    fs.renameSync(dir, trash);
+  } catch (error) {
+    if (error.code === "ENOENT") return;
+    throw error;
+  }
+  fs.rmSync(trash, { recursive: true, force: true });
+}
+
+/**
+ * The capture cache of one run of one check.
+ *
+ *   const cache = openCaptureCache(ctx, browser, { check: "visual", sources: [import.meta.url], extra: {...} });
+ *   const plan = cache.plan([{ id, route, ... }, …]);   // id → { cached: Buffer|null, spot: boolean }
+ *   cache.store(id, bytes)                              // after a fresh capture that missed
+ *   cache.mismatch(id, why)                             // a fresh capture differs from the cached one
+ *   cache.stats                                         // { enabled, hits, misses, spotChecked, stored, invalidated }
+ *
+ * `mode`: "use" reads and writes, "refill" only writes (the run after a drop), "off" does neither.
+ * `ctx.captureCacheDir` is where entries live, null when this run may not use a cache at all.
+ */
+export function openCaptureCache(
+  ctx,
+  browser,
+  { check, sources = [], extra = {}, mode = "use" },
+) {
+  const root = ctx.captureCacheDir ?? null;
+  const enabled = root !== null && mode !== "off";
+  const stats = {
+    enabled,
+    mode: enabled ? mode : "off",
+    hits: 0,
+    misses: 0,
+    spotChecked: 0,
+    stored: 0,
+    invalidated: null,
+  };
+  if (!enabled)
+    return {
+      stats,
+      plan: (items) =>
+        new Map(items.map((item) => [item.id, { cached: null, spot: false }])),
+      store() {},
+      mismatch() {},
+      get invalid() {
+        return false;
+      },
+    };
+
+  const dir = path.join(root, check);
+  const files = [import.meta.url, ...sources].map((source) =>
+    String(source).startsWith("file:") ? fileURLToPath(source) : source,
+  );
+  const base = {
+    format: CACHE_FORMAT,
+    check,
+    baseline: ctx.baselineHash,
+    playwright: packageVersion("playwright"),
+    playwrightCore: packageVersion("playwright-core"),
+    chromium: browser.version,
+    visualConfig: (() => {
+      try {
+        return sha256(fs.readFileSync(visualConfigFile));
+      } catch {
+        return null; // no config: the defaults in visual.mjs, whose source is part of the key
+      }
+    })(),
+    sources: files.map((file) => [path.basename(file), sourceHash(file)]),
+    platform: `${process.platform}-${process.arch}-${os.release()}`,
+    responses: responseStoreHash(ctx.cacheDir),
+    extra,
+  };
+  const fileOf = (item) =>
+    path.join(dir, `${sha256(JSON.stringify({ ...base, item }))}.bin`);
+  const entryFiles = new Map();
+  let invalid = false;
+
+  return {
+    stats,
+    get invalid() {
+      return invalid;
+    },
+
+    /** Look every item up once, and pick the hits to capture fresh anyway. */
+    plan(items) {
+      const plan = new Map();
+      const hits = [];
+      for (const item of items) {
+        const file = fileOf(item);
+        entryFiles.set(item.id, file);
+        let cached = null;
+        if (mode === "use") {
+          try {
+            cached = fs.readFileSync(file);
+          } catch {
+            // a miss, or dropped meanwhile by another run
+          }
+        }
+        plan.set(item.id, { cached, spot: false });
+        if (cached) hits.push(item.id);
+      }
+      // Guard b: some hits are captured fresh and must come out the same, byte for byte.
+      const spots = Math.min(ctx.captureSpotChecks ?? SPOT_CHECKS, hits.length);
+      for (let n = 0; n < spots; n += 1) {
+        const at = n + Math.floor(Math.random() * (hits.length - n));
+        [hits[n], hits[at]] = [hits[at], hits[n]];
+        plan.get(hits[n]).spot = true;
+      }
+      stats.spotChecked = spots;
+      stats.hits = hits.length - stats.spotChecked;
+      stats.misses = items.length - hits.length;
+      return plan;
+    },
+
+    /** Keep a fresh baseline capture for the next run. */
+    store(id, bytes) {
+      if (invalid) return;
+      const file = entryFiles.get(id);
+      if (!file) return;
+      try {
+        fs.mkdirSync(dir, { recursive: true });
+        const temp = `${file}.${process.pid}.${randomBytes(4).toString("hex")}.tmp`;
+        fs.writeFileSync(temp, bytes);
+        fs.renameSync(temp, file);
+        stats.stored += 1;
+      } catch {
+        // a cache that cannot be written is a slower run, not a failure
+      }
+    },
+
+    /** A fresh capture is not the cached one: nothing in the cache can be trusted. */
+    mismatch(id, why) {
+      if (invalid) return;
+      invalid = true;
+      stats.invalidated = `${why} (${id})`;
+      try {
+        dropDirectory(root);
+      } catch {
+        // dropped by someone else, or not removable: the run still redoes everything without it
+      }
+    },
+  };
+}
+
+/**
+ * A value measured on the baseline (JSON), for a check that keeps it in the cache: from the cache, or measured by
+ * `take()` and kept. The spot-checked hits are measured and must come out the same. A failure of `take()` is thrown.
+ * → { value, cached }: cached is true when the value came from the cache unchecked (guard a then applies to it).
+ */
+export async function baselineValue(cache, plan, id, take) {
+  const entry = plan.get(id);
+  if (entry.cached && !entry.spot) {
+    try {
+      return { value: JSON.parse(entry.cached.toString("utf8")), cached: true };
+    } catch {
+      cache.mismatch(id, "an unreadable entry");
+    }
+  }
+  const value = await take();
+  const bytes = Buffer.from(JSON.stringify(value));
+  if (entry.cached && !bytes.equals(entry.cached))
+    cache.mismatch(id, "spot check: a fresh capture differs");
+  if (!entry.cached) cache.store(id, bytes);
+  return { value, cached: false };
+}
+
+/**
+ * Guard a, for baselineValue(): a comparison failed against the cached value of `id`, so the baseline is measured
+ * again by `take()`. The same bytes mean the comparison stands as it is; anything else (another value, or no value
+ * at all) drops the cache, and withCaptureCache() runs the whole check again without it.
+ */
+export async function recheck(cache, plan, id, take) {
+  const entry = plan.get(id);
+  let value;
+  try {
+    value = await take();
+  } catch (error) {
+    cache.mismatch(
+      id,
+      `a fresh capture after a failure failed: ${String(error?.message ?? error).split("\n")[0]}`,
+    );
+    return;
+  }
+  if (!Buffer.from(JSON.stringify(value)).equals(entry.cached))
+    cache.mismatch(id, "a fresh capture after a failure differs");
+}
+
+/**
+ * Run a browser check with its capture cache, and once more without reading it when a guard found a wrong entry.
+ * `runOnce(mode)` returns the check result with `extra.cache` set to the stats of the cache it used.
+ */
+export async function withCaptureCache(ctx, runOnce) {
+  const mode = ctx.captureCacheDir ? "use" : "off";
+  const first = await runOnce(mode);
+  if (!first.extra?.cache?.invalidated) return first;
+  const again = await runOnce("refill");
+  again.extra = {
+    ...again.extra,
+    cache: { ...again.extra.cache, droppedBy: first.extra.cache },
+  };
+  return again;
 }
 
 /** Run `worker` over `items`, at most `limit` at a time, keeping the order of the results. */
