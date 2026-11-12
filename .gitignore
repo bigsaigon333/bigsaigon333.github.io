@@ -5,8 +5,10 @@
 /dist/
 /.astro/
 
-# verification harness and progress log (local only)
+# verification harness output (local only)
 /.verify/
+
+# progress log (local only)
 /.progress/
 
 # agent scratch

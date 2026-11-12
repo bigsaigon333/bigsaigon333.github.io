@@ -1,16 +1,19 @@
 // node scripts/release.mjs --branch=release/<name> [--from=<ref>] [--message=<msg>] [--dry-run]
 //
-// Builds the branch that main receives. main gets the product (the site) only. The migration
-// tooling — docs/, scripts/ (this file included), the npm scripts that run something under
-// scripts/, the devDependencies only scripts/ uses, and their ignore entries — stays on the work
-// branch astro, which is never merged into main.
+// Builds the branch that main receives. main gets the product (the site) and the tooling that keeps
+// being used after this migration: the verification harness (scripts/verify/) and its npm scripts
+// and devDependencies, which CI runs before every deploy. The one-off tooling of the migration —
+// docs/ (plan, learning notes), the progress dashboard (scripts/progress/), this file and
+// scripts/notes-lint.mjs, the npm scripts that run them, and their ignore entries — stays on the
+// work branch astro, which is never merged into main.
 //
 // The release branch is one commit on top of origin/main. Its tree is the tree of --from
-// (default HEAD) with the tooling removed. It is built in a temporary git worktree under
+// (default HEAD) with the one-off tooling removed. It is built in a temporary git worktree under
 // os.tmpdir() and verified there; the first failure stops the run:
 //   (a) no excluded path, npm script, devDependency or ignore entry is left
-//   (b) no tracked file, package-lock.json included, mentions the tooling (MENTIONS)
-//   (c) npm ci, lint, typecheck, check, build and prettier --check pass in the release tree
+//   (b) no tracked file, package-lock.json included, mentions the one-off tooling (MENTIONS)
+//   (c) npm ci, lint, typecheck, check, build, prettier --check, verify:setup and verify pass in
+//       the release tree (verify with VERIFY_REPORTER=off: the harness must work on its own)
 //   (d) the release tree's dist/ is byte-identical to a build of --from, made with the same
 //       commands in a second temporary checkout of --from (diff -r)
 // Temporary worktrees are always removed. The branch is kept only when every step passed and
@@ -32,69 +35,61 @@ import { isDeepStrictEqual } from "node:util";
 const DEFAULT_MESSAGE = "feat: 블로그를 Astro 로 옮긴다";
 const TRAILER = "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>";
 
-// Removed from the release tree.
-const EXCLUDED_DIRS = ["docs", "scripts"];
+// The one-off tooling: removed from the release tree (directories and files).
+const EXCLUDED_PATHS = [
+  "docs",
+  "scripts/progress",
+  "scripts/release.mjs",
+  "scripts/notes-lint.mjs",
+];
 // No tracked file of the release may live under these (the tooling's output and agent scratch too).
+// .verify/ is the harness's local output: the harness ships, its output never does.
 const EXCLUDED_PREFIXES = [
   "docs/",
-  "scripts/",
+  "scripts/progress/",
+  "scripts/release.mjs",
+  "scripts/notes-lint.mjs",
   ".verify/",
   ".progress/",
   ".superpowers/",
   ".claude/",
 ];
-// devDependencies that only scripts/ imports. Nothing outside scripts/ uses them.
-const TOOLING_DEV_DEPENDENCIES = [
-  "cheerio",
-  "pixelmatch",
-  "playwright",
-  "pngjs",
-];
-// The ignore entries that exist for the tooling. A comment goes with them when its block empties.
+// devDependencies that only the one-off tooling imports. None today: the dashboard, this file and
+// notes-lint use Node built-ins only, and the harness's packages ship with the harness.
+const TOOLING_DEV_DEPENDENCIES = [];
+// The ignore entries that exist for the one-off tooling. A comment goes with them when its block
+// empties.
 const IGNORE_ENTRIES = {
-  ".gitignore": [
-    "/.verify/",
-    "/.progress/",
-    "/.superpowers/",
-    "/.claude/worktrees/",
-  ],
-  ".prettierignore": [
-    ".verify",
-    ".progress",
-    ".claude",
-    "docs/astro-notes/_refs",
-  ],
+  ".gitignore": ["/.progress/", "/.superpowers/", "/.claude/worktrees/"],
+  ".prettierignore": [".progress", ".claude", "docs/astro-notes/_refs"],
 };
-const OXLINT_IGNORE_PATTERNS = ["/.verify", "/.progress", "/.claude", "/docs"];
+const OXLINT_IGNORE_PATTERNS = ["/.progress", "/.claude", "/docs"];
 
 // A repository path, not a URL segment: "scripts/x", "./scripts/x", "../../docs/x", "`docs/x`"
 // match; "react-scripts/lib" and "https://developer.mozilla.org/en-US/docs/Web" do not.
 const PATH_START = String.raw`(?<=^|[^\w/.-]|\.\/)`;
-// An npm script runs the tooling when its command names a path under scripts/.
-const RUNS_TOOLING = new RegExp(`${PATH_START}scripts/`);
+// An npm script runs the one-off tooling when its command names one of its paths.
+const ONE_OFF_PATH = String.raw`scripts/(?:progress/|release\.mjs|notes-lint\.mjs)`;
+const RUNS_TOOLING = new RegExp(`${PATH_START}${ONE_OFF_PATH}`);
 
-// Identifiers that mean "this file knows about the tooling". Each is narrowed so that product text
-// (posts, comments, package-lock.json) does not match it by accident:
-//   scripts/, docs/    as a repository path (PATH_START), not inside a URL or a package path
-//   .verify, .progress as a dot-name ("/.verify/", "`.progress`"), not a member like "jwt.verify("
-//   verify:, progress: as an npm script name ("verify:setup"), not "cancel-in-progress: true"
-//   package names      as whole words, so "cheeriojs" (a GitHub org in a funding URL) does not match
+// Identifiers that mean "this file knows about the one-off tooling". Each is narrowed so that
+// product text (posts, comments, package-lock.json) does not match it by accident:
+//   paths              as a repository path (PATH_START), not inside a URL or a package path
+//   .progress          as a dot-name ("/.progress/", "`.progress`"), not a member like "x.progress"
+//   progress:          as an npm script name ("progress:watch"), not "cancel-in-progress: true"
+//   PROGRESS_          the dashboard's environment variables
 //   .claude            any dot-name use, which covers ".claude/worktrees"
 const MENTIONS = [
-  ["scripts/", new RegExp(`${PATH_START}scripts/`)],
+  ["one-off script path", new RegExp(`${PATH_START}${ONE_OFF_PATH}`)],
   ["docs/", new RegExp(`${PATH_START}docs/`)],
   ["astro-notes", /astro-notes/i],
   ["notes-lint", /notes-lint/i],
-  [".verify", /(?<![\w$])\.verify(?![\w-])/],
+  ["release.mjs", /release\.mjs/],
   [".progress", /(?<![\w$])\.progress(?![\w-])/],
-  ["verify:<name>", /(?<![\w-])verify:\w/],
   ["progress:<name>", /(?<![\w-])progress:\w/],
-  ["npm run verify|progress", /\bnpm run (?:-s )?(?:verify|progress)\b/],
-  ["selftest", /selftest/i],
-  ["playwright", /\bplaywright\b/i],
-  ["pixelmatch", /\bpixelmatch\b/i],
-  ["pngjs", /\bpngjs\b/i],
-  ["cheerio", /\bcheerio\b/i],
+  ["npm run progress", /\bnpm run (?:-s )?progress\b/],
+  ["PROGRESS_<name>", /\bPROGRESS_[A-Z]/],
+  ["dashboard", /dashboard|대시보드/i],
   ["superpowers", /superpowers/i],
   [".claude", /(?<![\w$])\.claude(?![\w-])/],
 ];
@@ -201,6 +196,8 @@ let logDir;
 
 // Runs a product command with its output in a log file. HUSKY=0: `npm ci` runs the prepare script,
 // and husky would otherwise set core.hooksPath in the repository's shared config.
+// VERIFY_REPORTER=off: the release tree's verify runs must not use a local reporter of the main
+// checkout; CI has none either.
 function run(cwd, label, command, args, logName) {
   const log = path.join(logDir, `${logName}.log`);
   const fd = fs.openSync(log, "w");
@@ -210,6 +207,7 @@ function run(cwd, label, command, args, logName) {
     env: {
       ...cleanEnv,
       HUSKY: "0",
+      VERIFY_REPORTER: "off",
       ASTRO_TELEMETRY_DISABLED: "1",
       npm_config_update_notifier: "false",
     },
@@ -275,8 +273,7 @@ function printJsonArray(indent, key, values, comma) {
   return `${indent}${key}[\n${items.map((item) => `${indent}  ${item}`).join(",\n")}\n${indent}]${comma}`;
 }
 
-// .oxlintrc.json without the tooling's ignore patterns and without browser globals, which exist
-// for the Playwright page.evaluate callbacks under scripts/. The result is checked against the
+// .oxlintrc.json without the one-off tooling's ignore patterns. The result is checked against the
 // same change made on the parsed object.
 function filterOxlintConfig(original) {
   const config = parseJsonc(original);
@@ -285,34 +282,12 @@ function filterOxlintConfig(original) {
     expected.ignorePatterns = config.ignorePatterns.filter(
       (pattern) => !OXLINT_IGNORE_PATTERNS.includes(pattern),
     );
-  let envs = 0;
-  for (const override of expected.overrides ?? []) {
-    if (override.env && "browser" in override.env) {
-      delete override.env.browser;
-      envs += 1;
-    }
-  }
 
-  let text = original.replace(
+  const text = original.replace(
     /^([ \t]*)("ignorePatterns":\s*)\[[^\]]*\](,?)/m,
     (_, indent, key, comma) =>
       printJsonArray(indent, key, expected.ignorePatterns, comma),
   );
-  text = text
-    .replace(/,\s*"browser":\s*(?:true|false)/g, "")
-    .replace(/"browser":\s*(?:true|false)\s*,\s*/g, "");
-  // Comment sentences that explain the tooling go with it.
-  text = text
-    .split("\n")
-    .flatMap((line) => {
-      const comment = /^(\s*\/\/ ?)(.*)$/.exec(line);
-      if (!comment || !/playwright/i.test(comment[2])) return [line];
-      const kept = comment[2]
-        .split(/(?<=\.)\s+/)
-        .filter((sentence) => !/playwright/i.test(sentence));
-      return kept.length ? [`${comment[1]}${kept.join(" ")}`] : [];
-    })
-    .join("\n");
 
   let parsed;
   try {
@@ -327,7 +302,7 @@ function filterOxlintConfig(original) {
   const patterns =
     (config.ignorePatterns ?? []).length -
     (expected.ignorePatterns ?? []).length;
-  return { text, patterns, envs };
+  return { text, patterns };
 }
 
 // ---------------------------------------------------------------- steps
@@ -476,10 +451,12 @@ function main() {
   });
 
   step("remove", () =>
-    EXCLUDED_DIRS.map((dir) => {
-      const count = lsFiles(releaseDir, dir).length;
-      fs.rmSync(path.join(releaseDir, dir), { recursive: true, force: true });
-      return `${dir}/ (${count} files)`;
+    EXCLUDED_PATHS.map((entry) => {
+      const count = lsFiles(releaseDir, entry).length;
+      if (count === 0)
+        fail(`${entry} is not in ${short(fromSha)}; is EXCLUDED_PATHS stale?`);
+      fs.rmSync(path.join(releaseDir, entry), { recursive: true, force: true });
+      return `${entry} (${count} files)`;
     }).join(", "),
   );
 
@@ -586,13 +563,11 @@ function main() {
     }
     const file = path.join(releaseDir, ".oxlintrc.json");
     if (fs.existsSync(file)) {
-      const { text, patterns, envs } = filterOxlintConfig(
+      const { text, patterns } = filterOxlintConfig(
         fs.readFileSync(file, "utf8"),
       );
       fs.writeFileSync(file, text);
-      parts.push(
-        `.oxlintrc.json −${patterns} ignorePatterns, −${envs} browser env`,
-      );
+      parts.push(`.oxlintrc.json −${patterns} ignorePatterns`);
     }
     git(releaseDir, "add", "-A");
     return parts.join(", ");
@@ -604,10 +579,10 @@ function main() {
       EXCLUDED_PREFIXES.some((prefix) => file.startsWith(prefix)),
     );
     if (tracked) fail(`${tracked} is in the release tree`);
-    const onDisk = EXCLUDED_DIRS.find((dir) =>
-      fs.existsSync(path.join(releaseDir, dir)),
+    const onDisk = EXCLUDED_PATHS.find((entry) =>
+      fs.existsSync(path.join(releaseDir, entry)),
     );
-    if (onDisk) fail(`${onDisk}/ exists in the release tree`);
+    if (onDisk) fail(`${onDisk} exists in the release tree`);
 
     const pkg = JSON.parse(
       fs.readFileSync(path.join(releaseDir, "package.json"), "utf8"),
@@ -647,10 +622,8 @@ function main() {
         OXLINT_IGNORE_PATTERNS.includes(value),
       );
       if (pattern) fail(`.oxlintrc.json still ignores ${pattern}`);
-      if ((config.overrides ?? []).some((o) => o.env && "browser" in o.env))
-        fail(".oxlintrc.json still sets browser globals");
     }
-    return `${files.length} tracked files, none under ${EXCLUDED_PREFIXES.join(" ")}; no tooling script, devDependency or ignore entry`;
+    return `${files.length} tracked files, none under ${EXCLUDED_PREFIXES.join(" ")}; no one-off script, devDependency or ignore entry`;
   });
 
   step("(b) mentions", () => {
@@ -687,6 +660,8 @@ function main() {
     ["(c) check", "npm", ["run", "check"], "check"],
     ["(c) build", "npm", ["run", "build"], "build"],
     ["(c) prettier", "npx", ["prettier", "--check", "."], "prettier"],
+    ["(c) verify:setup", "npm", ["run", "verify:setup"], "verify-setup"],
+    ["(c) verify", "npm", ["run", "verify"], "verify"],
   ];
   for (const [name, command, commandArgs, log] of product) {
     step(name, () => {
