@@ -10,6 +10,12 @@
 //   - header    article h2 text, time datetime + text; footer text.
 // Home ("/"): ordered list of (a href, h2 text, time datetime, time text) per article, and the footer text.
 // Any other route: normalized text of <body>.
+// Every route, the site header (the first <header> outside <main>). Its two icon links are empty elements with a
+// background image and its title is a link around a picture, so neither the text above nor a screenshot says
+// where they lead or what a screen reader announces:
+//   - site header links  every <a>: href, aria-label, target, rel, referrerpolicy, text
+//   - site header media  every <img> and <source>: src, srcset, alt, type
+//   - site header text   normalized text
 //
 // Only element names and attributes are used to find things — no class names, ids or wrapper divs — so the same
 // extraction works on the Next.js baseline and on an Astro build. One failed item per route.
@@ -41,6 +47,33 @@ const footerOf = ($) =>
     .filter((el) => $(el).closest("main").length === 0)
     .at(-1);
 
+const attrs = (el, names) =>
+  names.map((name) => `${name}: ${attr(el, name) ?? "(none)"}`).join(" | ");
+
+/** The site header: where its links lead, what its pictures are and what it says. */
+function headerSnapshot($) {
+  const header = $(
+    $("header")
+      .toArray()
+      .filter((el) => $(el).closest("main").length === 0)
+      .slice(0, 1),
+  );
+  return {
+    "site header links": header
+      .find("a")
+      .toArray()
+      .map(
+        (el) =>
+          `${attrs(el, ["href", "aria-label", "target", "rel", "referrerpolicy"])} | text: ${text(el)}`,
+      ),
+    "site header media": header
+      .find("img, source")
+      .toArray()
+      .map((el) => `${el.name} ${attrs(el, ["src", "srcset", "alt", "type"])}`),
+    "site header text": text(header[0]),
+  };
+}
+
 function homeSnapshot($) {
   const posts = $("article")
     .toArray()
@@ -57,7 +90,7 @@ function homeSnapshot($) {
         text(time[0]),
       ].join(" | ");
     });
-  return { posts, footer: text(footerOf($)) };
+  return { ...headerSnapshot($), posts, footer: text(footerOf($)) };
 }
 
 function postSnapshot($) {
@@ -89,6 +122,7 @@ function postSnapshot($) {
   });
 
   return {
+    ...headerSnapshot($),
     title: text(header.find("h2")[0]),
     time: `${time.attr("datetime") ?? "(no datetime)"} | ${text(time[0])}`,
     main: `${$("main").length} <main>`,
@@ -117,7 +151,10 @@ function postSnapshot($) {
   };
 }
 
-const bodySnapshot = ($) => ({ text: text($("body")[0]) });
+const bodySnapshot = ($) => ({
+  ...headerSnapshot($),
+  text: text($("body")[0]),
+});
 
 /** Element counts inside <main>, for the report only (helps to explain a visual difference). */
 function tagCounts($) {
@@ -273,6 +310,88 @@ export default {
           );
         },
       },
+
+      // The site header. None of these changes a pixel or a word of the page.
+      {
+        name: "헤더 메일 링크의 href 변경",
+        apply(dir) {
+          mutateFile(dir, "index.html", (html) =>
+            replaceInHeader(
+              html,
+              /href="mailto:[^"]*"/,
+              'href="mailto:someone@example.com"',
+            ),
+          );
+        },
+      },
+      {
+        name: "헤더 깃허브 링크의 href 변경",
+        apply(dir) {
+          mutateFile(dir, "index.html", (html) =>
+            replaceInHeader(
+              html,
+              /href="https:\/\/github\.com\/[^"]*"/,
+              'href="https://github.com/someone-else"',
+            ),
+          );
+        },
+      },
+      {
+        name: "헤더 아이콘 링크의 aria-label 삭제",
+        apply(dir) {
+          mutateFile(dir, "index.html", (html) =>
+            replaceInHeader(html, / aria-label="[^"]*"/, ""),
+          );
+        },
+      },
+      {
+        name: "헤더 아이콘 링크의 target 삭제",
+        apply(dir) {
+          mutateFile(dir, "index.html", (html) =>
+            replaceInHeader(html, / target="[^"]*"/, ""),
+          );
+        },
+      },
+      {
+        name: "헤더 프로필 이미지의 alt 변경",
+        apply(dir) {
+          mutateFirst(dir, postFiles(dir), (html) =>
+            replaceInHeader(html, /(<img[^>]*? alt=")[^"]*/, "$1사진"),
+          );
+        },
+      },
+      {
+        name: "헤더 프로필 source 의 srcset 변경",
+        apply(dir) {
+          mutateFile(dir, "index.html", (html) =>
+            replaceInHeader(
+              html,
+              /(<source[^>]*? srcset=")[^"]*/i,
+              "$1/profile.jpg",
+            ),
+          );
+        },
+      },
+      {
+        name: "헤더 사이트 제목 링크의 목적지 변경",
+        apply(dir) {
+          mutateFirst(dir, postFiles(dir), (html) =>
+            replaceInHeader(html, /<a href="\/"/, '<a href="/posts"'),
+          );
+        },
+      },
     ],
   },
 };
+
+/** Self-test: replace the first match of `pattern` inside the first <header>…</header> only. */
+function replaceInHeader(html, pattern, replacement) {
+  const start = html.indexOf("<header");
+  const end = html.indexOf("</header>", start);
+  if (start === -1 || end === -1) return html;
+  return (
+    html.slice(0, start) +
+    html.slice(start, end).replace(pattern, replacement) +
+    html.slice(end)
+  );
+}
