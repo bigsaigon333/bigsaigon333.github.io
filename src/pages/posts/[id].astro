@@ -3,6 +3,7 @@ import type { GetStaticPaths, InferGetStaticPropsType } from "astro";
 import { render } from "astro:content";
 
 import Comments from "../../components/Comments.astro";
+import CopyCode from "../../components/CopyCode.astro";
 import PostHeader from "../../components/PostHeader.astro";
 import PostTags from "../../components/PostTags.astro";
 import SeriesNav from "../../components/SeriesNav.astro";
@@ -53,6 +54,8 @@ const { Content, headings } = await render(post);
   <PostHeader title={displayTitle(post)} date={date} />
   <PostTags keywords={keywords} />
   <Toc headings={headings} />
+  {/* 코드 블록마다 복사 버튼(S6.3). 상자 없는 <copy-code hidden> 이다. <main> 뒤에 두면 utterances 의 자리(main 바로 뒤)가 바뀐다. */}
+  <CopyCode />
   <main class="prose">
     <Content />
   </main>

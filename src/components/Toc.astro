@@ -102,47 +102,99 @@ const count = entries.reduce(
 <div class="post-extra">
   <p class="reading-time">읽는 시간 약 {minutes}분</p>
   {count >= 2 && (
-    <nav class="toc" aria-label="목차">
-      <details>
-        <summary>목차</summary>
-        <ol>
-          {entries.map((entry) => (
-            <li>
-              <a href={`#${entry.slug}`}>
-                {entry.parts.map((part) =>
-                  "html" in part ? (
-                    <Fragment set:html={part.html} />
-                  ) : (
-                    part.text
-                  ),
+    <toc-spy>
+      <nav class="toc" aria-label="목차">
+        <details>
+          <summary>목차</summary>
+          <ol>
+            {entries.map((entry) => (
+              <li>
+                <a href={`#${entry.slug}`}>
+                  {entry.parts.map((part) =>
+                    "html" in part ? (
+                      <Fragment set:html={part.html} />
+                    ) : (
+                      part.text
+                    ),
+                  )}
+                </a>
+                {entry.children.length > 0 && (
+                  <ol>
+                    {entry.children.map((child) => (
+                      <li>
+                        <a href={`#${child.slug}`}>
+                          {child.parts.map((part) =>
+                            "html" in part ? (
+                              <Fragment set:html={part.html} />
+                            ) : (
+                              part.text
+                            ),
+                          )}
+                        </a>
+                      </li>
+                    ))}
+                  </ol>
                 )}
-              </a>
-              {entry.children.length > 0 && (
-                <ol>
-                  {entry.children.map((child) => (
-                    <li>
-                      <a href={`#${child.slug}`}>
-                        {child.parts.map((part) =>
-                          "html" in part ? (
-                            <Fragment set:html={part.html} />
-                          ) : (
-                            part.text
-                          ),
-                        )}
-                      </a>
-                    </li>
-                  ))}
-                </ol>
-              )}
-            </li>
-          ))}
-        </ol>
-      </details>
-    </nav>
+              </li>
+            ))}
+          </ol>
+        </details>
+      </nav>
+    </toc-spy>
   )}
 </div>
 
+<script>
+  // 스크롤 스파이(S6.3): 지금 읽는 제목의 목차 링크에 aria-current="true".
+  // "지금 읽는 제목"은 위가 화면 위쪽 30% 선보다 위에 있는 마지막 본문 제목이다. 첫 제목이 그 선 아래면 없다.
+  // IntersectionObserver 의 관찰 영역을 그 선까지로 줄여(rootMargin 아래 -70%) 제목이 선을 넘을 때만 다시 계산한다.
+  // 맨 위에서 DOM 을 찾지 않는다. connectedCallback 이 이 <toc-spy> 안의 링크에서 시작하므로, 나중에 View Transitions 가
+  // 목차를 바꿔 넣어도 새 목차로 다시 돈다. disconnectedCallback 이 관찰을 끊는다.
+  const LINE = 0.3;
+
+  class TocSpy extends HTMLElement {
+    #observer?: IntersectionObserver;
+
+    connectedCallback() {
+      const pairs: [Element, HTMLAnchorElement][] = [];
+      for (const link of this.querySelectorAll<HTMLAnchorElement>(
+        'a[href^="#"]',
+      )) {
+        const target = document.getElementById(
+          decodeURIComponent(link.hash.slice(1)),
+        );
+        if (target) pairs.push([target, link]);
+      }
+
+      const update = () => {
+        const line = window.innerHeight * LINE;
+        let current: HTMLAnchorElement | undefined;
+        for (const [heading, link] of pairs)
+          if (heading.getBoundingClientRect().top < line) current = link;
+        for (const [, link] of pairs)
+          if (link === current) link.setAttribute("aria-current", "true");
+          else link.removeAttribute("aria-current");
+      };
+
+      this.#observer = new IntersectionObserver(update, {
+        rootMargin: `0px 0px -${100 - LINE * 100}% 0px`,
+      });
+      for (const [heading] of pairs) this.#observer.observe(heading);
+    }
+
+    disconnectedCallback() {
+      this.#observer?.disconnect();
+    }
+  }
+
+  if (!customElements.get("toc-spy")) customElements.define("toc-spy", TocSpy);
+</script>
+
 <style>
+  toc-spy {
+    display: block;
+  }
+
   .post-extra {
     width: 100%;
   }
@@ -176,6 +228,10 @@ const count = entries.reduce(
 
   .toc a {
     word-break: break-word;
+  }
+
+  .toc a[aria-current="true"] {
+    font-weight: 600;
   }
 
   .toc a:hover,
