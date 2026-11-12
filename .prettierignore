@@ -1,1 +1,9 @@
-.next
+dist
+.astro
+.verify
+.progress
+.claude
+package-lock.json
+public
+posts
+docs/astro-notes/_refs

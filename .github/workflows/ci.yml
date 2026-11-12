@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  ASTRO_TELEMETRY_DISABLED: 1
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: mise.toml
+          cache: npm
+      - run: npm ci
+      - run: npm run verify:setup
+      - run: npm run verify -- --static
+      - run: node scripts/notes-lint.mjs
+      - run: npx prettier --check .
