@@ -1,0 +1,51 @@
+---
+import { SITE } from "../lib/site";
+
+interface Props {
+  /** 홈에서만 메일·깃허브 아이콘 링크를 보여 준다. */
+  home?: boolean;
+}
+
+const { home = false } = Astro.props;
+---
+
+<header>
+  <h1 class="title">
+    <a class="title-link" href="/">
+      <div class="profile-wrapper">
+        <picture>
+          <source srcset="/profile.webp" type="image/webp" />
+          <img class="profile" src="/profile.jpg" alt="프로필" />
+        </picture>
+      </div>
+      <div>
+        <span>프론트엔드 개발자</span>
+        <br />
+        <span>김동희입니다</span>
+      </div>
+    </a>
+  </h1>
+
+  {home && (
+    <ul class="link-list">
+      <li>
+        <a
+          class="email-link"
+          href={`mailto:${SITE.email}`}
+          aria-label="김동희에게 메일 보내기"
+          referrerpolicy="no-referrer"
+          target="_blank"
+        />
+      </li>
+      <li>
+        <a
+          class="github-link"
+          href={SITE.github}
+          aria-label="김동희 깃허브"
+          referrerpolicy="no-referrer"
+          target="_blank"
+        />
+      </li>
+    </ul>
+  )}
+</header>

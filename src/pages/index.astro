@@ -1,6 +1,7 @@
 ---
+import PostHeader from "../components/PostHeader.astro";
 import BaseLayout from "../layouts/BaseLayout.astro";
-import { formatDate, getPublishedPosts, postPath } from "../lib/posts";
+import { getPublishedPosts, postPath } from "../lib/posts";
 import { SITE } from "../lib/site";
 
 const posts = await getPublishedPosts();
@@ -18,12 +19,7 @@ const posts = await getPublishedPosts();
 >
   <section>
     {posts.map(({ id, data: { title, date } }) => (
-      <article>
-        <a href={postPath(id)}>
-          <h2>{title}</h2>
-        </a>
-        <time datetime={date.toISOString()}>{formatDate(date)}</time>
-      </article>
+      <PostHeader title={title} date={date} href={postPath(id)} />
     ))}
   </section>
 </BaseLayout>

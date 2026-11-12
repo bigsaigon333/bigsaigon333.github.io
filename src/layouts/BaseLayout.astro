@@ -1,14 +1,17 @@
 ---
 import Analytics from "../components/Analytics.astro";
+import Footer from "../components/Footer.astro";
 import HeadAssets from "../components/HeadAssets.astro";
+import Header from "../components/Header.astro";
 import Seo, { type Props as SeoProps } from "../components/Seo.astro";
+import { SITE } from "../lib/site";
 
 interface Props {
   seo: SeoProps;
   home?: boolean;
 }
 
-const { seo } = Astro.props;
+const { seo, home = false } = Astro.props;
 ---
 
 <!doctype html>
@@ -17,11 +20,19 @@ const { seo } = Astro.props;
     <meta charset="utf-8" />
     <meta name="viewport" content="initial-scale=1.0, width=device-width" />
     <Seo {...seo} />
+    <link rel="icon" href="/favicon.ico" />
     <HeadAssets />
+    <meta
+      name="google-site-verification"
+      content={SITE.googleSiteVerification}
+    />
     <Analytics />
   </head>
   <body>
-    <slot />
-    <footer>Copyright&copy; 2022 All right reserved</footer>
+    <div class="layout">
+      <Header home={home} />
+      <slot />
+      <Footer />
+    </div>
   </body>
 </html>

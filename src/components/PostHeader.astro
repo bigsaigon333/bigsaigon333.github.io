@@ -1,15 +1,24 @@
 ---
 import { formatDate } from "../lib/posts";
 
+// 글의 제목과 날짜. 글 페이지의 머리와 홈 목록의 항목이 같은 모양이라 함께 쓴다.
 interface Props {
   title: string;
   date: Date;
+  /** 주면 제목이 이 주소로 가는 링크가 된다(홈 목록). */
+  href?: string;
 }
 
-const { title, date } = Astro.props;
+const { title, date, href } = Astro.props;
 ---
 
 <article>
-  <h2>{title}</h2>
+  {href ? (
+    <a href={href}>
+      <h2>{title}</h2>
+    </a>
+  ) : (
+    <h2>{title}</h2>
+  )}
   <time datetime={date.toISOString()}>{formatDate(date)}</time>
 </article>

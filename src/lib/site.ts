@@ -21,6 +21,8 @@ export const SITE = {
   author: "김동희",
   keywords,
   ogImage: `${url}/main-og-image.jpg`,
+  email: "likepepperint@gmail.com",
+  github: "https://github.com/bigsaigon333",
   gaId: "G-Y270VJN1Y2",
   googleSiteVerification: "EgEIEyHCMFeuXMkD5WkIL8nUqAu88egS-aNgSua3tjI",
 } as const;

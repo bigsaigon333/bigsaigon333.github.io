@@ -1,5 +1,7 @@
 ---
-// 스텁: <title> 만 낸다. S1.2 에서 description, canonical, og:*, twitter:* 를 채운다.
+import { SITE } from "../lib/site";
+
+// 페이지마다 달라지는 값만 받는다. 작성자·og:image·twitter:card 는 사이트 전체가 같아서 SITE 에서 읽는다.
 export interface Props {
   title: string;
   description: string;
@@ -8,7 +10,21 @@ export interface Props {
   keywords: string[];
 }
 
-const { title } = Astro.props;
+const { title, description, url, type, keywords } = Astro.props;
 ---
 
 <title>{title}</title>
+<meta name="description" content={description} />
+<meta name="author" content={SITE.author} />
+<meta name="keywords" content={keywords.join(", ")} />
+<link rel="canonical" href={url} />
+
+<meta property="og:title" content={title} />
+<meta property="og:description" content={description} />
+<meta property="og:url" content={url} />
+<meta property="og:type" content={type} />
+<meta property="og:image" content={SITE.ogImage} />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content={title} />
+<meta name="twitter:description" content={description} />
+<meta name="twitter:image" content={SITE.ogImage} />
