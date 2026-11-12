@@ -53,6 +53,15 @@
       ]
     },
     {
+      "id": "RC",
+      "part": "Part 1 — 1:1 이전",
+      "title": "리뷰 코멘트 반영",
+      "stages": [
+        { "id": "U1", "title": "TypeScript 7·lint", "agent": "U1" },
+        { "id": "U2", "title": "SEO 메타 태그", "agent": "U2" }
+      ]
+    },
+    {
       "id": "W4",
       "part": "Part 1 — 1:1 이전",
       "title": "운영 전환",
