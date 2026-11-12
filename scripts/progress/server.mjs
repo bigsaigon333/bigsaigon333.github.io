@@ -9,12 +9,18 @@
 //   GET /report/<p>    files under <main root>/.verify/report/
 //   GET /notes/<p>     files under <main root>/docs/astro-notes/ (as text/plain)
 //
+// On start it makes <main root>/.verify/reporter.mjs re-export ./verify-reporter.mjs: the verification harness hands
+// the summary of every run to that file, and verify-reporter.mjs turns it into a `verify` event. A reporter.mjs that
+// is not such a re-export is left alone (with a warning). To file a run as the integration result:
+//   PROGRESS_SCOPE=integration npm run verify
+//
 // Env: PROGRESS_PORT (default 4400), PROGRESS_DIR (see emit.mjs),
-//      PROGRESS_REPORT_DIR / PROGRESS_NOTES_DIR (override the two static roots; used by tests).
+//      PROGRESS_REPORT_DIR / PROGRESS_NOTES_DIR (override the two static roots; used by tests),
+//      PROGRESS_REPORTER_FILE (overrides <main root>/.verify/reporter.mjs; used by tests).
 import fs from "node:fs";
 import http from "node:http";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { eventsFile, mainRoot } from "./emit.mjs";
 import { PLAN_FILE, readState } from "./state.mjs";
 
@@ -30,6 +36,16 @@ const NOTES_DIR = path.resolve(
     path.join(mainRoot(), "docs", "astro-notes"),
 );
 const NOTES_PREFIX = "docs/astro-notes/";
+const REPORTER_FILE = path.resolve(
+  process.env.PROGRESS_REPORTER_FILE ||
+    path.join(mainRoot(), ".verify", "reporter.mjs"),
+);
+const REPORTER_SOURCE = `export { default } from ${JSON.stringify(
+  pathToFileURL(path.join(HERE, "verify-reporter.mjs")).href,
+)};\n`;
+/** What installReporter() writes, from this checkout or another one. */
+const OUR_REPORTER =
+  /^export \{ default \} from "file:\/\/[^"\n]*\/scripts\/progress\/verify-reporter\.mjs";\n?$/;
 
 const POLL_MS = 500;
 const HEARTBEAT_MS = 15_000;
@@ -107,6 +123,34 @@ function serveFile(res, resolved, contentType) {
     if (err) return send(res, 404, "not found\n");
     send(res, 200, data, { "Content-Type": contentType });
   });
+}
+
+/**
+ * Point the harness's reporter at ./verify-reporter.mjs. Writes REPORTER_FILE only when it is missing or is a
+ * re-export this function wrote (possibly from another checkout). Never throws: the dashboard still shows the rest.
+ */
+function installReporter() {
+  try {
+    let current = null;
+    try {
+      current = fs.readFileSync(REPORTER_FILE, "utf8");
+    } catch (err) {
+      if (err?.code !== "ENOENT") throw err;
+    }
+    if (current === REPORTER_SOURCE) return;
+    if (current !== null && !OUR_REPORTER.test(current)) {
+      process.stderr.write(
+        `[progress] ${REPORTER_FILE} was not written by the dashboard and is left as it is: verify results reach the dashboard only if it passes them on\n`,
+      );
+      return;
+    }
+    fs.mkdirSync(path.dirname(REPORTER_FILE), { recursive: true });
+    fs.writeFileSync(REPORTER_FILE, REPORTER_SOURCE);
+  } catch (err) {
+    process.stderr.write(
+      `[progress] could not write ${REPORTER_FILE}: ${err?.message ?? err}\n`,
+    );
+  }
 }
 
 /** Accept `/notes/01-x.md` as well as `/notes/docs/astro-notes/01-x.md`. */
@@ -239,6 +283,8 @@ server.on("error", (err) => {
   process.stderr.write(`[progress] server failed: ${reason}\n`);
   process.exit(1);
 });
+
+installReporter();
 
 server.listen(PORT, HOST, () => {
   process.stdout.write(
