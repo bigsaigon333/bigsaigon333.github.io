@@ -20,7 +20,7 @@
         "/posts/regular-expression-1",
         "/posts/ts-ambient-type-declaration"
       ],
-      "reason": "모든 라우트의 사이트 헤더 프로필이 <Picture /> 로 바뀌어 source·srcset 이 달라졌다(/profile.webp 한 장 → /_astro/ 의 너비 3개). 본문의 이미지는 week1·week2·week3·react-scripts 에서 원격 주소가 /_astro/ 의 webp 로 바뀌었다(alt·크기는 같다)"
+      "reason": "모든 라우트의 사이트 헤더 프로필이 <Picture /> 로 바뀌어 source·srcset 이 달라졌다(/profile.webp 한 장 → /_astro/ 의 너비 3개). 본문 이미지 11장(week1·week2·week3·react-scripts)은 원격 user-images.githubusercontent.com 주소가 src/assets/posts/ 에서 만든 /_astro/*.webp 로 바뀌었다. ![]() 4장과 HTML <img width> 7장(html-images 플러그인) 모두 alt·width 는 그대로이고, <img width> 에는 height 와 1x·2x srcset 이 붙는다"
     },
     {
       "check": "visual",
@@ -41,7 +41,7 @@
         "/posts/ts-ambient-type-declaration"
       ],
       "mask": ["img"],
-      "reason": "이미지 픽셀은 다시 인코딩(avif·webp, 1x·2x)되어 달라진다. img 상자만 가리고 나머지(상자 위치·크기 포함)는 같아야 한다"
+      "reason": "이미지 픽셀은 webp 로 다시 인코딩되어(<img width> 는 1x·2x) 달라진다. img 상자만 가리고 나머지(상자 위치·크기 포함)는 같아야 한다"
     }
   ]
 }

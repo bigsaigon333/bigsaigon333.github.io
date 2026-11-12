@@ -15,7 +15,7 @@ date: "2022-05-15"
 
 CSS2 에서는 `:` 가 표준이었는데 CSS3부터 `::` 가 표준으로 변경되었습니다.
 
-![](./images/167833289-c20314dc-7e12-4682-9ddd-5d27dc2c6dde.png)
+![](../src/assets/posts/167833289-c20314dc-7e12-4682-9ddd-5d27dc2c6dde.png)
 
 웹 기술에서는 일반적으로 [하위 호환성](https://www.w3.org/People/Bos/DesignGuide/compatibility.html)을 중요시 여기기 때문에, 표준은 바뀌더라도 기존 문법은 그대로 지원한다고 이해하면 좋습니다.
 
@@ -85,17 +85,17 @@ box-shadow: 2px 2px 2px 1px rgba(0, 0, 0, 0.2);
 **spread-radius**: 양의 값이면 shadow가 팽창하여 더 커지고, 음의 값이면 축소한다.
 
 box-shadow: 10px 5px 5px red;
-<img width="335" alt="image" src="https://user-images.githubusercontent.com/31029000/168477185-b03d0855-ff81-4349-8346-a1e36c093734.png">
+<img width="335" alt="image" src="../src/assets/posts/168477185-b03d0855-ff81-4349-8346-a1e36c093734.png">
 
 box-shadow: 10px 5px 5px 10px red;
-<img width="370" alt="image" src="https://user-images.githubusercontent.com/31029000/168477198-a58c50d9-b7cb-4511-9db1-ec3d215a6e8f.png">
+<img width="370" alt="image" src="../src/assets/posts/168477198-a58c50d9-b7cb-4511-9db1-ec3d215a6e8f.png">
 
 box-shadow: 10px 5px 5px 20px red;
-<img width="353" alt="image" src="https://user-images.githubusercontent.com/31029000/168477214-c48a3a01-d268-40a9-9a89-80cc14a4123c.png">
+<img width="353" alt="image" src="../src/assets/posts/168477214-c48a3a01-d268-40a9-9a89-80cc14a4123c.png">
 
 box-shadow: 10px 5px 5px -5px red;
 
-<img width="334" alt="image" src="https://user-images.githubusercontent.com/31029000/168477282-f12c744d-d233-4632-b9cb-3aca1d455724.png">
+<img width="334" alt="image" src="../src/assets/posts/168477282-f12c744d-d233-4632-b9cb-3aca1d455724.png">
 
 ### Reference
 
@@ -114,7 +114,7 @@ box-shadow: 10px 5px 5px -5px red;
 
 ## inline vs inline-block
 
-![image](./images/169675449-547eb42b-59be-4c6e-a026-ddf60021a76c.png)
+![image](../src/assets/posts/169675449-547eb42b-59be-4c6e-a026-ddf60021a76c.png)
 
 ### display: inline
 
@@ -137,13 +137,13 @@ box-shadow: 10px 5px 5px -5px red;
 
 - aspect-ratio를 유지한 채 요소의 컨텐트 박스를 벗어나지 않을 만큼만 커진다
 
-<img width="510" alt="image" src="https://user-images.githubusercontent.com/31029000/168478464-a97e3432-a879-44b0-89ff-91119e55d2d2.png">
+<img width="510" alt="image" src="../src/assets/posts/168478464-a97e3432-a879-44b0-89ff-91119e55d2d2.png">
 
 ### cover
 
 - aspect-ratio를 유지한 채 요소의 컨텐트 박스 전체를 채울때까지 커진다
 
-<img width="511" alt="image" src="https://user-images.githubusercontent.com/31029000/168478485-73a77ec8-d3cb-4a70-aa3e-84b8f1c69dd9.png">
+<img width="511" alt="image" src="../src/assets/posts/168478485-73a77ec8-d3cb-4a70-aa3e-84b8f1c69dd9.png">
 
 object-fit 속성의 contain, cover 값도 동일하다
 

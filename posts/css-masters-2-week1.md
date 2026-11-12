@@ -129,7 +129,7 @@ type 속성이 지정되지 않은 경우, 웹 브라우저는 이미지를 fetc
 
 전체 선택자를 사용하면 html 요소를 포함해 head 요소, title 요소, style 요소 등 문서 내 모든 단일 요소가 선택됩니다. (가상 요소는 선택되지 않습니다)
 
-<img width="600" alt="전체 선택자" src="https://user-images.githubusercontent.com/31029000/167280380-73136603-b5c8-43ef-abee-4959123e903d.png" >
+<img width="600" alt="전체 선택자" src="../src/assets/posts/167280380-73136603-b5c8-43ef-abee-4959123e903d.png" >
 
 ### 참고
 

@@ -26,7 +26,7 @@ import "react-app-polyfill";
 
 #### `Promise.any`의 지원범위
 
-![image](./images/170509567-cd21e2e3-d0f1-4efe-b20f-a1d3ca5de839.png)
+![image](../src/assets/posts/170509567-cd21e2e3-d0f1-4efe-b20f-a1d3ca5de839.png)
 
 ## II. 해결책을 찾기 위한 접근방법
 
