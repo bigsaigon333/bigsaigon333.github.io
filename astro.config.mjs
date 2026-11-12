@@ -1,5 +1,6 @@
 import { defineConfig } from "astro/config";
 
+import fonts from "./config/fonts.mjs";
 import markdown from "./config/markdown.mjs";
 
 export default defineConfig({
@@ -7,6 +8,7 @@ export default defineConfig({
   trailingSlash: "never",
   build: { format: "file" },
   markdown,
+  fonts,
   vite: {
     build: {
       // Vite 8 의 기본 대상(safari16.4 이상)에서는 @media (max-width: 600px) 가 (width<=600px) 로 바뀌어 나오고,

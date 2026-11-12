@@ -130,12 +130,6 @@ a {
 
 code[class*="language-"],
 pre[class*="language-"] {
-  font-family:
-    "Source Code Pro",
-    Consolas,
-    Menlo,
-    Monaco,
-    Courier New,
-    monospace;
+  font-family: var(--font-source-code-pro);
   font-size: 0.825rem;
 }
