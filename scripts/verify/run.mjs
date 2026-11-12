@@ -99,7 +99,9 @@ const results = [];
 const builds = !args.candidate && !args.candidateUrl && !args.noBuild;
 
 if (builds) {
-  if (!args.noCheck) results.push(step("check", ["npx", "astro", "check"]));
+  // `npm run check`, not `npx astro check`: Astro 7.4 refuses `astro check` when the project's TypeScript is 7.
+  // The script runs the same checker from tools/astro-check, which carries its own TypeScript 6.
+  if (!args.noCheck) results.push(step("check", ["npm", "run", "-s", "check"]));
   // --force: render every page from its source. A plain build takes the HTML of unchanged posts from
   // node_modules/.astro/data-store.json, and that store does not notice a changed renderer package, so the
   // gate could pass on pages the deploy workflow (a clean checkout, nothing stored) would render differently.

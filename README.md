@@ -42,7 +42,9 @@ keywords: 키워드1, 키워드2 (선택, 쉼표로 구분)
 본문
 ```
 
-초안은 `posts/draft/`에 둔다. 이 폴더의 글은 게시되지 않는다.
+초안은 `posts/draft/`에 두거나, `posts/`에 둔 채 파일 이름을 `draft:`로 시작하게 하거나 frontmatter에 `draft: true`를 적는다. 초안은 빌드에 나가지 않는다(글 페이지, 홈 목록, sitemap 모두).
+
+frontmatter에는 `title`, `date`, `description`, `keywords`, `summary`, `draft`만 쓸 수 있다. 그 밖의 키(오타 포함)가 있으면 빌드가 실패한다.
 
 ## 검증
 
@@ -50,8 +52,8 @@ keywords: 키워드1, 키워드2 (선택, 쉼표로 구분)
 
 ```sh
 npm run verify:setup      # node_modules 와 기준선(.verify/baseline) 준비
-npm run verify            # astro check → astro build → 기준선과 비교하는 모든 검사
-npm run verify:selftest   # 기준선을 일부러 망가뜨려 검사기가 차이를 잡는지 확인
+npm run verify            # npm run check → astro build --force → 기준선과 비교하는 검사와 새 빌드에만 거는 검사
+npm run verify:selftest   # 기준선이나 빌드를 일부러 망가뜨려 검사기가 차이를 잡는지 확인
 ```
 
 자세한 내용은 [scripts/verify/README.md](scripts/verify/README.md)에 있다.

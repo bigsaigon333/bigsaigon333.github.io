@@ -179,19 +179,19 @@
 
 검사는 `checks/<이름>.mjs`가 `{ name, kind: 'static' | 'browser', run(ctx) }`를 export하는 모듈이고, `run.mjs`가 폴더를 훑어 자동으로 싣는다. 검사를 병렬로 만들어도 공유 파일을 건드리지 않는다.
 
-| 파일        | 역할                                                                                                                                                                                                                                    |
-| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `serve.mjs` | GitHub Pages의 경로 해석을 흉내 내는 의존성 없는 정적 서버: `/p` → `p` → `p.html` → `p/index.html` → `404.html`(404). 기준선과 `dist/` 양쪽에 같은 서버를 쓴다                                                                          |
-| `routes`    | HTML 라우트 집합 일치(`/`, `/posts/<id>` 12개, `/404`). `public` 자산은 sha256 일치                                                                                                                                                     |
-| `head`      | 라우트별 `html[lang]`, `<title>`(바이트 일치), description/author/keywords(목록 정규화)/viewport/site-verification, canonical, `og:*`, `twitter:*`, icon                                                                                |
-| `content`   | 본문 루트(`main`)의 정규화 텍스트 완전 일치 + 구조 일치: 제목(레벨+텍스트), `pre` 텍스트, 링크 `href`, 이미지 `src/alt/width`, 표 셀, `details`, 체크박스, 취소선, 각주, 수식의 TeX 원문. 홈은 (href, 제목, `datetime`, 날짜) 순서 목록 |
-| `links`     | `dist`의 모든 내부 `href/src`가 실제 파일로 해석됨. `/_next/` 참조 0건                                                                                                                                                                  |
-| `embeds`    | GA ID가 모든 페이지에 있음. 글 페이지에만 utterances 스크립트가 올바른 속성으로 삽입됨(Playwright, 네트워크 차단)                                                                                                                       |
-| `sitemap`   | `/sitemap.xml`의 `<loc>` 집합이 기준선과 일치, `robots.txt` 동일                                                                                                                                                                        |
-| `budget`    | 페이지별 JS·CSS 개수와 바이트를 기준선과 나란히 출력. 1차 JS 예산 초과 시 FAIL                                                                                                                                                          |
-| `visual`    | Playwright로 13개 라우트 × 3개 뷰포트(375, 768, 1280) 전체 페이지 스크린샷 비교. 페이지 높이 일치 + 픽셀 차이 비율이 임계값 이하. `--selector=`로 요소 단위 비교도 지원. 실패 시 차이 이미지와 영역 좌표를 리포트에 저장                |
-| `run.mjs`   | `astro check` → `astro build` → 정적 검사 → 시각 검사. `--only=`, `--route=`, `--static` 지원. 결과를 `.progress/`에 자동 기록                                                                                                          |
-| `live.mjs`  | 배포 후 실제 URL 대상: 200, 리다이렉트 없음, `<title>` 일치, `head`·`content` 검사 재사용                                                                                                                                               |
+| 파일        | 역할                                                                                                                                                                                                                                     |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `serve.mjs` | GitHub Pages의 경로 해석을 흉내 내는 의존성 없는 정적 서버: `/p` → `p` → `p.html` → `p/index.html` → `404.html`(404). 기준선과 `dist/` 양쪽에 같은 서버를 쓴다                                                                           |
+| `routes`    | HTML 라우트 집합 일치(`/`, `/posts/<id>` 12개, `/404`). `public` 자산은 sha256 일치                                                                                                                                                      |
+| `head`      | 라우트별 `html[lang]`, `<title>`(바이트 일치), description/author/keywords(목록 정규화)/viewport/site-verification, canonical, `og:*`, `twitter:*`, icon                                                                                 |
+| `content`   | 본문 루트(`main`)의 정규화 텍스트 완전 일치 + 구조 일치: 제목(레벨+텍스트), `pre` 텍스트, 링크 `href`, 이미지 `src/alt/width`, 표 셀, `details`, 체크박스, 취소선, 각주, 수식의 TeX 원문. 홈은 (href, 제목, `datetime`, 날짜) 순서 목록  |
+| `links`     | `dist`의 모든 내부 `href/src`가 실제 파일로 해석됨. `/_next/` 참조 0건                                                                                                                                                                   |
+| `embeds`    | GA ID가 모든 페이지에 있음. 글 페이지에만 utterances 스크립트가 올바른 속성으로 삽입됨(Playwright, 네트워크 차단)                                                                                                                        |
+| `sitemap`   | `/sitemap.xml`의 `<loc>` 집합이 기준선과 일치, `robots.txt` 동일                                                                                                                                                                         |
+| `budget`    | 페이지별 JS·CSS 개수와 바이트를 기준선과 나란히 출력. 1차 JS 예산 초과 시 FAIL                                                                                                                                                           |
+| `visual`    | Playwright로 13개 라우트 × 6개 뷰포트(375, 414, 600, 700, 768, 1280) 전체 페이지 스크린샷 비교. 페이지 높이 일치 + 색 허용 오차 0, 다른 픽셀 0개. `--selector=`로 요소 단위 비교도 지원. 실패 시 차이 이미지와 영역 좌표를 리포트에 저장 |
+| `run.mjs`   | `npm run check` → `astro build --force` → 정적 검사 → 시각 검사. `--only=`, `--route=`, `--static` 지원. 결과를 `.progress/`에 자동 기록                                                                                                 |
+| `live.mjs`  | 배포 후 실제 URL 대상: 200, 리다이렉트 없음, `<title>` 일치, `head`·`content` 검사 재사용                                                                                                                                                |
 
 시각 검사의 결정성:
 
@@ -301,7 +301,7 @@ S2.2는 기존과 같은 unified 계열(`@astrojs/markdown-remark` + remark-math
 | ---- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
 | S3.2 | ① `gh api -X PUT repos/bigsaigon333/bigsaigon333.github.io/pages -f build_type=workflow` ② PR 병합 ③ `gh run watch --exit-status` ④ `npm run verify:live` | 실제 URL 13개 + 자산 + sitemap이 200, 리다이렉트 없음, `<title>` 일치 |
 
-롤백: `gh api -X PUT …/pages -f build_type=legacy -f 'source[branch]=gh-pages' -f 'source[path]=/'` 후 `verify:live`로 기준선 복귀 확인. `github-pages` 환경의 배포 브랜치 제한으로 deploy가 막히면 환경 정책에 `main`을 추가한다.
+롤백: `gh api -X PUT …/pages -f build_type=legacy -f 'source[branch]=gh-pages' -f 'source[path]=/'` 후 기준선 복귀 확인: `npm run verify:live -- --base-url=<url> --only=status,head,content,sitemap`은 통과하고 `--only=migrated`는 실패해야 한다(예전 배포본은 `migrated` 검사를 통과할 수 없다). `github-pages` 환경의 배포 브랜치 제한으로 deploy가 막히면 환경 정책에 `main`을 추가한다.
 
 전환이 성공하면 결과만 짧게 알리고 Part 2로 이어 간다.
 
@@ -416,7 +416,7 @@ S7.2는 사이트의 모든 인라인 스크립트를 알아야 하므로 마지
 ## 검증 (끝에서 끝까지)
 
 - `npm run verify:selftest`: 검증 장치가 차이를 실제로 잡아내는지 확인.
-- `npm run verify`: `astro check` → `astro build` → 정적 검사 → 시각 검사. Part 1 완료 기준은 통합 브랜치에서 전체 PASS와 사유가 적힌 allowlist뿐이다.
+- `npm run verify`: `npm run check` → `astro build --force` → 정적 검사 → 시각 검사. Part 1 완료 기준은 통합 브랜치에서 전체 PASS와 사유가 적힌 allowlist뿐이다.
 - 웨이브마다: 에이전트 반환값의 게이트 요약을 통합 검증 결과와 대조한다. 어긋나면 통합 검증을 따른다.
 - PR의 CI: `astro check`, build, `verify --static`.
 - `npm run verify:live`: 배포 후 실제 URL에서 상태 코드, 리다이렉트, `<title>`, 메타, 본문 확인.

@@ -368,7 +368,7 @@ export async function openBrowser(ctx, { maxPages = MAX_PAGES } = {}) {
 
 /** Run `worker` over `items`, at most `limit` at a time, keeping the order of the results. */
 export async function mapLimit(items, limit, worker) {
-  const results = new Array(items.length);
+  const results = Array.from({ length: items.length });
   let next = 0;
   const lanes = Array.from(
     { length: Math.min(limit, items.length) },
