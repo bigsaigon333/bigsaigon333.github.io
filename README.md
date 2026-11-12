@@ -54,6 +54,26 @@ keywords: 키워드1, 키워드2
 
 초안을 만드는 방법은 셋이다. `posts/draft/`에 두거나, 파일 이름을 `draft:`로 시작하게 하거나, frontmatter에 `draft: true`를 적는다. 어느 쪽이든 발행되지 않는다(글 페이지, 홈 목록, sitemap 어디에도 없다).
 
+## 검증
+
+`scripts/verify/`는 빌드 결과(`dist/`)를 지금 배포된 사이트(`gh-pages` 브랜치)와 비교하고, 새 사이트에만 있는 요건(SEO 메타 태그, 초안 유출 없음 등)을 확인한다. 자세한 것은 `scripts/verify/README.md`에 있다.
+
+```sh
+npx playwright install chromium   # 처음 한 번
+npm run verify:setup              # 기준선(gh-pages)과 응답 캐시 준비
+npm run verify                    # check → build → 비교·기능·시각 검사
+npm run verify:selftest           # 검사기가 차이를 실제로 잡는지 확인
+npm run verify:live -- --base-url=https://bigsaigon333.github.io   # 배포 뒤 실제 주소 확인
+```
+
 ## 배포
 
-`main`에 push하면 GitHub Actions(`.github/workflows/deploy.yml`)가 `npm run check`와 `npm run build`를 돌리고 `dist/`를 GitHub Pages에 배포한다. Pull Request에서는 `.github/workflows/ci.yml`이 린트, 타입 검사(`typecheck`, `check`), 빌드, 포맷 검사(`prettier --check`)를 돌린다.
+배포 전 검사는 모두 GitHub Actions에서 돈다. 검사 목록은 `.github/workflows/checks.yml` 한 곳에 있고, Pull Request(`ci.yml`)와 배포(`deploy.yml`)가 이 파일을 함께 부른다.
+
+| 작업                      | 하는 일                                                    |
+| ------------------------- | ---------------------------------------------------------- |
+| `lint, typecheck, format` | `npm run lint`, `npm run typecheck`, `prettier --check`    |
+| `verify`                  | `npm run verify` (`check`, 빌드, 비교·기능·시각 검사 전부) |
+| `verify selftest`         | `npm run verify:selftest`                                  |
+
+`main`에 push하면 `deploy.yml`이 같은 검사를 다시 돌리고, `verify`가 검사한 `dist/`를 GitHub Pages에 배포한 뒤, 실제 주소에 `verify:live`를 돌린다. 검사가 하나라도 실패하면 배포하지 않는다.

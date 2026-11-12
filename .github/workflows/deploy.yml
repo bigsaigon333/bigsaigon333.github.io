@@ -18,28 +18,43 @@ env:
   ASTRO_TELEMETRY_DISABLED: 1
 
 jobs:
-  build:
+  # main 에 Pull Request 를 거치지 않고 들어온 커밋도 같은 검사를 통과해야 배포된다.
+  checks:
+    uses: ./.github/workflows/checks.yml
+    with:
+      pages-artifact: true
+
+  deploy:
+    needs: checks
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    outputs:
+      page_url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5
+
+  # 배포 뒤 실제 주소가 200 으로, 리다이렉트 없이, 검사한 것과 같은 내용으로 응답하는지 본다.
+  live:
+    needs: deploy
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      # 게시 워크플로에서는 패키지 매니저 캐시를 쓰지 않는다.
       - uses: actions/setup-node@v7
         with:
           node-version-file: mise.toml
           package-manager-cache: false
       - run: npm ci
-      - run: npm run check
-      - run: npm run build
-      - uses: actions/upload-pages-artifact@v5
-        with:
-          path: dist
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v5
+      - run: npm run verify:setup
+      # CDN 이 새 배포를 내보내기까지 잠깐 걸릴 수 있어 30초 간격으로 다섯 번까지 본다.
+      - env:
+          BASE_URL: ${{ needs.deploy.outputs.page_url }}
+        run: |
+          for attempt in 1 2 3 4 5; do
+            npm run verify:live -- --base-url="$BASE_URL" && exit 0
+            echo "attempt $attempt failed"
+            sleep 30
+          done
+          exit 1
