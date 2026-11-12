@@ -1,5 +1,4 @@
 // npm run verify:live -- --base-url=<url> [--only=status,migrated,head,content,sitemap] [--route=/posts/x]
-//                        [--stage=S3.2 --agent=…]
 // npm run verify:live -- --serve=<dir>      rehearsal: serve <dir> locally (GitHub Pages resolution) and verify that
 //
 // After a deploy: the real URLs answer like the baseline (.verify/baseline) and are the new build.
@@ -10,6 +9,7 @@
 //   head, content, sitemap   the same checks as `npm run verify`, reading the candidate over HTTP
 // Prints one line per check; details go to .verify/report/. Exit code 0 only if everything passed,
 // 1 when a check failed, 2 when the command line asks for something that does not exist.
+// A summary of the run goes to the reporter module, if there is one (VERIFY_REPORTER, see lib/runner.mjs report()).
 import fs from "node:fs";
 import path from "node:path";
 
@@ -18,11 +18,11 @@ import { baselineDir } from "./lib/paths.mjs";
 import { listRoutes } from "./lib/resolve.mjs";
 import {
   createContext,
-  emitVerify,
   exitWithUsage,
   formatResults,
   loadChecks,
   parseArgsOrExit,
+  report,
   runChecks,
   toMatrix,
   UsageError,
@@ -34,7 +34,7 @@ import { startServer } from "./serve.mjs";
 const REUSED = ["migrated", "head", "content", "sitemap"];
 const USAGE =
   "usage: npm run verify:live -- --base-url=<url> | --serve=<dir>\n" +
-  `                              [--only=status,${REUSED.join(",")}] [--route=<route,…>] [--stage=<id>] [--agent=<id>]`;
+  `                              [--only=status,${REUSED.join(",")}] [--route=<route,…>]`;
 
 const args = parseArgsOrExit("live", USAGE);
 const started = performance.now();
@@ -174,9 +174,8 @@ console.log(
   `${ok ? "ALL PASS" : "FAILED"}  ${results.filter((r) => r.ok).length}/${results.length} checks  ${(durationMs / 1000).toFixed(1)}s`,
 );
 
-await emitVerify({
-  scope: "live",
-  args,
+await report({
+  command: "live",
   results,
   matrix: toMatrix(ctx, results),
   durationMs,

@@ -25,8 +25,6 @@ export class UsageError extends Error {}
 const SHARED_FLAGS = {
   only: "list",
   route: "list",
-  stage: "value",
-  agent: "value",
 };
 
 /** Every flag each command understands. Anything else is a mistake, not something to ignore. */
@@ -39,7 +37,6 @@ export const FLAGS = {
     "no-check": "flag",
     candidate: "value",
     "candidate-url": "value",
-    scope: "value",
     selector: "value",
   },
   selftest: { ...SHARED_FLAGS, static: "flag", calibrate: "flag" },
@@ -144,20 +141,6 @@ export function validateRoutes(wanted, routes, side) {
  */
 export const readsBaseline = (check) =>
   check.scope !== "feature" && check.candidateOnly !== true;
-
-/** Where the dashboard files a run of `npm run verify`. "integration" is the view everybody reads: it is never a default. */
-export const SCOPES = ["local", "agent", "integration"];
-
-export function scopeOf(args, env = process.env) {
-  if (args.scope !== undefined) {
-    if (!SCOPES.includes(args.scope))
-      throw new UsageError(
-        `no such scope: ${args.scope}\navailable: ${SCOPES.join(", ")}`,
-      );
-    return args.scope;
-  }
-  return args.agent || env.PROGRESS_AGENT ? "agent" : "local";
-}
 
 /** Parse the command line of `command` or print what is wrong with it, followed by `usage`, and exit with 2. */
 export function parseArgsOrExit(command, usage) {
@@ -429,7 +412,11 @@ export function formatResults(results) {
   });
 }
 
-/** routes × checks grid for the progress dashboard. */
+/**
+ * The routes × checks grid of a run: { routes, checks, cells: { "<route>|<check>": "pass" | "fail" | "skip" } } over
+ * the selected routes. A check that reports `cells` fills its column itself; one whose failures name routes fails
+ * those and passes the rest; any other check gives every route its own result.
+ */
 export function toMatrix(ctx, results) {
   const checks = results.map((result) => result.check);
   const cells = {};
@@ -449,20 +436,39 @@ export function toMatrix(ctx, results) {
   return { routes: ctx.routes, checks, cells };
 }
 
-/** Record a verify event for the progress dashboard. Never throws. */
-export async function emitVerify({ scope, args, results, matrix, durationMs }) {
-  // The self-test runs these commands itself to test them; those runs are not news for the dashboard.
-  if (process.env.VERIFY_EMIT === "0") return;
+/** The reporter module a run hands its summary to, or null for none. See report(). */
+function reporterFile(env = process.env) {
+  const setting = env.VERIFY_REPORTER ?? "";
+  if (setting === "off") return null;
+  // Relative to the main checkout, so that a run in any worktree finds the same module.
+  if (setting !== "") return path.resolve(mainRoot, setting);
+  const local = path.join(mainRoot, ".verify", "reporter.mjs");
+  return fs.existsSync(local) ? local : null;
+}
+
+/**
+ * Hand a summary of the run to a reporter module, when there is one:
+ *   VERIFY_REPORTER=off      none
+ *   VERIFY_REPORTER=<path>   that module (absolute, or relative to the main checkout)
+ *   unset or empty           <main checkout>/.verify/reporter.mjs, when that file exists (nothing here creates it)
+ * The module's default export is awaited with { command, ok, durationMs, results, matrix }, plus feature: true for a
+ * run of `verify --feature`. `command` is "verify", "selftest" or "live"; `results` holds per check { check, ok,
+ * pass, fail, failed } with at most 20 failures of { route, detail }; `matrix` is toMatrix() of the run, or undefined.
+ * Never throws and never changes the exit code: a reporter that cannot be loaded or throws costs one line on stderr.
+ */
+export async function report({
+  command,
+  results,
+  matrix,
+  durationMs,
+  feature = false,
+}) {
+  let file = null;
   try {
-    // Always the main checkout's emitter, so every worktree writes to the same log.
-    const { emit } = await import(
-      pathToFileURL(path.join(mainRoot, "scripts", "progress", "emit.mjs")).href
-    );
-    emit({
-      type: "verify",
-      scope,
-      stage: args.stage ?? process.env.PROGRESS_STAGE,
-      agent: args.agent ?? process.env.PROGRESS_AGENT,
+    file = reporterFile();
+    if (file === null) return;
+    const summary = {
+      command,
       // Zero checks is not a pass: nothing was verified.
       ok: results.length > 0 && results.every((result) => result.ok),
       durationMs,
@@ -477,8 +483,14 @@ export async function emitVerify({ scope, args, results, matrix, durationMs }) {
         })),
       })),
       matrix,
-    });
-  } catch {
-    // The dashboard is optional; verification must not depend on it.
+      ...(feature ? { feature: true } : {}),
+    };
+    const reporter = await import(pathToFileURL(file).href);
+    await reporter.default(summary);
+  } catch (error) {
+    const message = String(error?.message ?? error).split("\n")[0];
+    console.error(
+      `verify: reporter ${file ?? process.env.VERIFY_REPORTER} failed: ${message}`,
+    );
   }
 }

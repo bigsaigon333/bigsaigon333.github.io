@@ -1,6 +1,5 @@
 // npm run verify -- [--only=head,content] [--route=/posts/x] [--static] [--no-build] [--no-check]
 //                    [--candidate=<dir> | --candidate-url=<url>] [--selector=<css>]
-//                    [--stage=S1.3 --agent=SK] [--scope=integration]
 // npm run verify -- --feature [--only=seo,links] [--route=/posts/x] [--no-build] [--no-check] [--candidate=<dir>]
 //
 // astro check → astro build --force → checks in scripts/verify/checks/*.mjs.
@@ -11,6 +10,7 @@
 // the baseline does not have.
 // Prints one line per check; details go to .verify/report/. Exit code 0 only if everything passed,
 // 1 when a check failed, 2 when the command line asks for something that does not exist.
+// A summary of the run goes to the reporter module, if there is one (VERIFY_REPORTER, see lib/runner.mjs report()).
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
@@ -20,14 +20,13 @@ import { baselineDir, distDir, repoRoot, reportDir } from "./lib/paths.mjs";
 import { listRoutes } from "./lib/resolve.mjs";
 import {
   createContext,
-  emitVerify,
   exitWithUsage,
   formatResults,
   loadChecks,
   parseArgsOrExit,
   readsBaseline,
+  report,
   runChecks,
-  scopeOf,
   selectChecks,
   toMatrix,
   UsageError,
@@ -38,9 +37,8 @@ import {
 const USAGE =
   "usage: npm run verify -- [--only=<check,…>] [--route=<route,…>] [--static] [--no-build] [--no-check]\n" +
   "                         [--candidate=<dir> | --candidate-url=<url>] [--selector=<css>]\n" +
-  "                         [--stage=<id>] [--agent=<id>] [--scope=local|agent|integration]\n" +
   "       npm run verify -- --feature [--only=<check,…>] [--route=<route,…>] [--no-build] [--no-check]\n" +
-  "                         [--candidate=<dir>] [--stage=<id>] [--agent=<id>] [--scope=…]   (no baseline)";
+  "                         [--candidate=<dir>]   (no baseline)";
 
 /** Flags that only mean something next to the baseline, and why: refused with --feature. */
 const PARITY_FLAGS = {
@@ -68,9 +66,7 @@ if (!args.feature && !fs.existsSync(path.join(baselineDir, "index.html"))) {
 // would otherwise end in a run with nothing to fail. With --feature the routes are the build's, so before the build
 // a route is only checked for how it is written, and against the build's routes after it (checkCandidateRoutes).
 let checks;
-let scope;
 try {
-  scope = scopeOf(args);
   if (args.candidate && args.candidateUrl)
     throw new UsageError("give at most one of --candidate and --candidate-url");
 
@@ -274,10 +270,10 @@ console.log(
   `${ok ? "ALL PASS" : "FAILED"}  ${results.filter((r) => r.ok).length}/${results.length} checks  ${(durationMs / 1000).toFixed(1)}s`,
 );
 
-await emitVerify({
-  // An ad-hoc run is "local". Only an explicit --scope=integration reaches the dashboard's integration view.
-  scope,
-  args,
+await report({
+  command: "verify",
+  // A run without a baseline checks less: a reporter can tell it from a full one.
+  feature: args.feature,
   results,
   matrix: toMatrix(
     ctx,

@@ -12,6 +12,8 @@
 // And that the commands themselves cannot be talked into a pass (lib/cli-cases.mjs, selected as "cli"):
 //   3. command lines that ask for something that does not exist, a build from leftovers, a rehearsal against
 //      the site being replaced         → refused or FAIL, as each case says
+//
+// A summary of the cases goes to the reporter module, if there is one (VERIFY_REPORTER, see lib/runner.mjs report()).
 import fs from "node:fs";
 import path from "node:path";
 
@@ -20,10 +22,10 @@ import { baselineDir, distDir, verifyDir } from "./lib/paths.mjs";
 import { listRoutes } from "./lib/resolve.mjs";
 import {
   createContext,
-  emitVerify,
   exitWithUsage,
   loadChecks,
   parseArgsOrExit,
+  report,
   runChecks,
   selectChecks,
   UsageError,
@@ -31,8 +33,7 @@ import {
 } from "./lib/runner.mjs";
 
 const USAGE =
-  "usage: npm run verify:selftest -- [--only=<check,…|cli>] [--route=<route,…>] [--static] [--calibrate]\n" +
-  "                                  [--stage=<id>] [--agent=<id>]";
+  "usage: npm run verify:selftest -- [--only=<check,…|cli>] [--route=<route,…>] [--static] [--calibrate]";
 /** --only name of the command-level cases. */
 const CLI = "cli";
 
@@ -219,9 +220,8 @@ console.log(
   `${ok ? "SELFTEST PASS" : "SELFTEST FAILED"}  ${cases.filter((c) => c.ok).length}/${cases.length} cases  ${(durationMs / 1000).toFixed(1)}s`,
 );
 
-await emitVerify({
-  scope: "selftest",
-  args,
+await report({
+  command: "selftest",
   results: cases.map((item) => ({
     check: `${item.check}/${item.name}`,
     ok: item.ok,

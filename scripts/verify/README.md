@@ -13,7 +13,7 @@ npm run verify -- --no-build              # 이미 있는 dist/ 를 그대로 �
 npm run verify -- --no-check              # astro check 를 건너뛴다
 npm run verify -- --candidate=<dir>       # dist/ 대신 다른 디렉터리를 검사(빌드하지 않는다)
 npm run verify -- --candidate-url=<url>   # 디렉터리 대신 서빙 중인 사이트를 검사(빌드하지 않는다)
-npm run verify -- --scope=integration     # 대시보드의 통합 결과로 기록(아래 "기록되는 곳")
+VERIFY_REPORTER=off npm run verify        # 실행 요약을 reporter 에 넘기지 않는다(아래 "실행 요약 넘기기")
 npm run verify:selftest                   # 검사기가 차이를 실제로 잡는지 확인
 npm run verify:selftest -- --only=cli     # 명령 수준 시험만(아래 "자기 검사")
 npm run verify -- --only=visual --selector=header   # 전체 페이지 대신 요소 하나만 화면 비교
@@ -33,7 +33,7 @@ npm run verify:live -- --serve=<dir>      # 위 검사를 로컬에서 예행연
 - `npm run check` → `astro build --force` → **기준선을 읽지 않는 검사만**: 범위가 `feature`인 `seo`, `drafts`, `listed`, `migrated`와 `candidateOnly: true`를 적은 `links`. 아래 "검사 목록"의 "기준선" 열이 "안 읽음"인 것들이다.
 - `.verify/baseline`도 `origin/gh-pages`도 필요 없다. gh-pages를 한 번도 가져오지 않은 새 clone에서도 돈다. 이 실행의 ctx에는 기준선이 없어서, 기준선을 읽는 검사는 통과하지 못하고 `check crashed: … this run has no baseline`으로 실패한다.
 - 라우트는 **새 빌드의 것**이다(`ctx.routes`, `ctx.allRoutes`가 후보의 HTML 라우트). `--route`도 새 빌드의 라우트에서 고른다. 그래서 새 글의 라우트처럼 기준선에 없는 라우트도 고를 수 있다. 빌드하기 전에는 라우트가 라우트 모양인지만 보고(`posts/foo`, `/posts/foo.html`은 빌드 전에 2로 거부), 빌드한 뒤 새 빌드에 없는 라우트를 2로 거부한다. `--no-build`나 `--candidate`면 빌드가 없으니 처음에 바로 본다.
-- 기준선과 비교하는 검사를 `--only`로 고르거나(`--only=content`, `--only=links,routes`) 기준선이 있어야 뜻이 있는 플래그(`--candidate-url`: 배포된 사이트는 목록을 낼 수 없어 라우트를 기준선에서 가져온다, `--selector`: `visual`의 비교 범위)를 함께 주면 **아무것도 빌드하기 전에** 2로 거부한다. `--no-build`, `--no-check`, `--candidate`, `--static`, `--stage`, `--agent`, `--scope`는 그대로 쓸 수 있다.
+- 기준선과 비교하는 검사를 `--only`로 고르거나(`--only=content`, `--only=links,routes`) 기준선이 있어야 뜻이 있는 플래그(`--candidate-url`: 배포된 사이트는 목록을 낼 수 없어 라우트를 기준선에서 가져온다, `--selector`: `visual`의 비교 범위)를 함께 주면 **아무것도 빌드하기 전에** 2로 거부한다. `--no-build`, `--no-check`, `--candidate`, `--static`은 그대로 쓸 수 있다.
 
 ### 실패한 단계의 한 줄
 
@@ -53,21 +53,9 @@ FAIL  build     0/1  -: [InvalidContentEntryDataError] posts → foo data does n
 ## 통과가 통과이려면
 
 - **종료 코드**: 모두 통과 0, 검사 실패 1, 명령줄이 없는 것을 가리키면 2.
-- **없는 것을 고르면 거부한다.** 모르는 플래그, `--only`의 없는 검사 이름, `--route`의 기준선에 없는 라우트(`posts/foo`처럼 앞 슬래시를 빠뜨린 것 포함), 없는 `--scope`, 값이 빠진 `--only=`, `--only`로 이름을 준 브라우저 검사가 `--static`에 걸러지는 경우, `--feature`와 함께 준 parity 검사·플래그. 무엇이 틀렸는지 말하고 **아무것도 빌드하기 전에** 2로 끝난다. 세 명령 모두 같다. 하나만 빌드 뒤에 본다: `--feature`의 `--route`가 새 빌드에 있는지(빌드하기 전에는 새 빌드의 라우트를 알 수 없다. 모양은 빌드 전에 본다).
+- **없는 것을 고르면 거부한다.** 모르는 플래그, `--only`의 없는 검사 이름, `--route`의 기준선에 없는 라우트(`posts/foo`처럼 앞 슬래시를 빠뜨린 것 포함), 값이 빠진 `--only=`, `--only`로 이름을 준 브라우저 검사가 `--static`에 걸러지는 경우, `--feature`와 함께 준 parity 검사·플래그. 무엇이 틀렸는지 말하고 **아무것도 빌드하기 전에** 2로 끝난다. 세 명령 모두 같다. 하나만 빌드 뒤에 본다: `--feature`의 `--route`가 새 빌드에 있는지(빌드하기 전에는 새 빌드의 라우트를 알 수 없다. 모양은 빌드 전에 본다).
 - **0개를 본 검사는 실패다.** 통과한 항목이 하나도 없으면 `0/0 PASS`가 아니라 `nothing was examined` 로 실패한다. 고른 라우트가 그 검사에서 모두 허용 목록에 있을 때도 그렇다(예: `--route=/404 --only=visual`). `--route`를 넓히거나 `--only`로 그 검사를 빼면 된다.
 - **빌드는 처음부터 렌더한다.** 게이트는 `astro build --force`로 빌드한다. 그냥 `astro build`는 원본이 그대로인 글의 HTML을 `node_modules/.astro/data-store.json`에서 꺼내 쓰는데, 이 저장소는 렌더하는 패키지가 바뀐 것을 알아채지 못한다. 배포 워크플로는 늘 빈 상태에서 렌더하므로, 게이트만 예전 HTML로 통과할 수 있었다.
-
-### 기록되는 곳 (`--scope`)
-
-`npm run verify`의 결과는 진행 대시보드에 `scope`와 함께 기록된다.
-
-| scope         | 언제                                                                   |
-| ------------- | ---------------------------------------------------------------------- |
-| `local`       | 기본값. 아무 표시 없이 돌린 실행                                       |
-| `agent`       | `--agent=<id>`(또는 환경 변수 `PROGRESS_AGENT`)를 준 실행              |
-| `integration` | `--scope=integration`을 명시한 실행만. 대시보드의 통합 결과를 덮어쓴다 |
-
-`verify:selftest`는 `selftest`, `verify:live`는 `live`로 기록된다. 환경 변수 `VERIFY_EMIT=0`이면 기록하지 않는다(자기 검사가 명령을 직접 돌려 볼 때 쓴다).
 
 ## 검사 목록
 
@@ -127,7 +115,7 @@ export default {
       pass: 14, // 통과한 항목 수. 0 이면 ok 여도 실패로 센다
       fail: 0, // 실패한 항목 수
       failed: [], // [{ route, detail }]  detail 은 한 줄로 읽히는 설명
-      cells: undefined, // 선택: { "<route>": "pass" | "fail" | "skip" } (대시보드 격자)
+      cells: undefined, // 선택: { "<route>": "pass" | "fail" | "skip" } (실행 요약의 라우트 × 검사 격자)
       extra: undefined, // 선택: 리포트 JSON에만 남길 부가 정보. extra.allowed 는 허용 목록으로 넘긴 항목
     };
   },
@@ -163,7 +151,10 @@ export default {
 1. 기준선 ↔ 기준선: 모든 parity 검사가 PASS. `dist/` 그대로: 모든 feature 검사가 PASS.
 2. 변이본: 변이를 선언한 검사가 FAIL(`mutation: …`), 차이가 아닌 변화에는 PASS(`accepted: …`). 아무것도 보지 않아서 난 실패는 변이를 잡은 것으로 치지 않는다. `seo`, `links`, `listed`, `migrated`에는 기준선에 없는 새 글 페이지를 더해 거기에만 문제를 두는 변이가 있다(`기준선에 없는 새 …`). 기준선의 라우트를 돌면 놓친다.
 3. 명령 수준 시험(`cli`, `lib/cli-cases.mjs`): 명령을 실제로 돌려 본다. 지금 빌드가 기준선과 같은지는 묻지 않는다. 그것은 parity 실행이 답하고, CI는 기준선과 다른 것이 정상인 PR(새 글)에서 이 시험을 돌린다.
-   - 없는 라우트·검사 이름·플래그·scope 는 빌드 전에 2로 거부된다(세 명령 모두).
+   - 없는 라우트·검사 이름·플래그는 빌드 전에 2로 거부된다(세 명령 모두). 예전에 있던 `scope`·`stage`·`agent` 플래그도 모르는 플래그다.
+   - **reporter**(아래 "실행 요약 넘기기"). 임시 디렉터리에 모듈을 써서 `VERIFY_REPORTER`로 준다. 이 시험이 아닌 명령은 모두 `VERIFY_REPORTER=off`로 돈다.
+     - `--feature --no-build --no-check --only=migrated`(통과)와 `verify:live --serve=.verify/baseline --only=migrated`(실패)에서 모듈이 요약을 꼭 한 번 받는다. 요약의 키, `command`, `ok`, 검사 이름, `--feature`의 `feature: true`가 맞아야 한다. 뒤의 것은 모듈을 메인 체크아웃에서 본 상대 경로로 준다.
+     - 예외를 던지는 모듈과 없는 모듈: 통과하는 실행의 종료 코드는 0 그대로이고, stderr에 `verify: reporter <경로> failed: …` 한 줄이 남는다.
    - `--feature`에 parity 검사(`--only=content`, `--only=links,routes`), `--selector`, `--candidate-url`, 라우트 모양이 아닌 `--route`를 주면 2로 거부되고, `npm run check`도 빌드도 돌지 않았다(`.verify/report/check.log`·`build.log`가 그대로다. 단계 줄은 끝에 찍히므로 결과 줄이 없다는 것만으로는 모른다).
    - **기준선 없는 사본에서 `--feature`**: 프로젝트 사본(아래 `build:` 사례와 같은 방식, 초안과 `tools/`도 넣는다)에 기준선에 없는 올바른 글 하나를 더하고, `.verify/baseline` 없이 git 작업 트리로 만들어 `node scripts/verify/run.mjs --feature`를 그대로 돌린다. 종료 코드 0, 결과 줄은 `check`, `build`와 기준선을 읽지 않는 검사뿐, 라우트별로 보고하는 검사(`links`, `listed`, `migrated`, `seo`)는 모두 새 글의 라우트를 `pass`로 보고해야 한다. 이어서 `--route=<새 글>`로 좁히면 그 검사들이 그 라우트 하나만 보고, 새 빌드에 없는 라우트는 2로 거부된다.
    - 내용 저장소(`data-store.json`)의 렌더 결과 하나를 고쳐 놓고 게이트(`--feature --only=migrated`, 빌드만 보는 검사라 종료 코드가 빌드의 성패를 말한다)를 돌려도 고친 내용이 `dist/`에 나오지 않는다. 먼저 그냥 `astro build`로는 나온다는 것을 확인하므로, 저장소 재사용이 사라지면 이 시험이 알려 준다. 끝나면 저장소와 `dist/`를 되돌린다. 두 모드는 같은 빌드 단계를 쓴다.
@@ -230,3 +221,34 @@ export default {
 npm run verify:live -- --base-url=<url> --only=status,head,content,sitemap   # 통과해야 한다
 npm run verify:live -- --base-url=<url> --only=migrated                      # 실패해야 한다(예전 배포본이므로)
 ```
+
+## 실행 요약 넘기기 (reporter)
+
+세 명령(`verify`, `verify:selftest`, `verify:live`)은 끝날 때 실행 요약을 reporter 모듈 하나에 넘긴다. 어느 모듈인지는 환경 변수 `VERIFY_REPORTER`가 정한다.
+
+| `VERIFY_REPORTER` | reporter                                                                 |
+| ----------------- | ------------------------------------------------------------------------ |
+| `off`             | 없다                                                                     |
+| 그 밖의 값        | 그 경로의 모듈. 절대 경로이거나 메인 체크아웃의 루트에서 본 상대 경로    |
+| 없거나 빈 값      | 메인 체크아웃의 `.verify/reporter.mjs`. 그 파일이 없으면 reporter도 없다 |
+
+메인 체크아웃은 worktree가 아닌 원래 체크아웃이다(`lib/paths.mjs`의 `mainRoot`). 어느 worktree에서 돌려도 같은 모듈을 찾는다. `.verify/`는 git이 무시하는 로컬 상태이고, 검증 장치는 `reporter.mjs`를 만들지 않는다.
+
+모듈의 default export를 요약 하나로 부르고 끝날 때까지 기다린다.
+
+```js
+{
+  command: "verify", // "verify" | "selftest" | "live"
+  ok: false, // 검사가 하나 이상이고 모두 통과했는지. 0개는 통과가 아니다
+  durationMs: 42100,
+  // 검사마다 하나. 자기 검사는 사례마다 하나이고 check 는 "<검사>/<사례 이름>"이다.
+  // failed 는 20개까지, detail 은 200자까지 자른다.
+  results: [{ check: "head", ok: false, pass: 13, fail: 1, failed: [{ route: "/404", detail: "…" }] }],
+  // 고른 라우트 × 검사 격자. cells 의 키는 "<route>|<check>", 값은 "pass" | "fail" | "skip".
+  // verify 는 단계(check, build)를 뺀다. selftest 는 undefined.
+  matrix: { routes: ["/404"], checks: ["head"], cells: { "/404|head": "fail" } },
+  feature: true, // --feature 로 돌린 verify 에만 있다
+}
+```
+
+reporter는 종료 코드를 바꾸지 못한다. 불러오지 못하거나 예외를 던지면 stderr에 `verify: reporter <경로> failed: <메시지>` 한 줄을 남기고 그대로 끝난다.

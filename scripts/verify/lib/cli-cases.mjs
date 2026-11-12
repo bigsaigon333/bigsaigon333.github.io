@@ -4,8 +4,8 @@
 // the checks cannot be made to pass by asking for nothing, by building from leftovers or by looking at the
 // site that is being replaced, that the build refuses front matter the schema does not describe, and that the gate
 // of pull requests and deploys (`verify --feature`) needs no baseline (both on a copy of the project, so that no
-// fixture is ever written into posts/). Each case runs a command the way it is typed and returns null, or what
-// went wrong.
+// fixture is ever written into posts/), and that a reporter module (VERIFY_REPORTER) gets one summary of a run and
+// cannot change its exit status. Each case runs a command the way it is typed and returns null, or what went wrong.
 //
 // None of them asks whether the current build still equals the baseline: that is what the parity run answers, and
 // CI runs these cases on pull requests whose build differs from the frozen baseline by design (a new post).
@@ -16,20 +16,26 @@ import os from "node:os";
 import path from "node:path";
 import { stripVTControlCharacters } from "node:util";
 
-import { baselineDir, distDir, reportDir, repoRoot } from "./paths.mjs";
+import {
+  baselineDir,
+  distDir,
+  mainRoot,
+  reportDir,
+  repoRoot,
+} from "./paths.mjs";
 import { listRoutes } from "./resolve.mjs";
-import { loadChecks, readsBaseline, runChecks, scopeOf } from "./runner.mjs";
+import { loadChecks, readsBaseline, runChecks } from "./runner.mjs";
 
 const RESULT_LINE = /^(PASS|FAIL|ALL PASS|FAILED|SELFTEST)\b/;
 const script = (name) => path.join(repoRoot, "scripts", "verify", name);
 const firstLine = (text) => text.trim().split("\n")[0] ?? "";
 
-function command(name, flags) {
+/** `env` is added to the environment. Without it the run has no reporter: these runs test the commands, they are not real runs. */
+function command(name, flags, env = {}) {
   const run = spawnSync(process.execPath, [script(name), ...flags], {
     cwd: repoRoot,
     encoding: "utf8",
-    // These runs test the commands; they are not results anybody should see on the dashboard.
-    env: { ...process.env, VERIFY_EMIT: "0" },
+    env: { ...process.env, VERIFY_REPORTER: "off", ...env },
   });
   const output = `${run.stdout ?? ""}${run.stderr ?? ""}`;
   return {
@@ -436,7 +442,7 @@ function verifyIn(dir, flags) {
       cwd: dir,
       encoding: "utf8",
       timeout: BUILD_TIMEOUT_MS,
-      env: { ...process.env, VERIFY_EMIT: "0" },
+      env: { ...process.env, VERIFY_REPORTER: "off" },
     },
   );
   const output = `${run.stdout ?? ""}${run.stderr ?? ""}${run.error ? `\n${run.error.message}` : ""}`;
@@ -591,6 +597,140 @@ function failedBuildIsReadable() {
   );
 }
 
+// ── the reporter hook ───────────────────────────────────────────────────────────────────────────
+
+/** The keys of the summary a reporter receives (lib/runner.mjs report()). */
+const SUMMARY_KEYS = ["command", "durationMs", "matrix", "ok", "results"];
+
+/**
+ * Run `use(dir, module)` with a reporter module written to a fresh directory under the system's temporary directory:
+ * `module(name, body)` writes <dir>/<name> with `body` as the module's source and returns its path. The directory is
+ * removed afterwards, also when `use` throws.
+ */
+function withReporters(use) {
+  const dir = fs.realpathSync(
+    fs.mkdtempSync(path.join(os.tmpdir(), "verify-reporter-")),
+  );
+  const module = (name, body) => {
+    const file = path.join(dir, name);
+    fs.writeFileSync(file, body);
+    return file;
+  };
+  try {
+    return use(dir, module);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+/** A reporter that appends every summary it is given to `log`, one JSON line each. */
+const recorder = (log) =>
+  `import fs from "node:fs";\nexport default (summary) => fs.appendFileSync(${JSON.stringify(log)}, JSON.stringify(summary) + "\\n");\n`;
+
+/**
+ * `<script> <flags>` with VERIFY_REPORTER=`reporter`: exactly one summary reached it, and it says what ran.
+ * `expected` is { status, command, ok, checks, feature }.
+ */
+function reported(dir, module, script, flags, reporter, expected) {
+  const log = path.join(dir, `${expected.command}.jsonl`);
+  module(path.basename(reporter), recorder(log));
+  const { status, output } = command(script, flags, {
+    VERIFY_REPORTER: reporter,
+  });
+  const said = `${script} ${flags.join(" ")}`;
+  if (status !== expected.status)
+    return `${said}: exit status ${status}, expected ${expected.status}: ${firstLine(output)}`;
+  const lines = fs.existsSync(log)
+    ? fs.readFileSync(log, "utf8").split("\n").filter(Boolean)
+    : [];
+  if (lines.length !== 1)
+    return `${said}: the reporter received ${lines.length} summaries, expected 1`;
+  const summary = JSON.parse(lines[0]);
+  const keys = [...SUMMARY_KEYS, ...(expected.feature ? ["feature"] : [])];
+  const got = Object.keys(summary).sort();
+  if (got.join(",") !== keys.sort().join(","))
+    return `${said}: the summary has ${got.join(", ")}; expected ${keys.join(", ")}`;
+  const checks = summary.results.map((result) => result.check);
+  const wrong = [
+    summary.command !== expected.command &&
+      `command ${summary.command}, expected ${expected.command}`,
+    summary.ok !== expected.ok && `ok ${summary.ok}, expected ${expected.ok}`,
+    expected.feature && summary.feature !== true && "feature is not true",
+    checks.join(",") !== expected.checks.join(",") &&
+      `checks ${checks.join(", ")}, expected ${expected.checks.join(", ")}`,
+    summary.matrix?.checks?.join(",") !== expected.checks.join(",") &&
+      `matrix checks ${summary.matrix?.checks?.join(", ")}, expected ${expected.checks.join(", ")}`,
+    typeof summary.durationMs !== "number" && "durationMs is not a number",
+  ].filter(Boolean);
+  return wrong.length ? `${said}: ${wrong.join("; ")}` : null;
+}
+
+/**
+ * The cheapest real runs, one of each outcome: the gate (`--feature`) with a check that only reads the build, which
+ * passes on any build that went through, and the rehearsal against the baseline with migrated, which fails by design.
+ * The second names its reporter relative to the main checkout.
+ */
+function reporterGetsOneSummary() {
+  return withReporters(
+    (dir, module) =>
+      reported(
+        dir,
+        module,
+        "run.mjs",
+        ["--feature", "--no-build", "--no-check", "--only=migrated"],
+        path.join(dir, "verify.mjs"),
+        {
+          status: 0,
+          command: "verify",
+          ok: true,
+          checks: ["migrated"],
+          feature: true,
+        },
+      ) ??
+      reported(
+        dir,
+        module,
+        "live.mjs",
+        [`--serve=${baselineDir}`, "--only=migrated"],
+        path.relative(mainRoot, path.join(dir, "live.mjs")),
+        { status: 1, command: "live", ok: false, checks: ["migrated"] },
+      ),
+  );
+}
+
+/** A reporter that throws, or that cannot be loaded, costs one line on stderr and leaves the exit status alone. */
+function brokenReporterKeepsTheStatus() {
+  return withReporters((dir, module) => {
+    const flags = ["--feature", "--no-build", "--no-check", "--only=migrated"];
+    const reason = `reporter-failure-${randomBytes(4).toString("hex")}`;
+    for (const [reporter, says] of [
+      [
+        module(
+          "throws.mjs",
+          `export default () => {\n  throw new Error(${JSON.stringify(reason)});\n};\n`,
+        ),
+        reason,
+      ],
+      [path.join(dir, "missing.mjs"), "missing.mjs"],
+    ]) {
+      const { status, output, lines } = command("run.mjs", flags, {
+        VERIFY_REPORTER: reporter,
+      });
+      const name = path.basename(reporter);
+      if (status !== 0)
+        return `${name}: exit status ${status}, expected 0: ${firstLine(output)}`;
+      if (!lines.some((line) => /^ALL PASS\b/.test(line)))
+        return `${name}: the run did not pass: ${lines.at(-1) ?? ""}`;
+      const complaint = lines.filter((line) =>
+        line.startsWith(`verify: reporter ${reporter} failed: `),
+      );
+      if (complaint.length !== 1 || !complaint[0].includes(says))
+        return `${name}: expected one line "verify: reporter ${reporter} failed: …${says}…", got ${complaint.length}`;
+    }
+    return null;
+  });
+}
+
 // ── the cases ───────────────────────────────────────────────────────────────────────────────────
 
 const aPost = () =>
@@ -673,26 +813,36 @@ export const cliCases = [
       ),
   },
   {
-    name: "verify: 없는 scope 는 거부하고, 기본 scope 는 local 이다",
+    name: "verify: 없어진 플래그(scope, stage, agent)는 모르는 플래그로 거부한다(세 명령 모두)",
     run: () => {
-      const typo = refused(
-        "run.mjs",
-        ["--scope=integratoin"],
-        /no such scope: integratoin/,
-      );
-      if (typo) return typo;
-      const expected = [
-        [{}, {}, "local"],
-        [{ agent: "H1" }, {}, "agent"],
-        [{}, { PROGRESS_AGENT: "H1" }, "agent"],
-        [{ scope: "integration" }, {}, "integration"],
-        [{ scope: "integration", agent: "H1" }, {}, "integration"],
+      const gone = [
+        ["run.mjs", "scope", "integration"],
+        ["run.mjs", "stage", "x"],
+        ["run.mjs", "agent", "x"],
+        ["selftest.mjs", "stage", "x"],
+        ["selftest.mjs", "agent", "x"],
+        ["live.mjs", "stage", "x"],
+        ["live.mjs", "agent", "x"],
       ];
-      for (const [args, env, scope] of expected)
-        if (scopeOf(args, env) !== scope)
-          return `scope of ${JSON.stringify({ args, env })} is ${scopeOf(args, env)}, expected ${scope}`;
+      for (const [name, flag, value] of gone) {
+        const raw = `--${flag}=${value}`;
+        const problem = refused(
+          name,
+          [raw],
+          new RegExp(`unknown argument: ${raw}`),
+        );
+        if (problem) return `${name} ${raw}: ${problem}`;
+      }
       return null;
     },
+  },
+  {
+    name: "verify, verify:live: VERIFY_REPORTER 의 모듈이 실행마다 요약을 한 번 받는다(명령, 통과 여부, 검사 이름)",
+    run: reporterGetsOneSummary,
+  },
+  {
+    name: "verify: reporter 가 예외를 던지거나 없어도 종료 코드는 그대로이고, stderr 에 한 줄만 남는다",
+    run: brokenReporterKeepsTheStatus,
   },
   {
     name: "verify: 아무것도 보지 않은 검사는 통과가 아니다",
