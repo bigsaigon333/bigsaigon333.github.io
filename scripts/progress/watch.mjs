@@ -30,12 +30,6 @@ const green = paint("32");
 const yellow = paint("33");
 const cyan = paint("36");
 
-const WAVE_LABELS = {
-  pending: "대기",
-  running: "진행 중",
-  integrating: "통합 중",
-  done: "완료",
-};
 const TYPE_WIDTH = 10;
 
 function stageColor(state) {

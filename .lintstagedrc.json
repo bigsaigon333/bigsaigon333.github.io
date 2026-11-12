@@ -1,1 +1,4 @@
-{ "*": "prettier --write --ignore-unknown" }
+{
+  "*.{js,mjs,ts,astro}": "oxlint --no-error-on-unmatched-pattern",
+  "*": "prettier --write --ignore-unknown"
+}

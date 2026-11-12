@@ -23,6 +23,8 @@ jobs:
           node-version-file: mise.toml
           cache: npm
       - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
       - run: npm run verify:setup
       - run: npm run verify -- --static
       - run: node scripts/notes-lint.mjs

@@ -203,7 +203,7 @@ export function summarizeEvent(event) {
     default: {
       // log, ruling, merge, deploy and any unknown type
       if (event.msg != null) return clip(String(event.msg));
-      const { ts, type, ...rest } = event;
+      const { ts: _ts, type: _type, ...rest } = event;
       return clip(Object.keys(rest).length ? JSON.stringify(rest) : "");
     }
   }
@@ -419,7 +419,7 @@ export function reduceState(plan, events, meta = {}) {
       agentsRunning: activeStages.length,
       activeStages,
     },
-    verify: { ...(latestIntegration ?? latestVerify ?? {}), latestByAgent },
+    verify: { ...(latestIntegration ?? latestVerify), latestByAgent },
     events: events
       .slice(-EVENT_LOG_SIZE)
       .reverse()

@@ -19,9 +19,13 @@ npm run build       # dist/ 에 정적 사이트 생성
 npm run preview     # 빌드 결과 미리 보기
 npm run check       # .astro 까지 타입·템플릿 검사 (@astrojs/check + TypeScript 6)
 npm run typecheck   # .ts 타입 검사 (tsc --noEmit, TypeScript 7)
+npm run lint        # oxlint: 틀렸거나 쓸모없는 코드 찾기 (.mjs, .ts, .astro 의 스크립트)
+npm run lint:fix    # 안전하게 고칠 수 있는 것은 고친다
 ```
 
 루트의 `typescript`는 7(네이티브 컴파일러)이다. `.astro`를 검사하는 `@astrojs/check`는 TypeScript 6의 언어 서비스 API가 필요해서 `tools/astro-check/` 워크스페이스에 TypeScript 6과 함께 따로 설치된다(`npm ci` 한 번이면 둘 다 깔린다). `astro check` 명령은 루트의 TypeScript가 7이면 실행을 거부하므로 `npm run check`를 쓴다.
+
+린트 규칙은 `.oxlintrc.json`에 있다. 코드 모양은 Prettier가 맡고 oxlint는 `correctness` 범주만 오류로 잡는다. 커밋할 때 스테이징한 파일에 oxlint와 Prettier가 돈다(`.lintstagedrc.json`).
 
 ## 글 쓰기
 
@@ -61,7 +65,7 @@ npm run progress:watch   # 진행 기록을 터미널에서 따라 보기
 
 ## 배포
 
-`main`에 push하면 GitHub Actions(`.github/workflows/deploy.yml`)가 빌드해서 GitHub Pages에 배포한다. Pull Request에서는 `.github/workflows/ci.yml`이 검증과 포맷 검사를 돌린다.
+`main`에 push하면 GitHub Actions(`.github/workflows/deploy.yml`)가 빌드해서 GitHub Pages에 배포한다. Pull Request에서는 `.github/workflows/ci.yml`이 린트, 타입 검사, 검증, 포맷 검사를 돌린다.
 
 ## 학습 노트
 
