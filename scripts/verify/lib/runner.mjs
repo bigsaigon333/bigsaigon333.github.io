@@ -33,6 +33,7 @@ const SHARED_FLAGS = {
 export const FLAGS = {
   run: {
     ...SHARED_FLAGS,
+    feature: "flag",
     static: "flag",
     "no-build": "flag",
     "no-check": "flag",
@@ -86,9 +87,18 @@ export function parseArgs(argv, flags = FLAGS.run) {
   return args;
 }
 
+/** How lib/resolve.mjs listRoutes() would write `route` ("posts/a.html" → "/posts/a"). */
+const spelledAsRoute = (route) =>
+  `/${route}`
+    .replace(/\/{2,}/g, "/")
+    .replace(/\.html$/, "")
+    .replace(/(?<=.)\/$/, "");
+
 /**
  * A filter that matches nothing would leave nothing to fail. Throws a UsageError when --only names a check that
- * does not exist or --route a route the baseline does not have.
+ * does not exist or --route a route the baseline does not have. With `routes: null` (a run without a baseline,
+ * before the candidate is built) a route is only checked for being written as one; validateRoutes() checks it
+ * against the candidate's routes once there is a candidate.
  */
 export function validateSelection(args, { checkNames, routes }) {
   const unknownChecks = args.only.filter((name) => !checkNames.includes(name));
@@ -97,22 +107,43 @@ export function validateSelection(args, { checkNames, routes }) {
       `no such check: ${unknownChecks.join(", ")}\navailable: ${checkNames.join(", ")}`,
     );
 
-  const unknownRoutes = args.route.filter((route) => !routes.includes(route));
+  if (routes !== null) {
+    validateRoutes(args.route, routes, "baseline");
+    return;
+  }
+  // A trailing "/" is left to validateRoutes(): it is how a directory index (a/index.html → "/a/") is written.
+  const misspelt = args.route.filter(
+    (route) => spelledAsRoute(route) !== route.replace(/(?<=.)\/$/, ""),
+  );
+  if (misspelt.length)
+    throw new UsageError(
+      `no such route: ${misspelt.map((route) => `${route} (did you mean ${spelledAsRoute(route)}?)`).join(", ")}\nroutes are written as the site serves them: /, /404, /posts/<id>`,
+    );
+}
+
+/** Throws a UsageError when one of `wanted` is not one of `routes`, the HTML routes of `side`. */
+export function validateRoutes(wanted, routes, side) {
+  const unknownRoutes = wanted.filter((route) => !routes.includes(route));
   if (unknownRoutes.length) {
     const spelled = unknownRoutes.map((route) => {
-      const guess = `/${route}`
-        .replace(/\/{2,}/g, "/")
-        .replace(/\.html$/, "")
-        .replace(/(?<=.)\/$/, "");
+      const guess = spelledAsRoute(route);
       return routes.includes(guess)
         ? `${route} (did you mean ${guess}?)`
         : route;
     });
     throw new UsageError(
-      `no such route: ${spelled.join(", ")}\nroutes are written as the baseline serves them: ${routes.slice(0, 3).join(", ")}, …`,
+      `no such route: ${spelled.join(", ")}\nroutes are written as the ${side} serves them: ${routes.slice(0, 3).join(", ")}, …`,
     );
   }
 }
+
+/**
+ * Whether a check reads the baseline. A parity check compares the candidate with it. A feature check (scope
+ * "feature") and a check that declares `candidateOnly: true` (links) look at the candidate alone: only those run
+ * with --feature, where there is no baseline.
+ */
+export const readsBaseline = (check) =>
+  check.scope !== "feature" && check.candidateOnly !== true;
 
 /** Where the dashboard files a run of `npm run verify`. "integration" is the view everybody reads: it is never a default. */
 export const SCOPES = ["local", "agent", "integration"];
@@ -158,7 +189,8 @@ function loadAllowlist() {
  * @param {object} options
  * @param {string} [options.candidateDir]  built site to verify (default: dist/)
  * @param {string} [options.candidateUrl]  verify a deployed site instead of a directory
- * @param {string} [options.baseline]      reference site (default: .verify/baseline)
+ * @param {string|null} [options.baseline] reference site (default: .verify/baseline). null: a run without one
+ *                                         (--feature): the routes are the candidate's and reading the baseline throws
  * @param {object} [options.args]          parsed CLI args
  */
 export function createContext({
@@ -167,12 +199,29 @@ export function createContext({
   baseline = baselineDir,
   args = {},
 } = {}) {
-  const allRoutes = listRoutes(baseline);
+  if (baseline === null && candidateUrl)
+    throw new Error(
+      "a run without a baseline needs a directory: a deployed site cannot be listed",
+    );
+  const allRoutes =
+    baseline !== null
+      ? listRoutes(baseline)
+      : fs.existsSync(candidateDir)
+        ? listRoutes(candidateDir)
+        : [];
   const wanted = args.route ?? [];
   const allowlist = loadAllowlist();
   const dirs = { baseline, candidate: candidateDir };
   const htmlCache = new Map();
   const servers = new Map();
+  /** Directory of `side`. A check that reads the baseline in a run without one has nothing to compare with. */
+  const dirOf = (side) => {
+    if (side === "baseline" && baseline === null)
+      throw new Error(
+        'this run has no baseline (--feature), but the check reads it: only a check that never does may have scope "feature" or candidateOnly',
+      );
+    return dirs[side];
+  };
 
   const ctx = {
     args,
@@ -181,7 +230,7 @@ export function createContext({
     candidateUrl,
     reportDir,
     cacheDir,
-    /** Every HTML route of the baseline: "/", "/404", "/posts/<id>". */
+    /** Every HTML route of the baseline: "/", "/404", "/posts/<id>". In a run without a baseline, the candidate's. */
     allRoutes,
     /** allRoutes narrowed by --route. Checks iterate over this. */
     routes: wanted.length
@@ -202,7 +251,7 @@ export function createContext({
 
     /** Absolute path of the file a route resolves to on `side` ("baseline" | "candidate"), or null. */
     fileFor(side, route) {
-      const hit = resolve(dirs[side], route);
+      const hit = resolve(dirOf(side), route);
       return hit.file && (hit.status === 200 || route === "/404")
         ? hit.file
         : null;
@@ -241,7 +290,7 @@ export function createContext({
     /** Base URL of a server for `side`, started on first use on an ephemeral port. */
     async serve(side) {
       if (side === "candidate" && candidateUrl) return candidateUrl;
-      if (!servers.has(side)) servers.set(side, await startServer(dirs[side]));
+      if (!servers.has(side)) servers.set(side, await startServer(dirOf(side)));
       return servers.get(side).url;
     },
 
@@ -262,12 +311,16 @@ export function createContext({
   return ctx;
 }
 
-/** `checks` narrowed by --only and --static. */
-export const selectChecks = (checks, { only = [], staticOnly = false } = {}) =>
+/** `checks` narrowed by --only, --static and --feature (the checks that do not read the baseline). */
+export const selectChecks = (
+  checks,
+  { only = [], staticOnly = false, feature = false } = {},
+) =>
   checks.filter(
     (check) =>
       (only.length === 0 || only.includes(check.name)) &&
-      (!staticOnly || check.kind === "static"),
+      (!staticOnly || check.kind === "static") &&
+      (!feature || !readsBaseline(check)),
   );
 
 /** Every check module of scripts/verify/checks, narrowed by `only` and `staticOnly`. */

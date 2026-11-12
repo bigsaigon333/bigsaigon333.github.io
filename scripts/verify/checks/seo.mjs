@@ -3,7 +3,7 @@
 // A feature check: every rule is asserted on the candidate alone and the baseline is never read (it cannot pass).
 // Where possible a rule compares two things on the same page instead of a constant, so the tags cannot drift apart.
 //
-// Every route:
+// Every HTML route of the candidate (a new post included), narrowed by --route:
 //   - exactly one <title>, one canonical link, one meta description; no meta name/property twice (article:tag may repeat)
 //   - robots is ROBOTS_NOINDEX on /404 and ROBOTS_INDEX everywhere else
 //   - og:title, twitter:title = <title>; og:description, twitter:description = description; og:url = canonical
@@ -24,9 +24,12 @@
 //
 // One failed item per route lists every violated rule. Allowlist item: "route:<route>".
 import {
+  addPage,
   allowances,
+  candidateRoutes,
   internalPath,
   mutateFile,
+  NEW_PAGE,
   postFiles,
   probe,
   quote,
@@ -374,7 +377,8 @@ export default {
     const home = await ctx.dom("candidate", "/");
     const siteName = home === null ? null : rawText(home("head title")[0]);
 
-    for (const route of ctx.routes) {
+    // The candidate's routes, not the baseline's: a post a pull request adds is a page the baseline has never had.
+    for (const route of candidateRoutes(ctx)) {
       const $ = await ctx.dom("candidate", route);
       const problems =
         $ === null
@@ -453,6 +457,16 @@ export default {
             ),
           );
         },
+      },
+      {
+        // A post the baseline does not have, as a pull request would add one: its head has to be checked too.
+        name: "기준선에 없는 새 글 페이지의 canonical 삭제",
+        apply(dir) {
+          addPage(dir, postFiles(dir)[0], (html) =>
+            html.replace(/<link rel="canonical"[^>]*>/, ""),
+          );
+        },
+        routes: [NEW_PAGE.route],
       },
       {
         name: "404 의 noindex 삭제",

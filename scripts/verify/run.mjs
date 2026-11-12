@@ -1,8 +1,14 @@
 // npm run verify -- [--only=head,content] [--route=/posts/x] [--static] [--no-build] [--no-check]
 //                    [--candidate=<dir> | --candidate-url=<url>] [--selector=<css>]
 //                    [--stage=S1.3 --agent=SK] [--scope=integration]
+// npm run verify -- --feature [--only=seo,links] [--route=/posts/x] [--no-build] [--no-check] [--candidate=<dir>]
 //
 // astro check → astro build --force → checks in scripts/verify/checks/*.mjs.
+// Without --feature every check runs, and the parity checks compare the build with the baseline
+// (.verify/baseline, the deployed site extracted from origin/gh-pages by `npm run verify:setup`).
+// With --feature there is no baseline: only the checks that never read it run (scope "feature", and links), on the
+// routes of the build. That is the gate of pull requests and of the deploy workflow; a post they add is a route
+// the baseline does not have.
 // Prints one line per check; details go to .verify/report/. Exit code 0 only if everything passed,
 // 1 when a check failed, 2 when the command line asks for something that does not exist.
 import { spawnSync } from "node:child_process";
@@ -19,28 +25,48 @@ import {
   formatResults,
   loadChecks,
   parseArgsOrExit,
+  readsBaseline,
   runChecks,
   scopeOf,
   selectChecks,
   toMatrix,
   UsageError,
+  validateRoutes,
   validateSelection,
 } from "./lib/runner.mjs";
 
 const USAGE =
   "usage: npm run verify -- [--only=<check,…>] [--route=<route,…>] [--static] [--no-build] [--no-check]\n" +
   "                         [--candidate=<dir> | --candidate-url=<url>] [--selector=<css>]\n" +
-  "                         [--stage=<id>] [--agent=<id>] [--scope=local|agent|integration]";
+  "                         [--stage=<id>] [--agent=<id>] [--scope=local|agent|integration]\n" +
+  "       npm run verify -- --feature [--only=<check,…>] [--route=<route,…>] [--no-build] [--no-check]\n" +
+  "                         [--candidate=<dir>] [--stage=<id>] [--agent=<id>] [--scope=…]   (no baseline)";
+
+/** Flags that only mean something next to the baseline, and why: refused with --feature. */
+const PARITY_FLAGS = {
+  candidateUrl: [
+    "--candidate-url",
+    "a deployed site cannot be listed, so its routes would come from the baseline",
+  ],
+  selector: [
+    "--selector",
+    "it narrows visual, which compares screenshots with the baseline",
+  ],
+};
+
 const args = parseArgsOrExit("run", USAGE);
 const started = performance.now();
 
-if (!fs.existsSync(path.join(baselineDir, "index.html"))) {
-  console.error("baseline missing — run `npm run verify:setup` first");
+if (!args.feature && !fs.existsSync(path.join(baselineDir, "index.html"))) {
+  console.error(
+    "baseline missing — run `npm run verify:setup` first (`npm run verify -- --feature` needs none)",
+  );
   process.exit(2);
 }
 
 // Everything the command line names has to exist before anything is built: a filter that matches nothing
-// would otherwise end in a run with nothing to fail.
+// would otherwise end in a run with nothing to fail. With --feature the routes are the build's, so before the build
+// a route is only checked for how it is written, and against the build's routes after it (checkCandidateRoutes).
 let checks;
 let scope;
 try {
@@ -49,13 +75,34 @@ try {
     throw new UsageError("give at most one of --candidate and --candidate-url");
 
   const available = await loadChecks();
+  if (args.feature) {
+    const flags = Object.entries(PARITY_FLAGS)
+      .filter(([key]) => args[key] !== undefined)
+      .map(([, [flag, why]]) => `${flag} (${why})`);
+    if (flags.length)
+      throw new UsageError(`not with --feature: ${flags.join("; ")}`);
+  }
   validateSelection(args, {
     checkNames: available.map((check) => check.name),
-    routes: listRoutes(baselineDir),
+    routes: args.feature ? null : listRoutes(baselineDir),
   });
+  if (args.feature) {
+    const parity = available
+      .filter((check) => args.only.includes(check.name) && readsBaseline(check))
+      .map((check) => check.name);
+    if (parity.length)
+      throw new UsageError(
+        `not with --feature: ${parity.join(", ")} ${parity.length > 1 ? "compare" : "compares"} the build with the baseline\n` +
+          `checks that run without a baseline: ${available
+            .filter((check) => !readsBaseline(check))
+            .map((check) => check.name)
+            .join(", ")}`,
+      );
+  }
   checks = selectChecks(available, {
     only: args.only,
     staticOnly: args.static,
+    feature: args.feature,
   });
   // A check that was asked for by name and then left out would be one line less to read, not a failure.
   const dropped = args.only.filter(
@@ -171,6 +218,24 @@ function step(name, command) {
 
 const results = [];
 const builds = !args.candidate && !args.candidateUrl && !args.noBuild;
+const candidateDir = args.candidate ? path.resolve(args.candidate) : distDir;
+
+/** With --feature, --route picks from the routes of the build: refused with 2, like every other route that is not there. */
+function checkCandidateRoutes() {
+  if (!args.feature) return;
+  try {
+    validateRoutes(
+      args.route,
+      fs.existsSync(candidateDir) ? listRoutes(candidateDir) : [],
+      "candidate",
+    );
+  } catch (error) {
+    exitWithUsage(error, USAGE);
+  }
+}
+
+// A candidate that is not built here is there already: its routes are known before anything runs.
+if (!builds) checkCandidateRoutes();
 
 if (builds) {
   // `npm run check`, not `npx astro check`: Astro 7.4 refuses `astro check` when the project's TypeScript is 7.
@@ -185,9 +250,13 @@ if (builds) {
 const buildFailed = results.some(
   (result) => result.check === "build" && !result.ok,
 );
+if (builds && !buildFailed) checkCandidateRoutes();
+
 const ctx = createContext({
-  candidateDir: args.candidate ? path.resolve(args.candidate) : distDir,
+  candidateDir,
   candidateUrl: args.candidateUrl ?? null,
+  // --feature: no baseline. The routes are the candidate's, and a check that reads the baseline crashes (FAIL).
+  baseline: args.feature ? null : baselineDir,
   args,
 });
 

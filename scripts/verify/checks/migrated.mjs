@@ -10,9 +10,11 @@
 // Scope "feature": the baseline fails it by design, so the self-test runs it against dist/.
 // There is no allowlist: a page is the new build or it is not.
 import {
+  addPage,
   candidateRoutes,
   internalPath,
   mutateFile,
+  NEW_PAGE,
   postFiles,
   srcsetUrls,
 } from "../lib/html.mjs";
@@ -114,6 +116,15 @@ export default {
             ),
           );
         },
+      },
+      {
+        name: "기준선에 없는 새 글 페이지에 #__next 추가",
+        apply(dir) {
+          addPage(dir, postFiles(dir)[0], (html) =>
+            html.replace(/(<body[^>]*>)/, '$1<div id="__next"></div>'),
+          );
+        },
+        routes: [NEW_PAGE.route],
       },
       {
         name: "__NEXT_DATA__ 스크립트 추가",

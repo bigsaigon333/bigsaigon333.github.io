@@ -194,8 +194,15 @@ export const srcsetUrls = (srcset) =>
     .map((entry) => entry.trim().split(/\s+/)[0])
     .filter(Boolean);
 
-const dirOf = (ctx, side) =>
-  side === "baseline" ? ctx.baselineDir : ctx.candidateDir;
+const dirOf = (ctx, side) => {
+  const dir = side === "baseline" ? ctx.baselineDir : ctx.candidateDir;
+  // createContext({ baseline: null }): a run with --feature, which only runs checks that never read the baseline.
+  if (dir === null)
+    throw new Error(
+      `this run has no baseline (--feature), but the check reads the ${side}`,
+    );
+  return dir;
+};
 const isRemote = (ctx, side) =>
   side === "candidate" && Boolean(ctx.candidateUrl);
 
@@ -267,7 +274,8 @@ export async function readSiteFile(ctx, side, rel) {
 
 /**
  * HTML routes of the candidate. A directory is listed; a deployed site cannot be listed, so there the baseline
- * routes are used. Narrowed by --route like ctx.routes.
+ * routes are used. Narrowed by --route like ctx.routes. Checks that never read the baseline (scope "feature",
+ * links) walk these, not ctx.routes: a page a new post adds is not among the baseline's routes.
  */
 export function candidateRoutes(ctx) {
   if (ctx.candidateUrl) return ctx.routes;
@@ -332,6 +340,30 @@ export const postFiles = (dir) =>
 /** Self-test: route of a page file of a site copy ("index.html" → "/", "posts/a.html" → "/posts/a"). */
 export const routeOfPage = (rel) =>
   rel === "index.html" ? "/" : `/${rel.replace(/\.html$/, "")}`;
+
+/** Self-test: the page addPage() adds. Neither the baseline nor the build has it. */
+export const NEW_PAGE = {
+  file: "posts/only-in-candidate.html",
+  route: "/posts/only-in-candidate",
+};
+
+/**
+ * Self-test: add NEW_PAGE to a site copy, made of its page `from` changed by `edit` (text → text; without one, the
+ * page is copied as it is). A check that walks the routes of the baseline instead of the candidate's never sees
+ * it, so a mutation made with this proves the check looks at what a new post would add. Throws when the page
+ * exists already or `edit` changes nothing. A mutation declares `routes: [NEW_PAGE.route]`.
+ */
+export function addPage(dir, from, edit) {
+  const target = path.join(dir, NEW_PAGE.file);
+  if (fs.existsSync(target))
+    throw new Error(`${NEW_PAGE.file} exists already in ${dir}`);
+  const before = fs.readFileSync(path.join(dir, from), "utf8");
+  const after = edit ? edit(before) : before;
+  if (typeof after !== "string" || (edit && after === before))
+    throw new Error(`mutation changed nothing in: ${from}`);
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.writeFileSync(target, after);
+}
 
 /**
  * Self-test: the routes of the first post pages of a site copy whose HTML matches `pattern`, for a mutation

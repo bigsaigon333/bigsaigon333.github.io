@@ -2,9 +2,13 @@
 //
 // The mutations of a check prove that the check notices a difference. These prove that the commands around
 // the checks cannot be made to pass by asking for nothing, by building from leftovers or by looking at the
-// site that is being replaced, and that the build refuses front matter the schema does not describe (on a copy of
-// the project, so that no fixture is ever written into posts/). Each case runs a command the way it is typed and
-// returns null, or what went wrong.
+// site that is being replaced, that the build refuses front matter the schema does not describe, and that the gate
+// of pull requests and deploys (`verify --feature`) needs no baseline (both on a copy of the project, so that no
+// fixture is ever written into posts/). Each case runs a command the way it is typed and returns null, or what
+// went wrong.
+//
+// None of them asks whether the current build still equals the baseline: that is what the parity run answers, and
+// CI runs these cases on pull requests whose build differs from the frozen baseline by design (a new post).
 import { spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import fs from "node:fs";
@@ -12,9 +16,9 @@ import os from "node:os";
 import path from "node:path";
 import { stripVTControlCharacters } from "node:util";
 
-import { baselineDir, distDir, repoRoot } from "./paths.mjs";
+import { baselineDir, distDir, reportDir, repoRoot } from "./paths.mjs";
 import { listRoutes } from "./resolve.mjs";
-import { runChecks, scopeOf } from "./runner.mjs";
+import { loadChecks, readsBaseline, runChecks, scopeOf } from "./runner.mjs";
 
 const RESULT_LINE = /^(PASS|FAIL|ALL PASS|FAILED|SELFTEST)\b/;
 const script = (name) => path.join(repoRoot, "scripts", "verify", name);
@@ -74,6 +78,11 @@ const pagesWithMarker = () =>
  * Astro keeps the HTML it rendered for each post in node_modules/.astro/data-store.json and a plain
  * `astro build` reuses it for posts whose source has not changed, whatever has happened to the packages that
  * rendered it. Here one stored paragraph is given a marker; a gate that builds from scratch never shows it.
+ *
+ * The gate is run as the workflows run it (`--feature`), with a check that only reads the build: its exit status
+ * then says whether the build went through, not whether this build still equals the deployed site. A pull request
+ * that adds a post changes the home page, and a parity check would fail this case for that alone. Both modes
+ * build with the same step.
  */
 function staleStore() {
   if (!fs.existsSync(STORE)) astro("build"); // a first build writes the store
@@ -95,7 +104,8 @@ function staleStore() {
       return "a plain `astro build` did not reuse the tampered store entry, so this case proves nothing any more: has Astro's content cache changed?";
 
     const { status, output } = command("run.mjs", [
-      "--only=content",
+      "--feature",
+      "--only=migrated",
       "--no-check",
     ]);
     const stale = pagesWithMarker();
@@ -117,8 +127,17 @@ function staleStore() {
 
 // ── the deployed site is not the new site ───────────────────────────────────────────────────────
 
-function rehearsal(dir, expected) {
-  const { status, output, lines } = command("live.mjs", [`--serve=${dir}`]);
+/**
+ * `verify:live --serve=<dir> <flags>`: exit status and failing checks. The baseline is the site that is being
+ * replaced, so it passes every check but migrated. The build is tested with migrated alone: it is the one check
+ * that does not compare with the baseline, and whether this build still equals the deployed site is what the parity
+ * run (`npm run verify`) answers. Here it would fail every pull request that adds a post.
+ */
+function rehearsal(dir, expected, flags = []) {
+  const { status, output, lines } = command("live.mjs", [
+    `--serve=${dir}`,
+    ...flags,
+  ]);
   const failing = lines
     .filter((line) => /^FAIL\s/.test(line)) // a check's line, not the "FAILED 4/5 checks" summary
     .map((line) => line.split(/\s+/)[1]);
@@ -378,53 +397,188 @@ function draftsHaveNoPage() {
 
 /**
  * run.mjs verifies the project it is started in: lib/paths.mjs asks git for the top level of the working
- * directory. A copy that is a git work tree, with the harness and the baseline linked in, is such a project, so
- * the command is run there as it is typed, and its build fails on a misspelt key.
+ * directory. This makes a copy such a project: scripts/verify and tools/ (the checker `npm run check` starts)
+ * linked in, the drafts of posts/draft/ copied (the drafts check reads them), a git work tree of its own, and the
+ * baseline linked in when `baseline` is true. Returns null, or why the copy is not such a project.
+ */
+function asProject(dir, { baseline }) {
+  fs.mkdirSync(path.join(dir, "scripts"));
+  fs.symlinkSync(
+    path.join(repoRoot, "scripts", "verify"),
+    path.join(dir, "scripts", "verify"),
+  );
+  fs.symlinkSync(path.join(repoRoot, "tools"), path.join(dir, "tools"));
+  fs.cpSync(
+    path.join(repoRoot, "posts", "draft"),
+    path.join(dir, "posts", "draft"),
+    { recursive: true },
+  );
+  if (baseline) {
+    fs.mkdirSync(path.join(dir, ".verify"));
+    fs.symlinkSync(baselineDir, path.join(dir, ".verify", "baseline"));
+  }
+  spawnSync("git", ["init", "-q"], { cwd: dir });
+  const top = spawnSync("git", ["rev-parse", "--show-toplevel"], {
+    cwd: dir,
+    encoding: "utf8",
+  }).stdout?.trim();
+  return top === dir
+    ? null
+    : `the copy is not a git work tree of its own (top level: ${top || "none"}), so run.mjs would not verify it`;
+}
+
+/** `node scripts/verify/run.mjs <flags>` in a copy made by asProject(), as it is typed there. */
+function verifyIn(dir, flags) {
+  const run = spawnSync(
+    process.execPath,
+    [path.join("scripts", "verify", "run.mjs"), ...flags],
+    {
+      cwd: dir,
+      encoding: "utf8",
+      timeout: BUILD_TIMEOUT_MS,
+      env: { ...process.env, VERIFY_EMIT: "0" },
+    },
+  );
+  const output = `${run.stdout ?? ""}${run.stderr ?? ""}${run.error ? `\n${run.error.message}` : ""}`;
+  return {
+    status: run.status,
+    output,
+    lines: output.split("\n").filter(Boolean),
+  };
+}
+
+/** The checks and steps a run printed a result line for ("PASS  seo  15/15" → "seo"), in order. */
+const ranChecks = (lines) =>
+  lines
+    .map((line) => /^(?:PASS|FAIL)\s+(\S+)\s+\d+\/\d+/.exec(line)?.[1])
+    .filter(Boolean);
+
+/** { "<route>": "pass" | "fail" | "skip" } of a copy's .verify/report/<check>.json, or null when it reports none. */
+function reportedRoutes(dir, check) {
+  const file = path.join(dir, ".verify", "report", `${check}.json`);
+  if (!fs.existsSync(file)) return null;
+  return JSON.parse(fs.readFileSync(file, "utf8")).cells ?? null;
+}
+
+/** Why a run that should have passed did not, in one line. */
+const whyFailed = ({ status, lines }) =>
+  `exit status ${status}: ${lines.filter((line) => /^FAIL\s/.test(line)).join(" | ") || lines.at(-1) || "no output"}`;
+
+/**
+ * The checks of `npm run verify -- --feature` (the ones that never read the baseline) need no baseline: the gate
+ * of pull requests and of the deploy workflow, in a checkout that has never fetched gh-pages. The copy has a post
+ * the baseline does not have, as an ordinary pull request would add, and nothing at .verify/baseline.
+ *   1. `--feature` as the workflows type it passes, runs check, build and exactly those checks, and every check
+ *      that reports per route examined the new post's route
+ *   2. `--route=<the new post>` narrows those checks to that route: --route picks from the candidate's routes
+ *   3. a route the candidate does not have is refused with exit status 2
+ */
+async function featureWithoutBaseline() {
+  const expected = (await loadChecks())
+    .filter((check) => !readsBaseline(check))
+    .map((check) => check.name);
+  const id = fixtureToken();
+  const route = `/posts/${id}`;
+  return withCopy({ [`${id}.md`]: post(id) }, (dir) => {
+    const problem = asProject(dir, { baseline: false });
+    if (problem) return problem;
+
+    const full = verifyIn(dir, ["--feature"]);
+    if (fs.existsSync(path.join(dir, ".verify", "baseline")))
+      return "the run made a baseline in the copy";
+    if (!fs.existsSync(path.join(dir, "dist", "posts", `${id}.html`)))
+      return `run.mjs did not build the copy: ${firstLine(full.output)}`;
+    if (full.status !== 0) return whyFailed(full);
+    const ran = ranChecks(full.lines);
+    const wanted = ["check", "build", ...expected];
+    if (ran.join(",") !== wanted.join(","))
+      return `ran ${ran.join(", ")}; expected ${wanted.join(", ")}`;
+    const perRoute = expected.filter(
+      (check) => reportedRoutes(dir, check) !== null,
+    );
+    if (perRoute.length === 0)
+      return "no check reported per route, so whether the new post was examined is unknown";
+    const missed = perRoute.filter(
+      (check) => reportedRoutes(dir, check)[route] !== "pass",
+    );
+    if (missed.length)
+      return `${missed.join(", ")} did not examine ${route}, the post only the copy has`;
+
+    const narrowed = verifyIn(dir, [
+      "--feature",
+      "--no-build",
+      "--no-check",
+      `--route=${route}`,
+    ]);
+    if (narrowed.status !== 0)
+      return `--route=${route}: ${whyFailed(narrowed)}`;
+    for (const check of perRoute) {
+      const routes = Object.keys(reportedRoutes(dir, check) ?? {});
+      if (routes.join(",") !== route)
+        return `--route=${route}: ${check} examined ${routes.join(", ") || "nothing"}`;
+    }
+
+    const unknown = `${route}-missing`;
+    const refusal = verifyIn(dir, [
+      "--feature",
+      "--no-build",
+      "--no-check",
+      `--route=${unknown}`,
+    ]);
+    if (refusal.status !== 2)
+      return `--route=${unknown}: exit status ${refusal.status}, expected 2: ${firstLine(refusal.output)}`;
+    if (!refusal.output.includes(`no such route: ${unknown}`))
+      return `--route=${unknown}: the message does not say "no such route": ${firstLine(refusal.output)}`;
+    if (ranChecks(refusal.lines).length)
+      return `--route=${unknown}: checks ran before the route was refused`;
+    return null;
+  });
+}
+
+/** Modification times of the logs the steps of run.mjs write (null: no such log). */
+const stepLogs = () =>
+  ["check.log", "build.log"].map((name) => {
+    try {
+      return fs.statSync(path.join(reportDir, name)).mtimeMs;
+    } catch {
+      return null;
+    }
+  });
+
+/** Like refused(), and neither `npm run check` nor the build ran: run.mjs prints their lines only at the end. */
+function refusedBeforeBuild(flags, reason) {
+  const before = stepLogs();
+  const problem = refused("run.mjs", flags, reason);
+  if (problem) return `${flags.join(" ")}: ${problem}`;
+  if (stepLogs().some((stamp, index) => stamp !== before[index]))
+    return `${flags.join(" ")}: a step ran before the command line was refused`;
+  return null;
+}
+
+/**
+ * The same kind of copy, with the baseline linked in, whose build fails on a misspelt key. The command is run there
+ * as it is typed.
  */
 function failedBuildIsReadable() {
   const id = fixtureToken();
   return withCopy(
     { [`${id}.md`]: post(id, "desciption: typo of description\n") },
     (dir) => {
-      fs.mkdirSync(path.join(dir, "scripts"));
-      fs.symlinkSync(
-        path.join(repoRoot, "scripts", "verify"),
-        path.join(dir, "scripts", "verify"),
-      );
-      fs.mkdirSync(path.join(dir, ".verify"));
-      fs.symlinkSync(baselineDir, path.join(dir, ".verify", "baseline"));
-      spawnSync("git", ["init", "-q"], { cwd: dir });
-      const top = spawnSync("git", ["rev-parse", "--show-toplevel"], {
-        cwd: dir,
-        encoding: "utf8",
-      }).stdout?.trim();
-      if (top !== dir)
-        return `the copy is not a git work tree of its own (top level: ${top || "none"}), so run.mjs would not verify it`;
+      const problem = asProject(dir, { baseline: true });
+      if (problem) return problem;
 
-      const run = spawnSync(
-        process.execPath,
-        [
-          path.join("scripts", "verify", "run.mjs"),
-          "--no-check",
-          "--only=routes",
-        ],
-        {
-          cwd: dir,
-          encoding: "utf8",
-          timeout: BUILD_TIMEOUT_MS,
-          env: { ...process.env, VERIFY_EMIT: "0" },
-        },
-      );
-      const output = `${run.stdout ?? ""}${run.stderr ?? ""}`;
-      const lines = output.split("\n").filter(Boolean);
+      const { status, output, lines } = verifyIn(dir, [
+        "--no-check",
+        "--only=routes",
+      ]);
       const log = path.join(dir, ".verify", "report", "build.log");
       if (!fs.existsSync(log) || !fs.readFileSync(log, "utf8").includes(id))
         return `run.mjs did not build the copy: ${firstLine(output)}`;
       const line = lines.find((line) => /^FAIL\s+build\b/.test(line));
       if (!line)
-        return `the build did not fail on posts/${id}.md (exit status ${run.status}): ${lines.at(-1) ?? ""}`;
-      if (run.status !== 1)
-        return `exit status ${run.status}, expected 1: ${firstLine(output)}`;
+        return `the build did not fail on posts/${id}.md (exit status ${status}): ${lines.at(-1) ?? ""}`;
+      if (status !== 1)
+        return `exit status ${status}, expected 1: ${firstLine(output)}`;
       if (lines.some((line) => /^(PASS|FAIL)\s+routes\b/.test(line)))
         return "checks ran after the build had failed";
       if (stripVTControlCharacters(line) !== line)
@@ -473,6 +627,36 @@ export const cliCases = [
     run: () =>
       refused("run.mjs", ["--only="], /--only needs a value/) ??
       refused("run.mjs", ["--static=yes"], /--static takes no value/),
+  },
+  {
+    name: "verify --feature: 기준선과 비교하는 검사·플래그나 잘못 쓴 라우트를 주면 빌드 전에 거부한다",
+    run: () =>
+      refusedBeforeBuild(
+        ["--feature", "--only=content"],
+        /not with --feature: content compares/,
+      ) ??
+      refusedBeforeBuild(
+        ["--feature", "--only=links,routes"],
+        /not with --feature: routes compares/,
+      ) ??
+      refusedBeforeBuild(
+        ["--feature", "--selector=header"],
+        /not with --feature: --selector/,
+      ) ??
+      refusedBeforeBuild(
+        ["--feature", "--candidate-url=http://127.0.0.1:9"],
+        /not with --feature: --candidate-url/,
+      ) ??
+      refusedBeforeBuild(
+        ["--feature", `--route=${aPost().slice(1)}`],
+        new RegExp(
+          `no such route: ${aPost().slice(1)} \\(did you mean ${aPost()}\\?\\)`,
+        ),
+      ),
+  },
+  {
+    name: "verify --feature: 기준선 없는 사본에서 새 글까지 보고 통과하며, --route 는 후보의 라우트에서 고른다",
+    run: featureWithoutBaseline,
   },
   {
     name: "verify: 이름으로 고른 검사가 --static 에 걸러지면 거부한다",
@@ -557,8 +741,9 @@ export const cliCases = [
     run: () => rehearsal(baselineDir, { status: 1, failing: ["migrated"] }),
   },
   {
-    name: "verify:live: 새 빌드(dist)는 통과한다",
-    run: () => rehearsal(distDir, { status: 0, failing: [] }),
+    name: "verify:live: 새 빌드(dist)는 migrated 를 통과한다",
+    run: () =>
+      rehearsal(distDir, { status: 0, failing: [] }, ["--only=migrated"]),
   },
   {
     name: "build: (대조군) 프로젝트 사본에 더한 올바른 글은 빌드되어 페이지·홈 목록·sitemap 에 나온다",

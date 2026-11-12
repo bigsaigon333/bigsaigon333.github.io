@@ -13,8 +13,11 @@
 import { load } from "cheerio";
 
 import {
+  addPage,
   candidateRoutes,
   mutateFile,
+  NEW_PAGE,
+  postFiles,
   rawText,
   statusOf,
 } from "../lib/html.mjs";
@@ -130,6 +133,14 @@ export default {
             ),
           );
         },
+      },
+      {
+        // The page is a copy of a post that the sitemap does not list under the new address.
+        name: "sitemap 에 없는, 기준선에 없는 새 글 페이지",
+        apply(dir) {
+          addPage(dir, postFiles(dir)[0]);
+        },
+        routes: [NEW_PAGE.route],
       },
       {
         name: "sitemap 에서 홈 삭제",

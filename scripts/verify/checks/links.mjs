@@ -1,4 +1,6 @@
 // links — nothing on the candidate points into the void. Candidate-only; the baseline is not consulted.
+// Its scope stays parity, so the self-test runs it on the baseline and mutates a copy of the baseline, but it declares
+// `candidateOnly: true` and so runs with `npm run verify -- --feature`, where there is no baseline.
 //
 // In every HTML page of the candidate, each internal reference must answer 200 under GitHub Pages path resolution
 // (lib/resolve.mjs): a[href], link[href], script[src], img[src], source[src] and every srcset entry.
@@ -8,10 +10,12 @@
 //
 // Allowlist item: "ref:<pathname>" (a trailing ** matches by prefix).
 import {
+  addPage,
   allowances,
   candidateRoutes,
   internalPath,
   mutateFile,
+  NEW_PAGE,
   srcsetUrls,
   statusOf,
 } from "../lib/html.mjs";
@@ -44,6 +48,7 @@ function internalReferences($, route) {
 export default {
   name: "links",
   kind: "static",
+  candidateOnly: true,
 
   async run(ctx) {
     const { allowed, skip } = allowances(ctx, "links");
@@ -112,6 +117,18 @@ export default {
             ),
           );
         },
+      },
+      {
+        name: "기준선에 없는 새 페이지에 깨진 링크",
+        apply(dir) {
+          addPage(dir, "index.html", (html) =>
+            html.replace(
+              "</footer>",
+              '<a href="/posts/no-such-post"></a></footer>',
+            ),
+          );
+        },
+        routes: [NEW_PAGE.route],
       },
       {
         name: "없는 이미지 참조 삽입",
