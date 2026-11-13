@@ -4,6 +4,7 @@ import { defineConfig } from "astro/config";
 import { satteri } from "@astrojs/markdown-satteri";
 
 import fonts from "./config/fonts.mjs";
+import localIntegrations from "./config/integrations.mjs";
 import markdown from "./config/markdown.mjs";
 
 // .mdx 용 Sätteri 처리기. .md 와 같은 기능·플러그인을 쓰되, mdast 플러그인이 넣는 `html` 노드만 바꿔 넣는다.
@@ -47,7 +48,8 @@ export default defineConfig({
   build: { format: "file" },
   markdown,
   // .mdx 는 markdown 설정(Shiki 등)을 물려받는다(extendMarkdownConfig 기본값 true). 처리기만 위의 mdxProcessor 로 바꾼다.
-  integrations: [mdx({ processor: mdxProcessor })],
+  // 로컬 통합(site-guard: 빌드 뒤 링크·JS 예산 검사)은 config/integrations.mjs 에 있다.
+  integrations: [mdx({ processor: mdxProcessor }), ...localIntegrations],
   fonts,
   // View Transitions(S6.2)의 <ClientRouter /> 와 함께 쓰는 prefetch. 같은 사이트의 모든 링크를 포인터를 올리거나
   // 포커스할 때(hover) 미리 받는다. ClientRouter 가 있으면 prefetchAll 의 기본값이 true 지만 드러내 적는다.
