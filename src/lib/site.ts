@@ -1,3 +1,11 @@
+// 배포 환경마다 바뀔 수 있는 세 값은 astro:env(config/env.mjs 의 스키마, 값은 config/.env.<mode>)에서 읽는다.
+// 이 모듈을 가져오는 순간 스키마 전체가 검사되므로 값이 빠지면 빌드가 그 변수 이름을 대며 멈춘다.
+import {
+  GA_MEASUREMENT_ID,
+  GOOGLE_SITE_VERIFICATION,
+  UTTERANCES_REPO,
+} from "astro:env/server";
+
 const url = "https://bigsaigon333.github.io";
 
 // `as const` 안에서도 string[] 로 남도록 따로 선언한다(Seo 의 keywords: string[] 에 그대로 넘긴다).
@@ -32,6 +40,7 @@ export const SITE = {
     "화면에 BLOG 라고 적힌 노트북 주위에 사진, 동영상, 문서 아이콘이 떠 있는 일러스트",
   email: "likepepperint@gmail.com",
   github: "https://github.com/bigsaigon333",
-  gaId: "G-Y270VJN1Y2",
-  googleSiteVerification: "EgEIEyHCMFeuXMkD5WkIL8nUqAu88egS-aNgSua3tjI",
+  gaId: GA_MEASUREMENT_ID,
+  googleSiteVerification: GOOGLE_SITE_VERIFICATION,
+  utterancesRepo: UTTERANCES_REPO,
 } as const;

@@ -15,6 +15,8 @@
 // (embeds 검사는 repo·issue-term·theme·crossorigin·async 와 자리를 비교한다. 이 속성은 그 밖이다.)
 // issue-term="title" 은 document.title 로 댓글 이슈를 찾는다. 글의 <title> 을 바꾸면 댓글이 끊긴다.
 
+import { SITE } from "../lib/site";
+
 // repo, theme 은 HTML 표준 속성이 아니라서 선언이 없으면 astro check 가 ts(2322) 로 막는다.
 // (issue-term 처럼 하이픈이 든 이름은 JSX 타입 검사가 건너뛴다.)
 declare global {
@@ -30,7 +32,7 @@ declare global {
 <script
   is:inline
   src="https://utteranc.es/client.js"
-  repo="bigsaigon333/bigsaigon333.github.io"
+  repo={SITE.utterancesRepo}
   issue-term="title"
   theme="boxy-light"
   crossorigin="anonymous"
