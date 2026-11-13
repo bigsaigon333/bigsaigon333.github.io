@@ -165,6 +165,7 @@ function rehearsal(dir, expected, flags = []) {
 const BUILD_INPUTS = [
   "astro.config.mjs",
   "config",
+  "integrations",
   "src",
   "public",
   "tsconfig.json",
