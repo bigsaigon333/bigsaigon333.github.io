@@ -86,8 +86,17 @@ function resolveRef(ref) {
 
 /** What Astro and Vite write under node_modules/. A linked node_modules leaves them to the worktree. */
 const NODE_MODULES_CACHES = new Set([".astro", ".vite", ".cache"]);
+/**
+ * Packages copied instead of linked (as in lib/cli-cases.mjs). Astro compiles the .astro components it ships
+ * (ClientRouter) and looks up their compile metadata under the worktree's root joined with the link's real path,
+ * which a link to this checkout's node_modules/astro makes a path that does not exist.
+ */
+const NODE_MODULES_COPIED = new Set(["astro"]);
 
-/** node_modules of `dir`: links to this checkout's packages when the lockfiles are the same, else `npm ci`. */
+/**
+ * node_modules of `dir`: links to this checkout's packages (NODE_MODULES_COPIED copied) when the lockfiles are the
+ * same, else `npm ci`.
+ */
 function install(dir) {
   const lock = (root) => {
     try {
@@ -100,7 +109,13 @@ function install(dir) {
   if (ours !== null && ours === lock(dir)) {
     fs.mkdirSync(path.join(dir, "node_modules"));
     for (const entry of fs.readdirSync(path.join(repoRoot, "node_modules")))
-      if (!NODE_MODULES_CACHES.has(entry))
+      if (NODE_MODULES_COPIED.has(entry))
+        fs.cpSync(
+          path.join(repoRoot, "node_modules", entry),
+          path.join(dir, "node_modules", entry),
+          { recursive: true },
+        );
+      else if (!NODE_MODULES_CACHES.has(entry))
         fs.symlinkSync(
           path.join(repoRoot, "node_modules", entry),
           path.join(dir, "node_modules", entry),

@@ -542,7 +542,11 @@ export default {
         name: "글 본문 링크의 hover box-shadow 제거",
         routes: (dir) => postRoutesWith(dir, /<main[\s\S]*?<a href=/),
         apply(dir) {
-          editPages(dir, /a:hover\{box-shadow:0 \.125rem #000\}/, "a:hover{}");
+          editPages(
+            dir,
+            /a:hover\{box-shadow:0 \.125rem 0 0 var\(--color-text\)\}/,
+            "a:hover{}",
+          );
         },
       },
       {

@@ -310,9 +310,10 @@ export default {
               fs.readFileSync(path.join(dir, rel), "utf8"),
             ),
           );
+          // Inline, or (since S7.2's CSP keeps every script in a file) <script src="/_astro/CopyCode….js">.
           addPage(dir, from, (html) =>
             html.replace(
-              /<script type="module">[^<]*customElements\.define\(`copy-code`[^<]*<\/script>/,
+              /<script type="module">[^<]*customElements\.define\(`copy-code`[^<]*<\/script>|<script type="module" src="\/_astro\/CopyCode\.[^"]*"><\/script>/,
               "",
             ),
           );
