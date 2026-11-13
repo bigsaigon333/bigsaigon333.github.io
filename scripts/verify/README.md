@@ -35,7 +35,7 @@ npm run verify:live -- --serve=<dir>      # 위 검사를 로컬에서 예행연
 
 - `<ref>`의 기본값은 환경 변수 `VERIFY_BASELINE_REF`, 없으면 `origin/main`이다. 이 clone에 없으면 `origin`에서 가져온다.
 - `<ref>`를 임시 worktree(detached)로 꺼내 `npm run build`를 돌리고, `dist/`를 `.verify/baseline/`에 복사한 뒤 worktree를 지운다.
-- 의존성은 `package-lock.json`이 이 체크아웃과 같으면 이 체크아웃의 `node_modules`를 링크하고, 다르면 거기서 `npm ci`를 한다.
+- 의존성은 `package-lock.json`이 이 체크아웃과 같으면 이 체크아웃의 `node_modules`를 링크하고(`astro` 패키지만 복사한다. 링크하면 astro 가 싣는 `ClientRouter.astro`의 컴파일 메타데이터를 찾지 못한다), 다르면 거기서 `npm ci`를 한다.
 - `.verify/baseline.json`에 `{ ref, sha, hash }`를 남긴다. `hash`는 기준선 파일들의 (경로, sha256) 목록을 정렬해 다시 sha256한 값이다. accept 파일이 이 값을 가리킨다.
 - `<ref>`가 가리키는 커밋이 `baseline.json`의 `sha`와 같으면 다시 빌드하지 않는다.
 
