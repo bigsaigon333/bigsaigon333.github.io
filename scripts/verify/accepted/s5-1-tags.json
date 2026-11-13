@@ -1,0 +1,52 @@
+{
+  "baseline": "fe19427f9446e285e8c524f3f089854e00c3af1b42f908ad59bf03f8b6adb2d0",
+  "reason": "S5.1 태그 페이지: keywords 가 있는 글 2개의 머리 아래에 태그 줄을 더하고, /tags 와 태그 16개의 /tags/<슬러그> 페이지를 sitemap 과 함께 더한다",
+  "entries": [
+    {
+      "check": "hover",
+      "routes": [
+        "/posts/css-masters-2-week1",
+        "/posts/proxy-to-built-in-objects"
+      ],
+      "reason": "글 머리 아래에 새 태그 링크(nav.post-tags)가 생겼다. 그 링크만 가리고 나머지 링크의 hover 스타일은 기준선과 비교한다",
+      "mask": ["nav.post-tags"]
+    },
+    {
+      "check": "routes",
+      "routes": [
+        "/sitemap.xml",
+        "/tags",
+        "/tags/built-in-object",
+        "/tags/css",
+        "/tags/css3",
+        "/tags/html5",
+        "/tags/internal-slot",
+        "/tags/map",
+        "/tags/proxy",
+        "/tags/reflect",
+        "/tags/set-trap",
+        "/tags/void-요소",
+        "/tags/w3c",
+        "/tags/내부-슬롯",
+        "/tags/내장-객체",
+        "/tags/요소vs태그",
+        "/tags/웹표준",
+        "/tags/트랩-설정"
+      ],
+      "reason": "새 페이지: 태그 목록 /tags 와 태그마다 /tags/<슬러그>(keywords 16개). /sitemap.xml 은 그 주소들이 더해져 바이트가 달라진다"
+    },
+    {
+      "check": "sitemap",
+      "routes": ["/sitemap.xml"],
+      "reason": "새 태그 페이지 17개(/tags 와 /tags/<슬러그>)의 loc 가 더해진다. 기준선의 loc 는 모두 그대로 있다"
+    },
+    {
+      "check": "visual",
+      "routes": [
+        "/posts/css-masters-2-week1",
+        "/posts/proxy-to-built-in-objects"
+      ],
+      "reason": "keywords 가 있는 두 글만 글 머리 아래 태그 줄(약 2rem + 줄 높이)이 생겨 그 아래가 밀린다. 높이가 달라 mask 로는 가릴 수 없다. 키워드 없는 글 10개와 홈·404 는 그대로 비교한다"
+    }
+  ]
+}

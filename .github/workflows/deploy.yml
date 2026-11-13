@@ -18,11 +18,54 @@ env:
   ASTRO_TELEMETRY_DISABLED: 1
 
 jobs:
+  # 자기 검사는 검사기를 시험할 뿐 배포물을 만들지 않는다. push 된 커밋으로 merge 된 PR 의 head 가 같은 트리이고
+  # 그 head 에서 "verify selftest" 가 성공했으면 다시 돌리지 않는다. 그 밖의 경우(직접 push, 수동 실행, 무엇이든
+  # 어긋나거나 조회에 실패하면)는 모두 돌린다. verify(배포물을 만든다)는 늘 돈다.
+  selftest-plan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+      checks: read
+    outputs:
+      run: ${{ steps.plan.outputs.run }}
+    steps:
+      - id: plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          decide() { echo "selftest: $2"; echo "run=$1" >> "$GITHUB_OUTPUT"; exit 0; }
+          trap 'decide true "runs: a lookup failed"' ERR
+          set -o pipefail
+          [ "$EVENT" = push ] || decide true "runs: $EVENT is not a push"
+          prs=$(gh api "repos/$REPO/commits/$SHA/pulls" --jq "[.[] | select(.merged_at != null and .merge_commit_sha == \"$SHA\")]")
+          [ "$(jq length <<<"$prs")" = 1 ] || decide true "runs: no single pull request merged as $SHA"
+          number=$(jq -r '.[0].number' <<<"$prs")
+          head=$(jq -r '.[0].head.sha' <<<"$prs")
+          tree=$(gh api "repos/$REPO/commits/$SHA" --jq .commit.tree.sha)
+          head_tree=$(gh api "repos/$REPO/commits/$head" --jq .commit.tree.sha)
+          [ -n "$tree" ] && [ "$tree" = "$head_tree" ] || decide true "runs: tree of #$number head $head ($head_tree) is not the tree of $SHA ($tree)"
+          # 다시 돌린 것이 있으면 마지막 것을 본다. 다른 앱이 같은 이름으로 만든 check run 은 세지 않는다.
+          latest=$(gh api --paginate "repos/$REPO/commits/$head/check-runs?per_page=100" \
+            --jq '.check_runs[] | select(.app.slug == "github-actions" and (.name == "verify selftest" or (.name | endswith(" / verify selftest")))) | [.started_at, .status, (.conclusion // "-"), .html_url] | @tsv' \
+            | sort | tail -n 1)
+          [ -n "$latest" ] || decide true "runs: #$number head $head has no \"verify selftest\" check run"
+          IFS=$'\t' read -r _ status conclusion url <<<"$latest"
+          [ "$status/$conclusion" = completed/success ] || decide true "runs: \"verify selftest\" of #$number head $head is $status/$conclusion ($url)"
+          decide false "skipped: #$number head $head has the tree of $SHA and passed \"verify selftest\" ($url)"
+
   # main 에 Pull Request 를 거치지 않고 들어온 커밋도 같은 검사를 통과해야 배포된다.
   checks:
+    needs: selftest-plan
     uses: ./.github/workflows/checks.yml
     with:
       pages-artifact: true
+      selftest: ${{ needs.selftest-plan.outputs.run != 'false' }}
+      # 기준선은 직전 운영본: push 는 push 전의 main, 수동 실행은 지금 커밋(이미 배포된 것을 다시 올린다).
+      baseline-ref: ${{ github.event_name == 'push' && github.event.before || github.sha }}
 
   deploy:
     needs: checks
@@ -36,7 +79,7 @@ jobs:
       - id: deployment
         uses: actions/deploy-pages@v5
 
-  # 배포 뒤 실제 주소가 200 으로, 리다이렉트 없이, 검사한 것과 같은 내용으로 응답하는지 본다.
+  # 배포 뒤 실제 주소가 200 으로, 리다이렉트 없이, 방금 배포한 커밋의 빌드와 같은 내용으로 응답하는지 본다.
   live:
     needs: deploy
     runs-on: ubuntu-latest
@@ -47,7 +90,14 @@ jobs:
           node-version-file: mise.toml
           package-manager-cache: false
       - run: npm ci
-      - run: npm run verify:setup
+      # 실제 사이트는 방금 배포한 아티팩트(검사를 통과한 그 dist/)와 같아야 한다. 다시 빌드하지 않고 기준선으로 쓴다.
+      - uses: actions/download-artifact@v8
+        with:
+          name: github-pages
+          path: ${{ runner.temp }}/pages
+      - run: |
+          mkdir -p .verify/baseline
+          tar -xf "$RUNNER_TEMP/pages/artifact.tar" -C .verify/baseline
       # CDN 이 새 배포를 내보내기까지 잠깐 걸릴 수 있어 30초 간격으로 다섯 번까지 본다.
       - env:
           BASE_URL: ${{ needs.deploy.outputs.page_url }}

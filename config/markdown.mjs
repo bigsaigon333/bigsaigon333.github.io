@@ -1,49 +1,76 @@
 // astro.config.mjs 의 `markdown` 값.
 //
-// 예전 lib/posts.ts 의 unified 체인을 그대로 옮긴 것이다:
-//   remark-parse → remark-gfm → remark-math → remark-rehype(allowDangerousHtml) → rehype-katex → rehype-highlight
-//   → rehype-stringify
-// remark-parse, remark-rehype(allowDangerousHtml: true), rehype-stringify 는 `unified()` 프로세서가 스스로 넣는다.
-// 여기서는 그 사이에 끼울 플러그인을 넣고, 플러그인 메이저 버전이 올라가며 달라진 기본값을 예전 값으로 되돌린다.
-import { unified } from "@astrojs/markdown-remark";
-import rehypeHighlight from "rehype-highlight";
-import rehypeKatex from "rehype-katex";
-import remarkMath from "remark-math";
+// Astro 7 의 기본 엔진 Sätteri 와 기본 하이라이터 Shiki 를 쓴다(S4.1). 예전 unified 체인
+// (remark-gfm → remark-math → remark-rehype → rehype-katex → rehype-highlight)이 하던 일을 이렇게 옮겼다:
+//   - GFM(표, 취소선, 체크박스, 각주, 자동 링크): Sätteri 기본값. 각주 문구만 예전 값으로 되돌린다.
+//   - 수식: Sätteri 의 math 기능이 `$…$` 를 inlineMath 노드로 읽고, 아래 mdast 플러그인이 KaTeX HTML 로 바꾼다.
+//   - 코드 블록: Shiki 가 빌드 때 칠한다(인라인 style). 라이트·다크 두 테마를 CSS 변수로 함께 싣는다.
+//   - 원시 HTML: Sätteri 는 기본으로 raw 노드를 그대로 내보낸다. 단, 상대 경로 `<img>` 는 html-images 플러그인이
+//     Markdown 이미지로 바꿔 astro:assets 가 최적화하게 한다(S4.3).
+import { satteri } from "@astrojs/markdown-satteri";
+import katex from "katex";
 
-// 예전 빌드(rehype-highlight 5 → lowlight 2.6.1)가 등록하던 언어 35개.
-// prettier-ignore
-const OLD_LANGUAGES = [
-  "arduino", "bash", "c", "cpp", "csharp", "css", "diff", "go", "ini", "java", "javascript", "json", "kotlin",
-  "less", "lua", "makefile", "markdown", "objectivec", "perl", "php", "php-template", "plaintext", "python",
-  "python-repl", "r", "ruby", "rust", "scss", "shell", "sql", "swift", "typescript", "vbnet", "xml", "yaml",
-];
+import { htmlImagesPlugin } from "./html-images.mjs";
 
-// 문법 파일을 package.json 에 고정한 highlight.js 11.5.1 에서 가져온다(예전 사이트가 쓰던 버전).
-// rehype-highlight 7 이 기본으로 쓰는 문법은 lowlight 3 안의 highlight.js 11.11 것이라 TypeScript 토큰이 달라진다.
-const languages = Object.fromEntries(
-  await Promise.all(
-    OLD_LANGUAGES.map(async (name) => {
-      const grammar = await import(`highlight.js/lib/languages/${name}`);
-      return [name, grammar.default];
-    }),
-  ),
-);
+// rehype-katex 7 이 하던 것과 같은 호출이다. throwOnError 로 먼저 시도하고, 실패하면 오류 표시로 그린다.
+function renderMath(value, displayMode) {
+  try {
+    return katex.renderToString(value, { displayMode, throwOnError: true });
+  } catch {
+    return katex.renderToString(value, {
+      displayMode,
+      strict: "ignore",
+      throwOnError: false,
+    });
+  }
+}
+
+const katexPlugin = {
+  name: "katex",
+  inlineMath(node, ctx) {
+    ctx.replaceNode(node, {
+      type: "html",
+      value: renderMath(node.value, false),
+    });
+  },
+  math(node, ctx) {
+    ctx.replaceNode(node, {
+      type: "html",
+      value: renderMath(node.value, true),
+    });
+  },
+};
+
+// <code> 에 `language-<언어>` 클래스를 붙인다. 코드 글꼴(Source Code Pro, 0.825rem)은 global.css 의
+// `code[class*="language-"]` 가 정하는데, Shiki 는 이 클래스를 붙이지 않는다(언어는 <pre data-language> 에만 있다).
+// 언어를 적지 않은 블록은 Shiki 가 "plaintext" 로 받으므로 `language-plaintext` 가 되어 같은 글꼴을 받는다.
+// 예전 rehype-highlight 는 그런 블록의 언어를 자동 감지해 language-javascript 따위를 붙였었다.
+const languageClass = {
+  name: "language-class",
+  code(node) {
+    this.addClassToHast(node, `language-${this.options.lang}`);
+  },
+};
 
 export default {
-  // Astro 내장 하이라이터(Shiki)를 끈다. 코드 블록은 아래 rehype-highlight 가 highlight.js 클래스로 칠한다.
-  syntaxHighlight: false,
-  processor: unified({
-    // remark-gfm: 표, 취소선, 체크박스, 각주, 자동 링크.
-    gfm: true,
-    // 예전 체인에는 smartypants 가 없었다. 켜 두면 "…" 가 “…” 로, ... 가 … 로 바뀐다.
-    smartypants: false,
-    remarkPlugins: [remarkMath],
-    // remark-rehype 11 은 각주 되돌아가기 링크의 aria-label 을 "Back to reference 1" 로 쓴다. 10 의 문구로 되돌린다.
-    remarkRehype: { footnoteBackLabel: "Back to content" },
-    rehypePlugins: [
-      rehypeKatex,
-      // detect: 예전 rehype-highlight 5 는 언어를 적지 않은 코드 블록도 자동 감지해서 칠했다. 7 은 기본이 꺼짐이다.
-      [rehypeHighlight, { detect: true, languages }],
-    ],
+  syntaxHighlight: { type: "shiki", excludeLangs: ["math"] },
+  shikiConfig: {
+    // 색은 style="--shiki-light:…;--shiki-dark:…" 로만 싣는다. 어느 쪽을 쓸지는 src/styles/code.css 가 정한다.
+    themes: {
+      light: "github-light-high-contrast",
+      dark: "github-dark-high-contrast",
+    },
+    defaultColor: false,
+    transformers: [languageClass],
+  },
+  processor: satteri({
+    features: {
+      // 예전 remark-rehype 10 의 각주 되돌아가기 링크 aria-label. Sätteri 기본값은 "Back to reference 1" 이다.
+      gfm: { footnotes: { backLabel: "Back to content" } },
+      math: true,
+      // 예전 체인에는 smartypants 가 없었다.
+      smartPunctuation: false,
+    },
+    mdastPlugins: [katexPlugin, htmlImagesPlugin],
   }),
 };

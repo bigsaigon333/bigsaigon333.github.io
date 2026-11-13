@@ -1,0 +1,80 @@
+---
+// 코드 블록(Shiki 의 pre.astro-code)마다 "복사" 버튼을 단다(S6.3).
+//
+// 버튼은 빌드 때가 아니라 브라우저에서 만든다. 코드 블록은 <Content /> 가 그린 Markdown 이라 컴포넌트가 감쌀 수 없다.
+// 그래서 이 컴포넌트는 빈 커스텀 엘리먼트 <copy-code hidden> 하나와 처리되는(번들되는) <script> 하나다.
+// - 스크립트는 클래스를 정의하고 등록만 한다. 맨 위에서 DOM 을 찾지 않는다. 일은 connectedCallback 이 한다.
+//   이 엘리먼트가 문서에 붙을 때마다(첫 로드, 그리고 나중에 View Transitions 가 새 페이지를 바꿔 넣을 때) 다시 돈다.
+// - hidden 이라 상자가 없다. 레이아웃(.layout 의 row-gap)에 끼지 않는다.
+// - 버튼은 <pre> 안 오른쪽 위에 absolute 로 놓인다. 레이아웃은 그대로이고, 복사하는 것은 버튼이 아니라 <code> 의 글자다.
+//   검증 장치의 `interactions` 검사가 클립보드 = pre 의 글자, 이름 "복사" → "복사됨", Enter 로도 되는지를 본다.
+---
+
+<copy-code hidden></copy-code>
+
+<script>
+  const IDLE = "복사";
+  const DONE = "복사됨";
+  const FAILED = "복사하지 못했습니다";
+  const RESET_MS = 2000;
+
+  class CopyCode extends HTMLElement {
+    connectedCallback() {
+      for (const pre of document.querySelectorAll("pre.astro-code")) {
+        if (pre.querySelector(":scope > .copy-code")) continue;
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "copy-code";
+        button.textContent = IDLE;
+        button.setAttribute("aria-live", "polite");
+        let timer = 0;
+        button.addEventListener("click", async () => {
+          const text = (pre.querySelector("code") ?? pre).textContent ?? "";
+          try {
+            await navigator.clipboard.writeText(text);
+            button.textContent = DONE;
+          } catch {
+            button.textContent = FAILED;
+          }
+          clearTimeout(timer);
+          timer = window.setTimeout(() => {
+            button.textContent = IDLE;
+          }, RESET_MS);
+        });
+        pre.append(button);
+      }
+    }
+  }
+
+  if (!customElements.get("copy-code"))
+    customElements.define("copy-code", CopyCode);
+</script>
+
+<style is:global>
+  /* 버튼은 스크립트가 만들어 scoped 속성이 없다. 그래서 전역으로 쓴다(글 페이지에만 실린다). */
+  pre.astro-code {
+    position: relative;
+  }
+
+  .copy-code {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    padding: 0.125rem 0.5rem;
+    border: 1px solid #d0d7de;
+    border-radius: 0.25rem;
+    background: #ffffff;
+    /* 흰 배경에서 대비 7.0:1 */
+    color: #595959;
+    font: inherit;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .copy-code:hover {
+    color: #000000;
+  }
+</style>

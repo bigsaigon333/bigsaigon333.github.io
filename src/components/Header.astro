@@ -1,5 +1,14 @@
 ---
+import { Picture } from "astro:assets";
+
+import profile from "../assets/profile.jpg";
 import { SITE } from "../lib/site";
+import ThemeToggle from "./ThemeToggle.astro";
+
+// 프로필 사진: astro:assets 가 빌드 때 webp·jpg 를 너비 3개로 만든다.
+// avif 도 더하면 더 작지만(192w 3.6KB, webp 6.3KB) <source> 가 하나 늘어 예전 마크업(webp source + jpg img)과 모양이 달라진다.
+// 상자 크기는 .profile-wrapper 가 정하고 img 는 그 상자를 채우므로(아래 .profile) 렌더 크기는 그대로다.
+// public/profile.jpg·profile.webp 는 예전 주소로 들어오는 요청을 위해 남긴다.
 
 interface Props {
   /** 홈에서만 메일·깃허브 아이콘 링크를 보여 준다. */
@@ -10,13 +19,19 @@ const { home = false } = Astro.props;
 ---
 
 <header>
+  <ThemeToggle />
   <h1 class="title">
     <a class="title-link" href="/">
       <div class="profile-wrapper">
-        <picture>
-          <source srcset="/profile.webp" type="image/webp" />
-          <img class="profile" src="/profile.jpg" alt="프로필" />
-        </picture>
+        <Picture
+          class="profile"
+          src={profile}
+          alt="프로필"
+          formats={["webp"]}
+          widths={[192, 384, profile.width]}
+          sizes="(max-width: 600px) 20vw, (max-width: 767px) 25vw, 192px"
+          loading="eager"
+        />
       </div>
       <div>
         <span>프론트엔드 개발자</span>
@@ -82,7 +97,7 @@ const { home = false } = Astro.props;
 
   /* 배포본에서도 맞는 요소가 없는 규칙이다(제목은 p 가 아니라 div 안에 있다). 그대로 옮겼다. */
   .title-link:hover p span {
-    box-shadow: 0 0.25rem 0 0 black;
+    box-shadow: 0 0.25rem 0 0 var(--color-text);
   }
 
   @media (max-width: 767px) {
@@ -134,6 +149,12 @@ const { home = false } = Astro.props;
 
   .link-list li a:hover {
     opacity: 0.4;
+  }
+
+  /* 아이콘 그림(email.png, github-sign.png)은 검정이다. 다크에서는 뒤집어 흰색으로 보인다(--icon-filter). */
+  .email-link,
+  .github-link {
+    filter: var(--icon-filter);
   }
 
   /* EmailLink */
