@@ -10,6 +10,7 @@ import Footer from "../components/Footer.astro";
 import HeadAssets from "../components/HeadAssets.astro";
 import Header from "../components/Header.astro";
 import Seo, { type Props as SeoProps } from "../components/Seo.astro";
+import { inlineScript } from "../../config/csp.mjs";
 import { SITE } from "../lib/site";
 
 interface Props {
@@ -24,7 +25,7 @@ const { seo, home = false } = Astro.props;
 // 스타일시트보다 앞, <head> 맨 위에 둔다. 정하는 순서: 저장한 선택(localStorage "theme") → 시스템의 prefers-color-scheme.
 // 저장한 선택이 없으면 시스템 설정이 바뀔 때 따라간다.
 //
-// 값은 define:vars 로 넘긴다. Astro 는 본문을 (function(){ const themeKey = "theme"; … })(); 로 감싼다.
+// 값은 아래 themeScript 가 define:vars 와 같은 모양으로 넣는다: (function(){ const themeKey = "theme"; … })();
 // 그래서 밖에서 쓸 것은 window.__theme 에 단다. ThemeToggle 의 스크립트가 set() 을 부른다. set() 은 저장하지
 // 못해도(사생활 보호 모드 등) 이 페이지의 테마는 바꾼다.
 //
@@ -43,6 +44,71 @@ const { seo, home = false } = Astro.props;
 //  본문에 "<" 를 쓰지 않는다: 검증 장치의 theme 검사 자기 검사가 이 스크립트를 정규식으로 찾는다.)
 const themeKey = "theme";
 const utterancesThemes = { light: "boxy-light", dark: "github-dark" };
+
+// CSP(S7.2): Astro 는 is:inline 스크립트의 해시를 모른다. 그래서 define:vars 가 만들던 글자 그대로를 여기서 만들고,
+// inlineScript() 가 그 sha256 을 이 페이지의 정책(script-src)에 넣는다. 본문 한 글자라도 바꾸면 해시도 따라 바뀐다.
+const themeScript = inlineScript(
+  Astro,
+  `(function(){const themeKey = ${JSON.stringify(themeKey)};
+const utterancesThemes = ${JSON.stringify(utterancesThemes)};
+
+const root = document.documentElement;
+const system = matchMedia("(prefers-color-scheme: dark)");
+const saved = () => {
+  try {
+    const value = localStorage.getItem(themeKey);
+    return value === "light" || value === "dark" ? value : null;
+  } catch {
+    return null;
+  }
+};
+const widget = 'script[src^="https://utteranc.es/client.js"]';
+const apply = (theme) => {
+  root.dataset.theme = theme;
+  const name = utterancesThemes[theme];
+  for (const script of document.querySelectorAll(widget))
+    script.setAttribute("theme", name);
+  for (const frame of document.querySelectorAll(
+    "iframe.utterances-frame",
+  ))
+    frame.contentWindow?.postMessage(
+      { type: "set-theme", theme: name },
+      "https://utteranc.es",
+    );
+  document.dispatchEvent(new CustomEvent("themechange"));
+};
+apply(saved() ?? (system.matches ? "dark" : "light"));
+
+const observer = new MutationObserver(() => {
+  for (const script of document.querySelectorAll(widget))
+    script.setAttribute("theme", utterancesThemes[root.dataset.theme]);
+});
+observer.observe(root, { childList: true, subtree: true });
+addEventListener("DOMContentLoaded", () => observer.disconnect());
+
+document.addEventListener("astro:before-swap", (event) => {
+  const next = event.newDocument;
+  const theme = root.dataset.theme;
+  next.documentElement.dataset.theme = theme;
+  for (const script of next.querySelectorAll(widget))
+    script.setAttribute("theme", utterancesThemes[theme]);
+});
+
+system.addEventListener("change", (event) => {
+  if (!saved()) apply(event.matches ? "dark" : "light");
+});
+window.__theme = {
+  set(theme) {
+    apply(theme);
+    try {
+      localStorage.setItem(themeKey, theme);
+    } catch {
+      return;
+    }
+  },
+};
+})();`,
+);
 ---
 
 <!doctype html>
@@ -50,63 +116,7 @@ const utterancesThemes = { light: "boxy-light", dark: "github-dark" };
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="initial-scale=1.0, width=device-width" />
-    <script is:inline define:vars={{ themeKey, utterancesThemes }}>
-      const root = document.documentElement;
-      const system = matchMedia("(prefers-color-scheme: dark)");
-      const saved = () => {
-        try {
-          const value = localStorage.getItem(themeKey);
-          return value === "light" || value === "dark" ? value : null;
-        } catch {
-          return null;
-        }
-      };
-      const widget = 'script[src^="https://utteranc.es/client.js"]';
-      const apply = (theme) => {
-        root.dataset.theme = theme;
-        const name = utterancesThemes[theme];
-        for (const script of document.querySelectorAll(widget))
-          script.setAttribute("theme", name);
-        for (const frame of document.querySelectorAll(
-          "iframe.utterances-frame",
-        ))
-          frame.contentWindow?.postMessage(
-            { type: "set-theme", theme: name },
-            "https://utteranc.es",
-          );
-        document.dispatchEvent(new CustomEvent("themechange"));
-      };
-      apply(saved() ?? (system.matches ? "dark" : "light"));
-
-      const observer = new MutationObserver(() => {
-        for (const script of document.querySelectorAll(widget))
-          script.setAttribute("theme", utterancesThemes[root.dataset.theme]);
-      });
-      observer.observe(root, { childList: true, subtree: true });
-      addEventListener("DOMContentLoaded", () => observer.disconnect());
-
-      document.addEventListener("astro:before-swap", (event) => {
-        const next = event.newDocument;
-        const theme = root.dataset.theme;
-        next.documentElement.dataset.theme = theme;
-        for (const script of next.querySelectorAll(widget))
-          script.setAttribute("theme", utterancesThemes[theme]);
-      });
-
-      system.addEventListener("change", (event) => {
-        if (!saved()) apply(event.matches ? "dark" : "light");
-      });
-      window.__theme = {
-        set(theme) {
-          apply(theme);
-          try {
-            localStorage.setItem(themeKey, theme);
-          } catch {
-            return;
-          }
-        },
-      };
-    </script>
+    <script is:inline set:html={themeScript} />
     <Seo {...seo} />
     <link rel="icon" href="/favicon.ico" />
     <HeadAssets />

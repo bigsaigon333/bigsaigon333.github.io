@@ -3,6 +3,7 @@ import { defineConfig } from "astro/config";
 
 import { satteri } from "@astrojs/markdown-satteri";
 
+import csp from "./config/csp.mjs";
 import env, { envDir } from "./config/env.mjs";
 import fonts from "./config/fonts.mjs";
 import localIntegrations from "./config/integrations.mjs";
@@ -50,7 +51,8 @@ export default defineConfig({
   markdown,
   // .mdx 는 markdown 설정(Shiki 등)을 물려받는다(extendMarkdownConfig 기본값 true). 처리기만 위의 mdxProcessor 로 바꾼다.
   // 로컬 통합(site-guard: 빌드 뒤 링크·JS 예산 검사)은 config/integrations.mjs 에 있다.
-  integrations: [mdx({ processor: mdxProcessor }), ...localIntegrations],
+  // CSP(S7.2, config/csp.mjs)는 빌드 뒤 정책 meta 를 옮기므로 마지막에 둔다.
+  integrations: [mdx({ processor: mdxProcessor }), ...localIntegrations, csp()],
   fonts,
   // GA 측정 ID, 사이트 소유 확인 토큰, utterances 저장소(astro:env 스키마). 값은 config/.env.<mode> 에 있다.
   env,

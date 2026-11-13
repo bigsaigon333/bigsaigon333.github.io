@@ -121,7 +121,13 @@ function capture(browser, url, viewport, { route, selector, masks, onMasked }) {
     if (tab.failures.length)
       throw new Error(`third-party request failed: ${tab.failures[0]}`);
 
-    await tab.page.addStyleTag({ content: FREEZE_CSS });
+    // A constructed stylesheet, not addStyleTag: the site's CSP (S7.2) blocks an inline <style> without its hash,
+    // and CSSOM sheets are outside style-src. The same on both sides.
+    await tab.page.evaluate((css) => {
+      const sheet = new CSSStyleSheet();
+      sheet.replaceSync(css);
+      document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
+    }, FREEZE_CSS);
     if ((await paintMasks(tab.page, masks)) > 0) onMasked();
 
     const options = { animations: "disabled", caret: "hide", scale: "css" };
