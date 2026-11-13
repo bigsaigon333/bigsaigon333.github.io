@@ -1,0 +1,12 @@
+---
+// Reads what the middleware put on Astro.locals (on demand: locals are per request).
+import Page from "../../s84/Page.astro";
+
+export const prerender = false;
+const { requestId = "", greeting = "" } = Astro.locals.s84 ?? {};
+---
+
+<Page title="Locals" name="locals">
+  <p data-request-id={requestId}>Request {requestId}</p>
+  <p data-greeting={greeting}>{greeting}</p>
+</Page>

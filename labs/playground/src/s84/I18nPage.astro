@@ -1,0 +1,26 @@
+---
+// One i18n page in the current locale, with a link to the same page in the other locale.
+import { getRelativeLocaleUrl } from "astro:i18n";
+
+import Page from "./Page.astro";
+import { isLocale, messages } from "./i18n";
+
+interface Props {
+  name: "hello" | "about";
+}
+const { name } = Astro.props;
+const locale = isLocale(Astro.currentLocale) ? Astro.currentLocale : "en";
+const other = locale === "en" ? "ko" : "en";
+const otherUrl = getRelativeLocaleUrl(other, `s84/i18n/${name}`);
+const requested = Astro.locals.s84?.requestedLocale ?? locale;
+---
+
+<Page title={messages[locale][name]} name={name}>
+  <p data-locale={locale} data-requested-locale={requested}>
+    locale {locale} (asked for {requested})
+  </p>
+  <p data-text={messages[locale][name]}>{messages[locale][name]}</p>
+  <a href={otherUrl} data-other-locale-url={otherUrl}>
+    {other}
+  </a>
+</Page>

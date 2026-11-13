@@ -1,0 +1,14 @@
+---
+// Dynamic redirect: the target and the status are chosen per request.
+import Page from "../../s84/Page.astro";
+
+export const prerender = false;
+const to = Astro.url.searchParams.get("to");
+if (to === "new") return Astro.redirect("/s84/new", 307);
+if (to === "posts") return Astro.redirect("/s84/posts/1", 303);
+Astro.response.status = 400;
+---
+
+<Page title="Unknown target" name="go">
+  <p>?to= must be new or posts.</p>
+</Page>

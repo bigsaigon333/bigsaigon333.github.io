@@ -1,0 +1,23 @@
+---
+// Shared shell of the S8.4 pages. After a rewrite Astro.url is the target route's URL;
+// Astro.originPathname is still the path the browser asked for.
+interface Props {
+  title: string;
+  name: string;
+}
+const { title, name } = Astro.props;
+---
+
+<html lang={Astro.currentLocale ?? "en"}>
+  <head>
+    <meta charset="utf-8" />
+    <title>S8.4 {title}</title>
+  </head>
+  <body>
+    <h1 data-page={name}>{title}</h1>
+    <p data-url={Astro.url.pathname} data-origin={Astro.originPathname}>
+      Rendered {Astro.url.pathname} for {Astro.originPathname}
+    </p>
+    <slot />
+  </body>
+</html>

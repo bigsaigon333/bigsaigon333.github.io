@@ -1,0 +1,24 @@
+---
+// paginate(): prerendered pages /s84/posts/1 … /3, three posts each.
+import type { GetStaticPaths } from "astro";
+
+import Page from "../../../s84/Page.astro";
+
+export const getStaticPaths = (({ paginate }) => {
+  const posts = Array.from({ length: 7 }, (_, i) => `post-${i + 1}`);
+  return paginate(posts, { pageSize: 3 });
+}) satisfies GetStaticPaths;
+
+const { page } = Astro.props;
+---
+
+<Page title={`Posts, page ${page.currentPage}`} name="posts">
+  <p data-current-page={page.currentPage} data-total={page.total}>
+    {page.start + 1}–{page.end + 1} of {page.total}
+  </p>
+  <ul>{page.data.map((post) => <li data-item={post}>{post}</li>)}</ul>
+  <nav>
+    <a data-prev={page.url.prev ?? "none"} href={page.url.prev}>prev</a>
+    <a data-next={page.url.next ?? "none"} href={page.url.next}>next</a>
+  </nav>
+</Page>

@@ -1,0 +1,5 @@
+---
+// Rewrite: render /s84/new here; the browser keeps /s84/alias and gets no redirect.
+export const prerender = false;
+return Astro.rewrite("/s84/new");
+---
