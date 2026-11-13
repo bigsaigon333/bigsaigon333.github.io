@@ -42,7 +42,7 @@
 끝나면 바꾼 줄을 되돌린다.
 
 1. `config/s85.mjs`에서 `cache` 키를 지우고 `npm --prefix labs/playground run verify -- --only=s85`.
-   <details><summary>예상 결과</summary>캐시 케이스가 `null !== 'MISS'`로 실패하고 `data-cache-enabled`는 `false`다. `routeRules`만 있고 provider가 없으면 아무것도 담지 않는다. 라이브 항목 케이스도 `HIT`을 못 받는다.</details>
+   <details><summary>예상 결과</summary>`FAILED 2/12`. 캐시 케이스는 `null !== 'MISS'`다. provider 없이 `routeRules`만 있으면 아무것도 담지 않는다. `cache.invalidate()`는 던진다. 그래서 `POST /s85/live/api`가 500이 되고 라이브 케이스도 실패한다. 남는 것은 로거와 툴바 케이스다.</details>
 2. `config/s85.mjs` 기록기의 `level`을 `"info"`로 바꾸고 같은 명령을 돌린다.
    <details><summary>예상 결과</summary>로거 케이스만 실패한다. 기록된 레벨이 `["error", "info", "warn"]`이 된다. 걸러 내는 것은 Astro가 아니라 핸들러의 `matchesLevel`이다.</details>
 
