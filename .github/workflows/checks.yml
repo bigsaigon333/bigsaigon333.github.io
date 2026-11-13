@@ -37,6 +37,8 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
+      # 단위 시험(Vitest + Container API). Seo 의 렌더링 결과와 src/lib 의 순수 함수.
+      - run: npm test
       - run: npx prettier --check .
 
   verify:

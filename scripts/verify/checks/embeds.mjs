@@ -296,7 +296,9 @@ export default {
         name: "utterances 테마 변경",
         routes: aPost,
         apply(dir) {
-          editPages(dir, / theme="[^"]+"/, ' theme="github-dark"');
+          // The theme script in <head> sets the widget's theme attribute from the page theme, so the mutation
+          // changes the light theme's entry in its map, not the attribute it overwrites.
+          editPages(dir, /("light":)"[^"]+"/, '$1"github-dark"');
         },
       },
       {
