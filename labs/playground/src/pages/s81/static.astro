@@ -1,0 +1,15 @@
+---
+// No `prerender` export: in static output this page is rendered once, at build time.
+const renderedAt = new Date().toISOString();
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>S8.1 prerendered</title>
+  </head>
+  <body>
+    <h1>Prerendered</h1>
+    <p data-rendered-at={renderedAt}>Built at {renderedAt}.</p>
+  </body>
+</html>

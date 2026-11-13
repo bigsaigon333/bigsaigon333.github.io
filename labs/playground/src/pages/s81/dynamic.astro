@@ -1,0 +1,20 @@
+---
+// Opt out of prerendering: the Node adapter renders this page on every request.
+export const prerender = false;
+
+const requestId = crypto.randomUUID();
+const name = Astro.url.searchParams.get("name") ?? "anonymous";
+Astro.response.headers.set("Cache-Control", "no-store");
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>S8.1 on demand</title>
+  </head>
+  <body>
+    <h1>On demand</h1>
+    <p data-request-id={requestId}>Request {requestId}</p>
+    <p data-name={name}>Hello, {name}.</p>
+  </body>
+</html>

@@ -21,7 +21,8 @@
     "node_modules",
     "/public",
     "/posts",
-    "/docs"
+    "/docs",
+    "/labs"
   ],
   "overrides": [
     {

@@ -5,7 +5,8 @@
 // and devDependencies, which CI runs before every deploy. The one-off tooling of the migration —
 // docs/ (plan, learning notes), the progress dashboard (scripts/progress/), this file and
 // scripts/notes-lint.mjs, the npm scripts that run them, and their ignore entries — stays on the
-// work branch astro, which is never merged into main.
+// work branch astro, which is never merged into main. So does labs/: separate Astro projects for
+// experiments (own package.json and checks) that the root lint and type check exclude.
 //
 // The release branch is one commit on top of origin/main. Its tree is the tree of --from
 // (default HEAD) with the one-off tooling removed. It is built in a temporary git worktree under
@@ -41,6 +42,7 @@ const EXCLUDED_PATHS = [
   "scripts/progress",
   "scripts/release.mjs",
   "scripts/notes-lint.mjs",
+  "labs",
 ];
 // No tracked file of the release may live under these (the tooling's output and agent scratch too).
 // .verify/ is the harness's local output: the harness ships, its output never does.
@@ -49,6 +51,7 @@ const EXCLUDED_PREFIXES = [
   "scripts/progress/",
   "scripts/release.mjs",
   "scripts/notes-lint.mjs",
+  "labs/",
   ".verify/",
   ".progress/",
   ".superpowers/",
@@ -63,7 +66,9 @@ const IGNORE_ENTRIES = {
   ".gitignore": ["/.progress/", "/.superpowers/", "/.claude/worktrees/"],
   ".prettierignore": [".progress", ".claude", "docs/astro-notes/_refs"],
 };
-const OXLINT_IGNORE_PATTERNS = ["/.progress", "/.claude", "/docs"];
+const OXLINT_IGNORE_PATTERNS = ["/.progress", "/.claude", "/docs", "/labs"];
+// tsconfig.json "exclude" entries that exist for the one-off tooling.
+const TSCONFIG_EXCLUDES = ["labs"];
 
 // A repository path, not a URL segment: "scripts/x", "./scripts/x", "../../docs/x", "`docs/x`"
 // match; "react-scripts/lib" and "https://developer.mozilla.org/en-US/docs/Web" do not.
@@ -92,6 +97,7 @@ const MENTIONS = [
   ["dashboard", /dashboard|대시보드/i],
   ["superpowers", /superpowers/i],
   [".claude", /(?<![\w$])\.claude(?![\w-])/],
+  ["labs", /(?<![\w-])labs(?![\w-])/],
 ];
 
 class Failure extends Error {}
@@ -273,37 +279,38 @@ function printJsonArray(indent, key, values, comma) {
   return `${indent}${key}[\n${items.map((item) => `${indent}  ${item}`).join(",\n")}\n${indent}]${comma}`;
 }
 
-// .oxlintrc.json without the one-off tooling's ignore patterns. The result is checked against the
-// same change made on the parsed object.
-function filterOxlintConfig(original) {
+// A JSON(C) config without some entries of one of its top-level string arrays (.oxlintrc.json
+// "ignorePatterns", tsconfig.json "exclude"). The result is checked against the same change made
+// on the parsed object.
+function filterConfigArray(name, original, key, drop) {
   const config = parseJsonc(original);
   const expected = structuredClone(config);
-  if (config.ignorePatterns)
-    expected.ignorePatterns = config.ignorePatterns.filter(
-      (pattern) => !OXLINT_IGNORE_PATTERNS.includes(pattern),
-    );
+  if (config[key])
+    expected[key] = config[key].filter((value) => !drop.includes(value));
 
   const text = original.replace(
-    /^([ \t]*)("ignorePatterns":\s*)\[[^\]]*\](,?)/m,
-    (_, indent, key, comma) =>
-      printJsonArray(indent, key, expected.ignorePatterns, comma),
+    new RegExp(`^([ \\t]*)("${key}":\\s*)\\[[^\\]]*\\](,?)`, "m"),
+    (_, indent, prefix, comma) =>
+      printJsonArray(indent, prefix, expected[key], comma),
   );
 
   let parsed;
   try {
     parsed = parseJsonc(text);
   } catch (error) {
-    fail(`.oxlintrc.json is not valid after filtering: ${error.message}`);
+    fail(`${name} is not valid after filtering: ${error.message}`);
   }
   if (!isDeepStrictEqual(parsed, expected))
-    fail(
-      ".oxlintrc.json: the filtered text does not match the filtered config",
-    );
-  const patterns =
-    (config.ignorePatterns ?? []).length -
-    (expected.ignorePatterns ?? []).length;
-  return { text, patterns };
+    fail(`${name}: the filtered text does not match the filtered config`);
+  const removed = (config[key] ?? []).length - (expected[key] ?? []).length;
+  return { text, removed };
 }
+
+// The configs whose arrays carry one-off entries: [file, key, entries].
+const CONFIG_ARRAYS = [
+  [".oxlintrc.json", "ignorePatterns", OXLINT_IGNORE_PATTERNS],
+  ["tsconfig.json", "exclude", TSCONFIG_EXCLUDES],
+];
 
 // ---------------------------------------------------------------- steps
 
@@ -561,13 +568,17 @@ function main() {
       fs.writeFileSync(file, text);
       parts.push(`${name} −${removed} lines`);
     }
-    const file = path.join(releaseDir, ".oxlintrc.json");
-    if (fs.existsSync(file)) {
-      const { text, patterns } = filterOxlintConfig(
+    for (const [name, key, entries] of CONFIG_ARRAYS) {
+      const file = path.join(releaseDir, name);
+      if (!fs.existsSync(file)) continue;
+      const { text, removed } = filterConfigArray(
+        name,
         fs.readFileSync(file, "utf8"),
+        key,
+        entries,
       );
       fs.writeFileSync(file, text);
-      parts.push(`.oxlintrc.json −${patterns} ignorePatterns`);
+      parts.push(`${name} −${removed} ${key}`);
     }
     git(releaseDir, "add", "-A");
     return parts.join(", ");
@@ -615,13 +626,12 @@ function main() {
         .find((line) => entries.includes(line.trim()));
       if (left) fail(`${name} still has ${left.trim()}`);
     }
-    const oxlintFile = path.join(releaseDir, ".oxlintrc.json");
-    if (fs.existsSync(oxlintFile)) {
-      const config = parseJsonc(fs.readFileSync(oxlintFile, "utf8"));
-      const pattern = (config.ignorePatterns ?? []).find((value) =>
-        OXLINT_IGNORE_PATTERNS.includes(value),
-      );
-      if (pattern) fail(`.oxlintrc.json still ignores ${pattern}`);
+    for (const [name, key, entries] of CONFIG_ARRAYS) {
+      const file = path.join(releaseDir, name);
+      if (!fs.existsSync(file)) continue;
+      const config = parseJsonc(fs.readFileSync(file, "utf8"));
+      const left = (config[key] ?? []).find((value) => entries.includes(value));
+      if (left) fail(`${name} ${key} still has ${left}`);
     }
     return `${files.length} tracked files, none under ${EXCLUDED_PREFIXES.join(" ")}; no one-off script, devDependency or ignore entry`;
   });
