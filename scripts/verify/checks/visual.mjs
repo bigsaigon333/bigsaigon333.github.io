@@ -547,10 +547,15 @@ export default {
     mutations: [
       {
         name: "스타일시트의 CSS 값 변경",
-        routes: (dir) => postRoutesWith(dir, /<pre>/),
+        routes: (dir) => postRoutesWith(dir, /<pre[\s>]/),
         apply(dir) {
-          // The background of code blocks. Same layout, different pixels: only the pixel comparison can notice.
-          editPages(dir, /background:#272822/g, "background:#14506e");
+          // The background of code blocks (Shiki's light theme, a custom property on each <pre>). Same layout,
+          // different pixels: only the pixel comparison can notice.
+          editPages(
+            dir,
+            /--shiki-light-bg:#ffffff/g,
+            "--shiki-light-bg:#14506e",
+          );
         },
       },
       {
@@ -573,7 +578,7 @@ export default {
         apply(dir) {
           editPages(
             dir,
-            /(:not\(pre\)>code\{[^}]*?)background:#ffe56433/,
+            /(:not\(pre\)>code\{[^}]*?)background:var\(--color-code-bg\)/,
             "$1background:transparent",
           );
         },
@@ -584,7 +589,7 @@ export default {
         apply(dir) {
           editPages(
             dir,
-            /(tr:nth-child\(2n\)\{)background-color:#f6f8fa/,
+            /(tr:nth-child\(2n\)\{)background-color:var\(--color-table-stripe\)/,
             "$1background-color:transparent",
           );
         },

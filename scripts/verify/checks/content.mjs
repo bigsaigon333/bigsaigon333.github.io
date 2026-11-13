@@ -266,7 +266,7 @@ export default {
         name: "코드 블록 들여쓰기 변경",
         apply(dir) {
           mutateFirst(dir, postFiles(dir), (html) =>
-            replaceInMain(html, /(<pre><code[^>]*>)/, "$1  "),
+            replaceInMain(html, /(<pre\b[^>]*><code[^>]*>)/, "$1  "),
           );
         },
       },
@@ -340,7 +340,8 @@ export default {
         name: "헤더 아이콘 링크의 aria-label 삭제",
         apply(dir) {
           mutateFile(dir, "index.html", (html) =>
-            replaceInHeader(html, / aria-label="[^"]*"/, ""),
+            // The first link's: the theme toggle before the links is a <button>, which this check does not read.
+            replaceInHeader(html, /(<a\b[^>]*?) aria-label="[^"]*"/, "$1"),
           );
         },
       },
