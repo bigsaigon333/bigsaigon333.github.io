@@ -9,11 +9,17 @@
 //   utterances   repo, issue-term, theme, crossorigin and async of the utteranc.es client script, and where it
 //                stands: the tag names of its parent and of the elements before and after it. The widget is
 //                inserted right after the script, so a script that has moved is comments in another place. Or null.
-import fs from "node:fs";
-import path from "node:path";
 
-import { mapLimit, MAX_PAGES, openBrowser } from "../lib/browser.mjs";
-import { postFiles, routeOfPage } from "../lib/html.mjs";
+import {
+  baselineValue,
+  mapLimit,
+  MAX_PAGES,
+  openBrowser,
+  openCaptureCache,
+  recheck,
+  withCaptureCache,
+} from "../lib/browser.mjs";
+import { editPages, postFiles, routeOfPage } from "../lib/html.mjs";
 
 const NAME = "embeds";
 const VIEWPORT = { width: 1280, height: 900 };
@@ -137,7 +143,9 @@ function differences(baseline, candidate) {
   return found;
 }
 
-async function run(ctx) {
+const run = (ctx) => withCaptureCache(ctx, (mode) => runOnce(ctx, mode));
+
+async function runOnce(ctx, cacheMode) {
   const cells = {};
   const allowed = [];
   const routes = [];
@@ -153,26 +161,44 @@ async function run(ctx) {
 
   const browser = await openBrowser(ctx);
   let outcomes;
+  let cache;
   try {
     const urls = {
       baseline: await ctx.serve("baseline"),
       candidate: await ctx.serve("candidate"),
     };
 
-    // One page at a time per route, so MAX_PAGES routes in flight are MAX_PAGES pages.
-    outcomes = await mapLimit(routes, MAX_PAGES, async (route) => {
+    // The baseline's embeds, kept from an earlier run (lib/browser.mjs openCaptureCache).
+    cache = openCaptureCache(ctx, browser, {
+      check: NAME,
+      sources: [import.meta.url],
+      mode: cacheMode,
+    });
+    const plan = cache.plan(
+      routes.map((route) => ({ id: route, route, viewport: VIEWPORT })),
+    );
+
+    /** One route. → { outcome, cached }: cached when the baseline's embeds came from the cache. */
+    const examine = async (route, takeBaseline) => {
       let baseline;
+      let cached = false;
       let candidate;
       try {
-        baseline = await collect(
-          browser,
-          urls.baseline + route,
+        ({ value: baseline, cached } = await baselineValue(
+          cache,
+          plan,
           route,
-          hasAnalytics,
-          BASELINE_WAIT_MS,
-        );
+          takeBaseline,
+        ));
       } catch (error) {
-        return { route, ok: false, problems: [`baseline: ${oneLine(error)}`] };
+        return {
+          cached,
+          outcome: {
+            route,
+            ok: false,
+            problems: [`baseline: ${oneLine(error)}`],
+          },
+        };
       }
       try {
         candidate = await collect(
@@ -184,20 +210,43 @@ async function run(ctx) {
         );
       } catch (error) {
         return {
-          route,
-          ok: false,
-          baseline,
-          problems: [`candidate: ${oneLine(error)}`],
+          cached,
+          outcome: {
+            route,
+            ok: false,
+            baseline,
+            problems: [`candidate: ${oneLine(error)}`],
+          },
         };
       }
       const problems = differences(baseline, candidate);
       return {
-        route,
-        ok: problems.length === 0,
-        baseline,
-        candidate,
-        problems,
+        cached,
+        outcome: {
+          route,
+          ok: problems.length === 0,
+          baseline,
+          candidate,
+          problems,
+        },
       };
+    };
+
+    // One page at a time per route, so MAX_PAGES routes in flight are MAX_PAGES pages.
+    outcomes = await mapLimit(routes, MAX_PAGES, async (route) => {
+      const takeBaseline = () =>
+        collect(
+          browser,
+          urls.baseline + route,
+          route,
+          hasAnalytics,
+          BASELINE_WAIT_MS,
+        );
+      const { outcome, cached } = await examine(route, takeBaseline);
+      // Guard a: a failure against a cached baseline reads the baseline again (lib/browser.mjs recheck).
+      if (!outcome.ok && cached)
+        await recheck(cache, plan, route, takeBaseline);
+      return outcome;
     });
   } finally {
     await browser.close();
@@ -219,30 +268,11 @@ async function run(ctx) {
     fail: failed.length,
     failed,
     cells,
-    extra: { routes: outcomes, allowed },
+    extra: { routes: outcomes, allowed, cache: cache.stats },
   };
 }
 
 // ── selftest ────────────────────────────────────────────────────────────────────────────────────
-
-/** Apply `pattern → replacement` to every JavaScript chunk of a Next.js build. Throws when nothing matched. */
-function editChunks(dir, pattern, replacement) {
-  const chunks = path.join(dir, "_next", "static", "chunks");
-  let edited = 0;
-  for (const name of fs.readdirSync(chunks, { recursive: true })) {
-    const file = path.join(chunks, name);
-    if (!file.endsWith(".js")) continue;
-    const before = fs.readFileSync(file, "utf8");
-    const after = before.replace(pattern, replacement);
-    if (after === before) continue;
-    fs.writeFileSync(file, after);
-    edited += 1;
-  }
-  if (edited === 0)
-    throw new Error(
-      `mutation did not apply: ${pattern} not found under ${chunks}`,
-    );
-}
 
 // Analytics is wired the same on every page and utterances on every post: one page of each kind shows a mutation.
 const HOME = ["/"];
@@ -259,25 +289,25 @@ export default {
         name: "GA 측정 ID 변경",
         routes: HOME,
         apply(dir) {
-          editChunks(dir, /\bG-[A-Z0-9]{6,}\b/g, "G-MUTANT0000");
+          editPages(dir, /\bG-[A-Z0-9]{6,}\b/g, "G-MUTANT0000");
         },
       },
       {
         name: "utterances 테마 변경",
         routes: aPost,
         apply(dir) {
-          editChunks(dir, /\("theme","[^"]+"\)/, '("theme","github-dark")');
+          editPages(dir, / theme="[^"]+"/, ' theme="github-dark"');
         },
       },
       {
-        // The page puts the script where its placeholder <div> stood, between <main> and <footer>.
+        // The page has the script between <main> and <footer>.
         name: "utterances 스크립트를 body 끝으로 이동",
         routes: aPost,
         apply(dir) {
-          editChunks(
+          editPages(
             dir,
-            /\b\w+\.current\.replaceWith\(/,
-            "document.body.append(",
+            /(<script src="https:\/\/utteranc\.es[^>]*><\/script>)([\s\S]*)(<\/body>)/,
+            "$2$1$3",
           );
         },
       },
@@ -285,17 +315,17 @@ export default {
         name: 'gtag("js", new Date()) 호출 삭제',
         routes: HOME,
         apply(dir) {
-          editChunks(dir, /gtag\('js', new Date\(\)\);/, "");
+          editPages(dir, /gtag\("js", new Date\(\)\);/, "");
         },
       },
       {
         name: 'gtag("config") 에 { send_page_view: false } 추가',
         routes: HOME,
         apply(dir) {
-          editChunks(
+          editPages(
             dir,
-            /gtag\('config', '([^']+)'\)/,
-            "gtag('config', '$1', { send_page_view: false })",
+            /gtag\("config", (\w+)\)/,
+            'gtag("config", $1, { send_page_view: false })',
           );
         },
       },
@@ -304,7 +334,7 @@ export default {
         name: "gtag 호출을 arguments 가 아닌 배열로 push",
         routes: HOME,
         apply(dir) {
-          editChunks(
+          editPages(
             dir,
             /dataLayer\.push\(arguments\)/,
             "dataLayer.push(Array.from(arguments))",

@@ -81,6 +81,12 @@ const jsonLd =
 <meta name="generator" content={Astro.generator} />
 <link rel="canonical" href={url} />
 <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
+<link
+  rel="alternate"
+  type="application/rss+xml"
+  title={SITE.title}
+  href={`${SITE.url}/rss.xml`}
+/>
 
 <meta property="og:site_name" content={SITE.title} />
 <meta property="og:locale" content={SITE.locale} />

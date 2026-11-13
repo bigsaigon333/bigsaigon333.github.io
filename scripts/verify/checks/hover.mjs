@@ -14,7 +14,16 @@
 // inside them is paired by tag path, e.g. div[2] > span: the first <span> of the second <div>.
 //
 // Allowlist item: route:<route> skips the route.
-import { mapLimit, MAX_PAGES, openBrowser } from "../lib/browser.mjs";
+// An accept entry with "mask" (lib/accept.mjs) leaves out every link inside an element the mask selects, on both sides.
+import {
+  baselineValue,
+  mapLimit,
+  MAX_PAGES,
+  openBrowser,
+  openCaptureCache,
+  recheck,
+  withCaptureCache,
+} from "../lib/browser.mjs";
 import { editPages, postRoutesWith } from "../lib/html.mjs";
 
 const NAME = "hover";
@@ -48,7 +57,7 @@ const shorten = (text, max) =>
  *                no point of the element can be reached), and where to park it afterwards
  *   read(index)  the values of the element now that the pointer is on it
  */
-function survey({ selector, properties, patience }) {
+function survey({ selector, properties, patience, mask }) {
   const family = (element) => [element, ...element.querySelectorAll("*")];
   const boxes = (node) =>
     Array.from(node.getClientRects()).filter(
@@ -58,8 +67,12 @@ function survey({ selector, properties, patience }) {
     element.checkVisibility({ visibilityProperty: true }) &&
     family(element).some((node) => boxes(node).length > 0);
 
+  const masked = (element) => mask !== "" && element.closest(mask) !== null;
+  window.__verifyMasked = Array.from(
+    document.querySelectorAll(selector),
+  ).filter(masked).length;
   const targets = Array.from(document.querySelectorAll(selector)).filter(
-    visible,
+    (element) => visible(element) && !masked(element),
   );
 
   /**
@@ -200,8 +213,11 @@ function survey({ selector, properties, patience }) {
 
 // ── measuring ───────────────────────────────────────────────────────────────────────────────────
 
-/** Every visible link and <summary> of one page: { tag, href, text, parts, rest, hover }. */
-function measure(browser, url, route) {
+/**
+ * Every visible link and <summary> of one page outside the elements `mask` selects:
+ * { elements: [{ tag, href, text, parts, rest, hover }], masked: <number of links left out> }.
+ */
+function measure(browser, url, route, mask) {
   return browser.withPage(VIEWPORT, async (tab) => {
     const status = await tab.open(url);
     if (status >= 400 && route !== "/404") throw new Error(`HTTP ${status}`);
@@ -213,7 +229,9 @@ function measure(browser, url, route) {
       selector: SELECTOR,
       properties: PROPERTIES,
       patience: POINTER_WAIT_MS,
+      mask,
     });
+    const masked = await page.evaluate(() => window.__verifyMasked);
 
     for (const [index, element] of elements.entries()) {
       const { point, neutral } = await page.evaluate(
@@ -232,7 +250,7 @@ function measure(browser, url, route) {
       );
       await page.mouse.move(neutral.x, neutral.y);
     }
-    return elements;
+    return { elements, masked };
   });
 }
 
@@ -397,7 +415,9 @@ function verdict(route, baseline, candidate) {
 
 // ── the check ───────────────────────────────────────────────────────────────────────────────────
 
-async function run(ctx) {
+const run = (ctx) => withCaptureCache(ctx, (mode) => runOnce(ctx, mode));
+
+async function runOnce(ctx, cacheMode) {
   const cells = {};
   const allowed = [];
   const routes = [];
@@ -412,30 +432,65 @@ async function run(ctx) {
   }
 
   const browser = await openBrowser(ctx);
-  let measured;
+  let outcomes;
+  let cache;
   try {
     const urls = {
       baseline: await ctx.serve("baseline"),
       candidate: await ctx.serve("candidate"),
     };
+    const maskOf = (route) => ctx.masks(NAME, route).join(",");
+    // The baseline's measurements, kept from an earlier run (lib/browser.mjs openCaptureCache).
+    cache = openCaptureCache(ctx, browser, {
+      check: NAME,
+      sources: [import.meta.url],
+      mode: cacheMode,
+    });
+    const plan = cache.plan(
+      routes.map((route) => ({
+        id: route,
+        route,
+        viewport: VIEWPORT,
+        mask: maskOf(route),
+      })),
+    );
+
+    const take = (route, side) => () =>
+      measure(browser, urls[side] + route, route, maskOf(route));
     const pages = routes.flatMap((route) => [
       { route, side: "baseline" },
       { route, side: "candidate" },
     ]);
-    measured = await mapLimit(pages, MAX_PAGES, async ({ route, side }) => {
-      try {
-        return { elements: await measure(browser, urls[side] + route, route) };
-      } catch (error) {
-        return { error };
-      }
-    });
+    const measured = await mapLimit(
+      pages,
+      MAX_PAGES,
+      async ({ route, side }) => {
+        try {
+          const { value, cached } =
+            side === "baseline"
+              ? await baselineValue(cache, plan, route, take(route, side))
+              : { value: await take(route, side)(), cached: false };
+          if (value.masked > 0) ctx.masked(NAME, route);
+          return { elements: value.elements, cached };
+        } catch (error) {
+          return { error };
+        }
+      },
+    );
+    outcomes = routes.map((route, index) =>
+      verdict(route, measured[2 * index], measured[2 * index + 1]),
+    );
+    // Guard a: a route that fails against a cached baseline has its baseline measured again (lib/browser.mjs recheck).
+    await mapLimit(
+      routes.filter(
+        (route, index) => !outcomes[index].ok && measured[2 * index].cached,
+      ),
+      MAX_PAGES,
+      (route) => recheck(cache, plan, route, take(route, "baseline")),
+    );
   } finally {
     await browser.close();
   }
-
-  const outcomes = routes.map((route, index) =>
-    verdict(route, measured[2 * index], measured[2 * index + 1]),
-  );
 
   const failed = [];
   for (const outcome of outcomes) {
@@ -450,14 +505,14 @@ async function run(ctx) {
     fail: failed.length,
     failed,
     cells,
-    extra: { routes: outcomes, allowed },
+    extra: { routes: outcomes, allowed, cache: cache.stats },
   };
 }
 
 // ── selftest ────────────────────────────────────────────────────────────────────────────────────
 
-// The mutations edit the styled-components rules inlined in every page (editPages in lib/html.mjs says which
-// of those survive hydration). `routes` names a page the mutated rule shows on, so that one is measured, not all.
+// The mutations edit the rules inlined in every page (editPages in lib/html.mjs). `routes` names a page the
+// mutated rule shows on, so that one is measured, not all.
 export default {
   name: NAME,
   kind: "browser",
@@ -469,29 +524,25 @@ export default {
         name: "홈 목록 링크의 hover 밑줄 제거",
         routes: ["/"],
         apply(dir) {
-          editPages(
-            dir,
-            /a:hover\{-webkit-text-decoration:underline;text-decoration:underline;\}/,
-            "a:hover{}",
-          );
+          editPages(dir, /a:hover\{text-decoration:underline\}/, "a:hover{}");
         },
       },
       {
         name: "헤더 아이콘 링크의 hover 투명도 변경",
         routes: ["/"],
         apply(dir) {
-          editPages(dir, /(?<=li a:hover\{opacity:)0\.4/, "0.8");
+          editPages(
+            dir,
+            /(?<=li\[[^\]]*\] a\[[^\]]*\]:hover\{opacity:)\.4/,
+            "0.8",
+          );
         },
       },
       {
         name: "글 본문 링크의 hover box-shadow 제거",
         routes: (dir) => postRoutesWith(dir, /<main[\s\S]*?<a href=/),
         apply(dir) {
-          editPages(
-            dir,
-            /a:hover\{box-shadow:0 0\.125rem 0 0 black;\}/,
-            "a:hover{}",
-          );
+          editPages(dir, /a:hover\{box-shadow:0 \.125rem #000\}/, "a:hover{}");
         },
       },
       {
@@ -500,7 +551,7 @@ export default {
         name: "헤더 제목 링크 안쪽 요소의 hover box-shadow 추가",
         routes: ["/"],
         apply(dir) {
-          editPages(dir, /:hover p span\{/, ":hover div span{");
+          editPages(dir, /:hover p(\[[^\]]*\]) span/, ":hover div$1 span");
         },
       },
     ],

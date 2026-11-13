@@ -1,10 +1,11 @@
 ---
 import PostHeader from "../components/PostHeader.astro";
 import BaseLayout from "../layouts/BaseLayout.astro";
-import { getPublishedPosts, postPath } from "../lib/posts";
+import { displayTitle, getVisiblePosts, postPath } from "../lib/posts";
 import { SITE } from "../lib/site";
 
-const posts = await getPublishedPosts();
+// 운영 빌드에서는 발행된 글만, astro dev 에서는 "[초안]" 이 붙은 초안도 함께.
+const posts = await getVisiblePosts();
 ---
 
 <BaseLayout
@@ -18,8 +19,12 @@ const posts = await getPublishedPosts();
   home
 >
   <section>
-    {posts.map(({ id, data: { title, date } }) => (
-      <PostHeader title={title} date={date} href={postPath(id)} />
+    {posts.map((post) => (
+      <PostHeader
+        title={displayTitle(post)}
+        date={post.data.date}
+        href={postPath(post.id)}
+      />
     ))}
   </section>
 </BaseLayout>

@@ -1,0 +1,88 @@
+---
+/**
+ * MDX 글에서 쓰는 강조 상자. `.mdx` 파일 맨 위에서 import 해 쓴다(S5.5 시연, posts/draft/mdx-demo.mdx).
+ *
+ * ```mdx
+ * import Callout from "../../src/components/mdx/Callout.astro";
+ *
+ * <Callout type="warning" title="주의">본문은 **Markdown** 으로 쓴다.</Callout>
+ * ```
+ *
+ * 색은 WCAG AA(4.5:1)를 넘긴다: 세 종류 모두 밝은 배경 위에 #1a1a1a 본문, 진한 강조색 제목이다.
+ * 다크 모드(<html data-theme="dark">, S6.1)에서는 어두운 배경 위에 본문색(--color-text) 본문, 밝은 강조색 제목이다.
+ */
+interface Props {
+  type?: "note" | "tip" | "warning";
+  title?: string;
+}
+
+const labels = { note: "참고", tip: "팁", warning: "주의" } as const;
+
+const { type = "note", title = labels[type] } = Astro.props;
+---
+
+<aside class:list={["callout", type]} aria-label={title}>
+  <p class="title">{title}</p>
+  <div class="body">
+    <slot />
+  </div>
+</aside>
+
+<style>
+  .callout {
+    margin: 1.5em 0;
+    border-left: 4px solid var(--accent);
+    border-radius: 0.25em;
+    background: var(--bg);
+    color: #1a1a1a;
+    padding: 0.75em 1em;
+  }
+
+  .note {
+    --accent: #0550ae;
+    --bg: #ddf4ff;
+  }
+
+  .tip {
+    --accent: #116329;
+    --bg: #dafbe1;
+  }
+
+  .warning {
+    --accent: #7d4e00;
+    --bg: #fff8c5;
+  }
+
+  :global([data-theme="dark"]) .callout {
+    color: var(--color-text);
+  }
+
+  :global([data-theme="dark"]) .note {
+    --accent: #79c0ff;
+    --bg: #0c2d4a;
+  }
+
+  :global([data-theme="dark"]) .tip {
+    --accent: #56d364;
+    --bg: #0f2d1a;
+  }
+
+  :global([data-theme="dark"]) .warning {
+    --accent: #e3b341;
+    --bg: #2e2408;
+  }
+
+  .title {
+    margin: 0 0 0.25em;
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  .body > :global(:first-child) {
+    margin-top: 0;
+  }
+
+  .body > :global(:last-child) {
+    margin-bottom: 0;
+  }
+</style>

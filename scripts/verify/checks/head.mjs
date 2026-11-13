@@ -25,6 +25,11 @@ import {
   rawText,
 } from "../lib/html.mjs";
 
+/** Self-test: the allowlist entry the variants about an exempt route run with. */
+const EXEMPT_404 = [
+  { check: "head", item: "route:/404", reason: "self-test: an exempt route" },
+];
+
 const NAMED = ["description", "author", "viewport", "google-site-verification"];
 const OPEN_GRAPH = [
   "og:title",
@@ -320,7 +325,8 @@ export default {
         },
       },
 
-      // /404 is allowlisted: its head may differ from the baseline's, but not in these.
+      // /404 allowlisted (by the variant itself: allowlist.json no longer needs it): its head may differ from the
+      // baseline's, but not in these.
       ...[
         ["<title> 비움", /<title>[^<]*<\/title>/, "<title></title>"],
         ["html lang 삭제", /(<html[^>]*?) lang="[^"]*"/, "$1"],
@@ -339,6 +345,7 @@ export default {
         ],
       ].map(([name, pattern, replacement]) => ({
         name: `허용한 /404 의 ${name}`,
+        allowlist: EXEMPT_404,
         apply(dir) {
           mutateFile(dir, "404.html", (html) =>
             html.replace(pattern, replacement),
@@ -362,6 +369,7 @@ export default {
       },
       {
         name: "허용한 /404 의 robots noindex, follow",
+        allowlist: EXEMPT_404,
         apply(dir) {
           addToHead(
             dir,

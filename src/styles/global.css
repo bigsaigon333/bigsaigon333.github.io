@@ -1,5 +1,48 @@
 /* 예전 styles/global-style.ts 의 createGlobalStyle 을 그대로 옮긴 것. BaseLayout.astro 가 import 한다. */
 
+/*
+ * 색 토큰(S6.1). 사이트의 색은 모두 여기 CSS 사용자 정의 속성으로 모은다. 컴포넌트의 scoped <style> 과
+ * prose.css·code.css 는 값을 직접 쓰지 않고 var(--color-…) 를 쓴다.
+ * 라이트 값은 다크 모드 전의 값 그대로다(기본 글자색 #000, 기본 캔버스 #fff 포함): 라이트 화면은 픽셀까지 같아야 한다.
+ * 다크는 <html data-theme="dark"> 일 때다. BaseLayout 의 <head> 인라인 스크립트가 첫 화면 전에 붙인다.
+ * 다크 값은 #0d1117 배경 위에서 WCAG AA(본문 4.5:1)를 넘긴다: 본문 #e6edf3 16:1, 흐린 글자 #9198a1 6.2:1.
+ */
+:root {
+  color-scheme: light;
+  --color-bg: #fff;
+  --color-text: #000;
+  --color-muted: #595959;
+  --color-rule: #eaeaea;
+  --color-border: #d0d7de;
+  --color-table-rule: hsl(210deg 18% 87% / 100%);
+  --color-table-stripe: #f6f8fa;
+  --color-code-bg: rgb(255 229 100 / 20%);
+  --color-code-text: #1a1a1a;
+  --color-quote-border: hsl(0deg 0% 0% / 90%);
+  --icon-filter: none;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-bg: #0d1117;
+  --color-text: #e6edf3;
+  --color-muted: #9198a1;
+  --color-rule: #30363d;
+  --color-border: #3d444d;
+  --color-table-rule: #3d444d;
+  --color-table-stripe: #151b23;
+  --color-code-bg: rgb(255 229 100 / 15%);
+  --color-code-text: #e6edf3;
+  --color-quote-border: hsl(0deg 0% 100% / 90%);
+  --icon-filter: invert(1);
+}
+
+/* 캔버스와 기본 글자색. 라이트에서는 브라우저 기본값(#fff, #000)과 같다. */
+:root {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+}
+
 /* css-remedy */
 *,
 ::before,
@@ -130,12 +173,6 @@ a {
 
 code[class*="language-"],
 pre[class*="language-"] {
-  font-family:
-    "Source Code Pro",
-    Consolas,
-    Menlo,
-    Monaco,
-    Courier New,
-    monospace;
+  font-family: var(--font-source-code-pro);
   font-size: 0.825rem;
 }

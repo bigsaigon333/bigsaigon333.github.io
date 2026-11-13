@@ -1,0 +1,241 @@
+---
+import type { MarkdownHeading } from "astro";
+import { getEntry } from "astro:content";
+import katex from "katex";
+
+import { readingMinutes, withoutFencedCode } from "../lib/reading-time";
+
+// 글 머리 아래의 읽는 시간과 목차(S5.3).
+//
+// 목차: render() 가 돌려준 headings 중 h2·h3 만, 본문 순서대로. h3 은 바로 앞의 h2 아래 목록에 들어간다.
+// 이런 제목이 2개 이상일 때만 그린다(하나뿐인 목차는 쓸모가 없다). 접힌 <details> 라 글 머리를 밀어내지 않는다.
+// href 는 heading.slug, 곧 Astro 가 본문 제목에 붙인 id 다. 검증 장치의 `toc` 검사가 둘이 맞는지 본다.
+//
+// 읽는 시간: lib/reading-time.ts 의 규칙(코드 블록을 뺀 글자 수 / 500자, 최소 1분).
+// 원문은 이 페이지의 글 항목(id = Astro.params.id)에서 읽는다. posts 에 없으면 drafts(dev 의 초안)에서 찾는다.
+//
+// 수식이 든 제목: headings 의 text 에는 수식이 빠진다("### 임의의 집합 $C$" → "임의의 집합 "). KaTeX 플러그인
+// (config/markdown.mjs)이 수식을 html 노드로 바꿔서다. 그래서 원문에서 수식이 든 h2·h3 줄을 찾아, 수식을 뺀
+// 글자가 같은 제목에는 원문대로 글자와 수식(본문과 같은 KaTeX HTML)을 그린다.
+interface Props {
+  headings: MarkdownHeading[];
+}
+
+type Part = { text: string } | { html: string };
+
+interface Item {
+  slug: string;
+  parts: Part[];
+}
+
+const { headings } = Astro.props;
+
+const id = Astro.params.id;
+const post = id
+  ? ((await getEntry("posts", id)) ?? (await getEntry("drafts", id)))
+  : undefined;
+const body = post?.body ?? "";
+const minutes = readingMinutes(body);
+
+const INLINE_MATH = /\$([^$\n]+)\$/g;
+const ATX_HEADING = /^ {0,3}(#{2,3})[ \t]+(.*?)(?:[ \t]+#+)?[ \t]*$/;
+const collapse = (text: string) => text.replace(/\s+/g, " ").trim();
+const plain = (source: string) => source.replace(/[`*_]/g, "");
+
+/** 원문의 h2·h3 중 수식이 든 것: { depth, plain(수식을 뺀 글자), parts }. 본문 순서대로. */
+const mathHeadings = withoutFencedCode(body)
+  .split("\n")
+  .flatMap((line) => {
+    const [, hashes = "", source = ""] = ATX_HEADING.exec(line) ?? [];
+    if (!source.match(INLINE_MATH)) return [];
+    // split 에 잡는 괄호가 있으면 글자와 수식 원문이 번갈아 나온다(홀수 번째가 수식).
+    const parts: Part[] = source
+      .split(/\$([^$\n]+)\$/)
+      .map((piece, index) =>
+        index % 2 === 1
+          ? {
+              html: katex.renderToString(piece, {
+                throwOnError: false,
+                strict: "ignore",
+              }),
+            }
+          : { text: plain(piece) },
+      )
+      .filter((part) => !("text" in part) || part.text !== "");
+    return [
+      {
+        depth: hashes.length,
+        plain: collapse(plain(source.replace(INLINE_MATH, ""))),
+        parts,
+      },
+    ];
+  });
+
+/** 목차 항목. 수식이 든 제목이면 원문의 조각들, 아니면 heading.text 하나. */
+function itemOf(heading: MarkdownHeading): Item {
+  const next = mathHeadings[0];
+  if (
+    next &&
+    next.depth === heading.depth &&
+    next.plain === collapse(heading.text)
+  ) {
+    mathHeadings.shift();
+    return { slug: heading.slug, parts: next.parts };
+  }
+  return { slug: heading.slug, parts: [{ text: heading.text }] };
+}
+
+const entries: (Item & { depth: number; children: Item[] })[] = [];
+for (const heading of headings) {
+  if (heading.depth !== 2 && heading.depth !== 3) continue;
+  const item = itemOf(heading);
+  const parent = entries.at(-1);
+  if (heading.depth === 3 && parent?.depth === 2) parent.children.push(item);
+  else entries.push({ ...item, depth: heading.depth, children: [] });
+}
+const count = entries.reduce(
+  (sum, entry) => sum + 1 + entry.children.length,
+  0,
+);
+---
+
+<div class="post-extra">
+  <p class="reading-time">읽는 시간 약 {minutes}분</p>
+  {count >= 2 && (
+    <toc-spy>
+      <nav class="toc" aria-label="목차">
+        <details>
+          <summary>목차</summary>
+          <ol>
+            {entries.map((entry) => (
+              <li>
+                <a href={`#${entry.slug}`}>
+                  {entry.parts.map((part) =>
+                    "html" in part ? (
+                      <Fragment set:html={part.html} />
+                    ) : (
+                      part.text
+                    ),
+                  )}
+                </a>
+                {entry.children.length > 0 && (
+                  <ol>
+                    {entry.children.map((child) => (
+                      <li>
+                        <a href={`#${child.slug}`}>
+                          {child.parts.map((part) =>
+                            "html" in part ? (
+                              <Fragment set:html={part.html} />
+                            ) : (
+                              part.text
+                            ),
+                          )}
+                        </a>
+                      </li>
+                    ))}
+                  </ol>
+                )}
+              </li>
+            ))}
+          </ol>
+        </details>
+      </nav>
+    </toc-spy>
+  )}
+</div>
+
+<script>
+  // 스크롤 스파이(S6.3): 지금 읽는 제목의 목차 링크에 aria-current="true".
+  // "지금 읽는 제목"은 위가 화면 위쪽 30% 선보다 위에 있는 마지막 본문 제목이다. 첫 제목이 그 선 아래면 없다.
+  // IntersectionObserver 의 관찰 영역을 그 선까지로 줄여(rootMargin 아래 -70%) 제목이 선을 넘을 때만 다시 계산한다.
+  // 맨 위에서 DOM 을 찾지 않는다. connectedCallback 이 이 <toc-spy> 안의 링크에서 시작하므로, 나중에 View Transitions 가
+  // 목차를 바꿔 넣어도 새 목차로 다시 돈다. disconnectedCallback 이 관찰을 끊는다.
+  const LINE = 0.3;
+
+  class TocSpy extends HTMLElement {
+    #observer?: IntersectionObserver;
+
+    connectedCallback() {
+      const pairs: [Element, HTMLAnchorElement][] = [];
+      for (const link of this.querySelectorAll<HTMLAnchorElement>(
+        'a[href^="#"]',
+      )) {
+        const target = document.getElementById(
+          decodeURIComponent(link.hash.slice(1)),
+        );
+        if (target) pairs.push([target, link]);
+      }
+
+      const update = () => {
+        const line = window.innerHeight * LINE;
+        let current: HTMLAnchorElement | undefined;
+        for (const [heading, link] of pairs)
+          if (heading.getBoundingClientRect().top < line) current = link;
+        for (const [, link] of pairs)
+          if (link === current) link.setAttribute("aria-current", "true");
+          else link.removeAttribute("aria-current");
+      };
+
+      this.#observer = new IntersectionObserver(update, {
+        rootMargin: `0px 0px -${100 - LINE * 100}% 0px`,
+      });
+      for (const [heading] of pairs) this.#observer.observe(heading);
+    }
+
+    disconnectedCallback() {
+      this.#observer?.disconnect();
+    }
+  }
+
+  if (!customElements.get("toc-spy")) customElements.define("toc-spy", TocSpy);
+</script>
+
+<style>
+  toc-spy {
+    display: block;
+  }
+
+  .post-extra {
+    width: 100%;
+  }
+
+  .reading-time {
+    margin: 0 0 0.75rem;
+    font-size: 0.875rem;
+    /* 흰 배경에서 대비 7.0:1, 다크 배경(#0d1117)에서 6.2:1. 토큰은 global.css */
+    color: var(--color-muted);
+  }
+
+  .toc {
+    border-left: 0.25rem solid var(--color-border);
+    padding-left: 1rem;
+  }
+
+  .toc summary {
+    cursor: pointer;
+    font-weight: 600;
+  }
+
+  .toc ol {
+    margin: 0.5rem 0 0;
+    padding-inline-start: 1.25rem;
+    line-height: 1.75;
+  }
+
+  .toc ol ol {
+    margin: 0;
+  }
+
+  .toc a {
+    word-break: break-word;
+  }
+
+  .toc a[aria-current="true"] {
+    font-weight: 600;
+  }
+
+  .toc a:hover,
+  .toc a:focus-visible {
+    box-shadow: 0 0.125rem 0 0 var(--color-text);
+  }
+</style>

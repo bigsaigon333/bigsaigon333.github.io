@@ -1,0 +1,35 @@
+/*
+ * 코드 블록. Shiki(config/markdown.mjs 의 shikiConfig)가 빌드 때 토큰마다 style="--shiki-light:…;--shiki-dark:…" 를
+ * 붙이고(defaultColor: false), 여기서 어느 쪽 변수를 쓸지 고른다. src/pages/posts/[id].astro 가 import 한다.
+ *
+ * 라이트(github-light-high-contrast)가 기본이고, <html data-theme="dark"> 아래에서는 같은 선택자에
+ * --shiki-dark*(github-dark-high-contrast)를 쓴다(S6.1). 두 테마 모두 고대비라 다크 배경에서도 AA 를 넘긴다.
+ */
+
+.astro-code,
+.astro-code span {
+  color: var(--shiki-light);
+  background-color: var(--shiki-light-bg);
+  font-style: var(--shiki-light-font-style);
+  font-weight: var(--shiki-light-font-weight);
+  text-decoration: var(--shiki-light-text-decoration);
+}
+
+[data-theme="dark"] .astro-code,
+[data-theme="dark"] .astro-code span {
+  color: var(--shiki-dark);
+  background-color: var(--shiki-dark-bg);
+  font-style: var(--shiki-dark-font-style);
+  font-weight: var(--shiki-dark-font-weight);
+  text-decoration: var(--shiki-dark-text-decoration);
+}
+
+/*
+ * 상자는 예전 highlight.js 테마의 `pre code.hljs { display: block; overflow-x: auto; padding: 1em }` 그대로다.
+ * 여백을 <pre> 가 아니라 안쪽 <code> 에 두어야 코드 블록의 높이와 그 아래 내용의 자리가 예전과 같다.
+ */
+.astro-code > code {
+  display: block;
+  overflow-x: auto;
+  padding: 1em;
+}

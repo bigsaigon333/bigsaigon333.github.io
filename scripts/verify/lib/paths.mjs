@@ -19,6 +19,8 @@ export const isWorktree = repoRoot !== mainRoot;
 
 export const verifyDir = path.join(repoRoot, ".verify");
 export const baselineDir = path.join(verifyDir, "baseline");
+/** { ref, sha, hash } of the baseline, written by `npm run verify:setup`. */
+export const baselineFile = path.join(verifyDir, "baseline.json");
 export const reportDir = path.join(verifyDir, "report");
 export const cacheDir = path.join(verifyDir, "cache");
 export const distDir = path.join(repoRoot, "dist");
@@ -29,3 +31,5 @@ export const allowlistFile = path.join(
   "verify",
   "allowlist.json",
 );
+/** Declared, intended differences from the baseline: one JSON file each (lib/accept.mjs). */
+export const acceptedDir = path.join(repoRoot, "scripts", "verify", "accepted");

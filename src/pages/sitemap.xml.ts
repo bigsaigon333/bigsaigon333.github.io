@@ -4,6 +4,7 @@ import type { APIRoute } from "astro";
 
 import { formatDate, getPublishedPosts, postUrl } from "../lib/posts";
 import { SITE } from "../lib/site";
+import { getTags, TAGS_PATH, tagUrl } from "../lib/tags";
 
 const escapeXml = (text: string): string =>
   text
@@ -29,11 +30,31 @@ export const GET = (async () => {
     .sort()
     .at(-1);
 
+  // 태그 페이지. lastmod 는 그 태그가 붙은 가장 최근 글의 날짜, 목록(/tags)은 태그가 붙은 모든 글 중 가장 최근 날짜.
+  // loc 은 퍼센트 인코딩한 주소다(lib/tags.ts 의 tagUrl). 한글 슬러그가 그대로 들어가지 않는다.
+  const tags = (await getTags()).map((tag) => ({
+    loc: tagUrl(tag.label),
+    lastmod: tag.posts
+      .map((post) => formatDate(post.data.date))
+      .sort()
+      .at(-1),
+  }));
+  const newestTagged = tags
+    .map((tag) => tag.lastmod ?? "")
+    .sort()
+    .at(-1);
+
   const xml = [
     `<?xml version="1.0" encoding="UTF-8"?>`,
     `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`,
     urlElement(SITE.url, newest),
     ...posts.map((post) => urlElement(post.loc, post.lastmod)),
+    ...(tags.length > 0
+      ? [
+          urlElement(`${SITE.url}${TAGS_PATH}`, newestTagged || undefined),
+          ...tags.map((tag) => urlElement(tag.loc, tag.lastmod)),
+        ]
+      : []),
     `</urlset>`,
     "",
   ].join("\n");

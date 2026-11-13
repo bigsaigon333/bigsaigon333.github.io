@@ -1,0 +1,12 @@
+{
+  "baseline": "fe19427f9446e285e8c524f3f089854e00c3af1b42f908ad59bf03f8b6adb2d0",
+  "reason": "S4.1: 코드 블록을 highlight.js(monokai)에서 Shiki(github-light)로 바꾼다",
+  "entries": [
+    {
+      "check": "visual",
+      "routes": ["/posts/*"],
+      "reason": "코드 블록의 색만 바뀐다(monokai → github-light). pre 상자를 가리고 나머지는 같아야 한다",
+      "mask": ["pre"]
+    }
+  ]
+}

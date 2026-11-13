@@ -1,0 +1,17 @@
+{
+  "baseline": "fe19427f9446e285e8c524f3f089854e00c3af1b42f908ad59bf03f8b6adb2d0",
+  "reason": "S5.3: 글 머리 아래에 읽는 시간과 접힌 목차(nav[aria-label=목차] > details)를 더한다",
+  "entries": [
+    {
+      "check": "hover",
+      "routes": ["/posts/*"],
+      "reason": "새 상자(.post-extra) 안의 목차 <summary> 가 기준선에 없다. 그 상자만 가리고 나머지 링크의 hover 스타일은 같아야 한다",
+      "mask": [".post-extra"]
+    },
+    {
+      "check": "visual",
+      "routes": ["/posts/*"],
+      "reason": "글 머리와 본문 사이에 읽는 시간 한 줄과 접힌 목차가 들어가 페이지가 82px(접힌 높이 + row-gap) 길어지고 그 아래가 모두 밀린다. 높이가 달라 mask 로는 비교할 수 없다. 내용은 content(14/14)와 toc 가 보고 대비는 a11y 가 본다"
+    }
+  ]
+}

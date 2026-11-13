@@ -13,3 +13,6 @@ concurrency:
 jobs:
   checks:
     uses: ./.github/workflows/checks.yml
+    with:
+      # 기준선은 PR 이 들어갈 커밋의 빌드다.
+      baseline-ref: ${{ github.event.pull_request.base.sha }}

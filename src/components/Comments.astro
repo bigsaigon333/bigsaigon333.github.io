@@ -4,6 +4,9 @@
 // client.js 는 document.currentScript 의 속성(repo, issue-term, theme)을 읽고, 이 <script> 바로 뒤에
 // 댓글 iframe 을 끼워 넣는다. 그래서 이 태그가 놓인 자리가 곧 위젯이 나타나는 자리이고,
 // 속성이 하나도 빠지지 않고 그대로 나가야 한다 → is:inline (src 말고 다른 속성이 있으면 어차피 암묵 적용된다).
+// theme 은 라이트의 boxy-light 그대로 나간다. 다크 모드(S6.1)에서는 BaseLayout <head> 의 인라인 스크립트가
+// client.js 가 실행되기 전에 이 속성을 github-dark 로 바꾸고, 토글하면 댓글 iframe 에 postMessage
+// ({ type: "set-theme", theme })로 알린다. 그래서 이 태그의 속성·자리는 그대로다(embeds 검사가 기준선과 비교한다).
 // issue-term="title" 은 document.title 로 댓글 이슈를 찾는다. 글의 <title> 을 바꾸면 댓글이 끊긴다.
 
 // repo, theme 은 HTML 표준 속성이 아니라서 선언이 없으면 astro check 가 ts(2322) 로 막는다.

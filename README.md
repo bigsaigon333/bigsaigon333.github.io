@@ -52,19 +52,40 @@ keywords: 키워드1, 키워드2
 
 이 밖의 키(오타 포함)가 있으면 빌드가 실패한다.
 
-초안을 만드는 방법은 셋이다. `posts/draft/`에 두거나, 파일 이름을 `draft:`로 시작하게 하거나, frontmatter에 `draft: true`를 적는다. 어느 쪽이든 발행되지 않는다(글 페이지, 홈 목록, sitemap 어디에도 없다).
+### 초안
+
+초안은 운영 빌드(`npm run build`)에 나가지 않는다. 글 페이지, 홈 목록, sitemap 어디에도 없다. `npm run dev`에서는 홈 목록과 글 페이지에 제목 앞 `[초안]` 표시와 함께 나온다(댓글은 없다). sitemap에는 dev에서도 없다.
+
+| 방법                                 | 주소(dev)             | 비고                                                                                                       |
+| ------------------------------------ | --------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `posts/draft/<이름>.md`에 둔다       | `/posts/<이름>`       | 권장. `title`, `date`가 없어도 된다(그 밖의 키 규칙은 같다). 최상위 글과 이름이 같으면 dev가 멈춘다        |
+| frontmatter에 `draft: true`를 적는다 | `/posts/<파일 이름>`  | 발행할 자리(`posts/`)에 둔 채로 감출 때. 발행하려면 줄을 지운다. 운영 빌드에서도 frontmatter 검사는 받는다 |
+| 파일 이름을 `draft:`로 시작한다      | `/posts/draft:<이름>` | 예전 규칙이라 쓰지 않는다. 검증 장치(`drafts`)가 아직 이 이름을 초안으로 보므로 사이트도 그렇게 다룬다     |
+
+`posts/draft/`는 `astro dev`에서만 읽는다. 쓰다 만 초안의 frontmatter가 배포를 멈추지 않는다. 발행하려면 파일을 `posts/`로 옮긴다.
 
 ## 검증
 
-`scripts/verify/`는 빌드 결과(`dist/`)를 지금 배포된 사이트(`gh-pages` 브랜치)와 비교하고, 새 사이트에만 있는 요건(SEO 메타 태그, 초안 유출 없음 등)을 확인한다. 자세한 것은 `scripts/verify/README.md`에 있다.
+`scripts/verify/`는 빌드 결과(`dist/`)를 직전 운영본의 빌드(기준선)와 비교하고, 기준선과 상관없는 요건(SEO 메타 태그, 초안 유출 없음 등)을 확인한다. 자세한 것은 `scripts/verify/README.md`에 있다.
 
 ```sh
 npx playwright install chromium   # 처음 한 번
-npm run verify:setup              # 기준선(gh-pages)과 응답 캐시 준비
+npm run verify:setup              # 기준선(origin/main 의 빌드)과 응답 캐시 준비
 npm run verify                    # check → build → 비교·기능·시각 검사
 npm run verify:selftest           # 검사기가 차이를 실제로 잡는지 확인
 npm run verify:live -- --base-url=https://bigsaigon333.github.io   # 배포 뒤 실제 주소 확인
 ```
+
+사이트를 일부러 바꾸면 기준선과 달라져 검사가 실패한다. 그 차이를 선언해 허용한다.
+
+```sh
+npm run verify -- --write-accept=<이름> --reason="<왜 바뀌었는지>"
+```
+
+- `scripts/verify/accepted/<이름>.json`이 생긴다. PR에 함께 커밋한다.
+- 새 글을 쓰면 홈, `sitemap.xml`, 라우트 목록이 바뀐다. 그 PR에서 이 명령을 돌린다.
+- 파일은 그 기준선에만 적용된다. 병합 뒤 기준선이 바뀌면 저절로 무시된다.
+- 화면 비교는 `mask`로 바뀐 요소만 가리는 편이 낫다.
 
 ## 배포
 
@@ -76,4 +97,6 @@ npm run verify:live -- --base-url=https://bigsaigon333.github.io   # 배포 뒤 
 | `verify`                  | `npm run verify` (`check`, 빌드, 비교·기능·시각 검사 전부) |
 | `verify selftest`         | `npm run verify:selftest`                                  |
 
-`main`에 push하면 `deploy.yml`이 같은 검사를 다시 돌리고, `verify`가 검사한 `dist/`를 GitHub Pages에 배포한 뒤, 실제 주소에 `verify:live`를 돌린다. 검사가 하나라도 실패하면 배포하지 않는다.
+기준선은 직전 운영본이다. PR은 base 커밋의 빌드, 배포는 push 전 main 커밋의 빌드와 비교한다(수동 실행은 지금 커밋).
+
+`main`에 push하면 `deploy.yml`이 같은 검사를 다시 돌리고, `verify`가 검사한 `dist/`를 GitHub Pages에 배포한 뒤, 실제 주소에 `verify:live`를 돌린다. 이때 기준선은 방금 배포한 커밋이다. 검사가 하나라도 실패하면 배포하지 않는다.

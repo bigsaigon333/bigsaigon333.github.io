@@ -3,21 +3,31 @@ import type { GetStaticPaths, InferGetStaticPropsType } from "astro";
 import { render } from "astro:content";
 
 import Comments from "../../components/Comments.astro";
+import CopyCode from "../../components/CopyCode.astro";
 import PostHeader from "../../components/PostHeader.astro";
+import PostTags from "../../components/PostTags.astro";
+import SeriesNav from "../../components/SeriesNav.astro";
+import Toc from "../../components/Toc.astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import { getPublishedPosts, postUrl } from "../../lib/posts";
+import {
+  displayTitle,
+  getVisiblePosts,
+  isDraft,
+  postUrl,
+} from "../../lib/posts";
 
 // 글 페이지에만 실리는 전역 CSS 두 개. 이 페이지만 import 하므로 홈과 404 에는 나가지 않는다.
 // 다른 import 뒤에 둔다. 이 둘은 한 묶음이 되고, 묶음은 그 안에서 가장 먼저 import 된 파일의 자리에 놓인다.
 // 하나라도 맨 위로 올리면 둘 다 global.css 앞으로 가서, 특이도가 같은 규칙에서 전역 스타일에 지게 된다.
 //
-// 1. 코드 블록의 색: npm 패키지 안의 테마 파일을 바로 가져온다(package.json 에 고정한 highlight.js 11.5.1 의 것).
-import "highlight.js/styles/base16/monokai.css";
+// 1. 코드 블록의 색: Shiki 가 붙인 CSS 변수 중 라이트·다크 어느 쪽을 쓸지 정한다.
+import "../../styles/code.css";
 // 2. 본문(<main class="prose"> 아래): <Content /> 가 그린 요소에는 scoped <style> 이 닿지 않아 전역 CSS 로 둔다.
 import "../../styles/prose.css";
 
+// 운영 빌드에서는 발행된 글만, astro dev 에서는 초안도(lib/posts.ts 의 getVisiblePosts).
 export const getStaticPaths = (async () => {
-  const posts = await getPublishedPosts();
+  const posts = await getVisiblePosts();
 
   return posts.map((post) => ({ params: { id: post.id }, props: { post } }));
 }) satisfies GetStaticPaths;
@@ -26,7 +36,7 @@ type Props = InferGetStaticPropsType<typeof getStaticPaths>;
 
 const { post } = Astro.props;
 const { title, date, description, keywords } = post.data;
-const { Content } = await render(post);
+const { Content, headings } = await render(post);
 ---
 
 <BaseLayout
@@ -41,9 +51,17 @@ const { Content } = await render(post);
     publishedTime: date,
   }}
 >
-  <PostHeader title={title} date={date} />
+  <PostHeader title={displayTitle(post)} date={date} />
+  <PostTags keywords={keywords} />
+  <Toc headings={headings} />
+  {/* 코드 블록마다 복사 버튼(S6.3). 상자 없는 <copy-code hidden> 이다. <main> 뒤에 두면 utterances 의 자리(main 바로 뒤)가 바뀐다. */}
+  <CopyCode />
   <main class="prose">
     <Content />
   </main>
-  <Comments />
+  <SeriesNav postId={post.id} />
+  {
+    // 초안(dev 에서만 그려진다)에는 댓글을 싣지 않는다. utterances 가 초안 제목으로 이슈를 만들면 안 된다.
+    !isDraft(post) && <Comments />
+  }
 </BaseLayout>
