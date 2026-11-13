@@ -1,0 +1,60 @@
+---
+// S8.2: a session-backed counter and cart. The browser holds only the s82-session cookie (a
+// random id); the data sits in the server's session store under that id.
+import { actions, isInputError } from "astro:actions";
+
+import { ITEMS, VISITS_KEY, encodeCart, readCart } from "../../s82/cart";
+
+export const prerender = false;
+
+const session = Astro.session;
+// Count page views only: a form POST renders this page too but is not a visit.
+let visits = (await session?.get(VISITS_KEY)) ?? 0;
+if (Astro.request.method === "GET") {
+  visits += 1;
+  session?.set(VISITS_KEY, visits);
+}
+
+// Read after the action ran: a POST to "?_action=s82.addToCart" has already updated the session.
+const cart = await readCart(session);
+const added = Astro.getActionResult(actions.s82.addToCart);
+const fields: Record<string, string[] | undefined> =
+  added?.error && isInputError(added.error) ? added.error.fields : {};
+Astro.response.headers.set("Cache-Control", "no-store");
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>S8.2 cart</title>
+  </head>
+  <body>
+    <h1>Session cart</h1>
+    <p data-visits={visits}>Visits in this session: {visits}</p>
+    <ul data-cart={encodeCart(cart)}>
+      {Object.entries(cart).map(([item, qty]) => (
+        <li>
+          {item} × {qty}
+        </li>
+      ))}
+    </ul>
+
+    <form id="s82-add" method="POST" action={actions.s82.addToCart}>
+      <label for="item">Item</label>
+      <select id="item" name="item">
+        {ITEMS.map((item) => (
+          <option value={item}>{item}</option>
+        ))}
+      </select>
+      <label for="qty">Qty</label>
+      <input id="qty" name="qty" type="number" value="1" />
+      {Object.entries(fields).map(([name, messages]) => (
+        <span data-error-for={name}>{messages?.join(", ")}</span>
+      ))}
+      <button type="submit">Add</button>
+    </form>
+    <form id="s82-clear" method="POST" action={actions.s82.clearCart}>
+      <button type="submit">Clear</button>
+    </form>
+  </body>
+</html>

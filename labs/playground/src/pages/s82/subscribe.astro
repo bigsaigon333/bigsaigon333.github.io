@@ -1,0 +1,99 @@
+---
+// S8.2: one Action, two paths. Without JS the <form> POSTs to "?_action=s82.subscribe" on this
+// page, Astro runs the action before rendering, and getActionResult() hands the result here.
+// With JS the script below intercepts submit and calls the same action over /_actions/….
+import { actions, isInputError } from "astro:actions";
+
+export const prerender = false;
+
+const result = Astro.getActionResult(actions.s82.subscribe);
+const fields: Record<string, string[] | undefined> =
+  result?.error && isInputError(result.error) ? result.error.fields : {};
+const failure =
+  result?.error && !isInputError(result.error) ? result.error.message : "";
+
+// Put the submitted values back after a failed POST (the body is still readable: the action
+// parsed a clone of the request).
+const values: Record<string, string> = {};
+if (Astro.request.method === "POST" && result?.error) {
+  for (const [key, value] of await Astro.request.formData())
+    if (typeof value === "string") values[key] = value;
+}
+
+const inputs = [
+  { name: "name", label: "Name", type: "text" },
+  { name: "email", label: "E-mail", type: "email" },
+  { name: "age", label: "Age", type: "number" },
+] as const;
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>S8.2 subscribe</title>
+  </head>
+  <body>
+    <h1>Subscribe (Action + zod)</h1>
+    <!-- novalidate: let the server's zod schema be the one that answers -->
+    <form
+      id="s82-subscribe"
+      method="POST"
+      action={actions.s82.subscribe}
+      novalidate
+    >
+      {inputs.map(({ name, label, type }) => (
+        <p>
+          <label for={name}>{label}</label>
+          <input id={name} name={name} type={type} value={values[name]} />
+          <span data-errors={name}>
+            {fields[name] && (
+              <span data-error-for={name}>{fields[name].join(", ")}</span>
+            )}
+          </span>
+        </p>
+      ))}
+      <button type="submit">Subscribe</button>
+    </form>
+    <div id="s82-output" aria-live="polite">
+      {result?.data && (
+        <p data-result={result.data.message}>{result.data.message}</p>
+      )}
+      {failure && <p data-failure>{failure}</p>}
+    </div>
+
+    <script>
+      import { actions, isInputError } from "astro:actions";
+
+      const form = document.querySelector<HTMLFormElement>("#s82-subscribe")!;
+      const output = document.querySelector("#s82-output")!;
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const { data, error } = await actions.s82.subscribe(new FormData(form));
+        output.replaceChildren();
+        for (const slot of form.querySelectorAll<HTMLElement>("[data-errors]"))
+          slot.replaceChildren();
+        if (data) {
+          const p = document.createElement("p");
+          p.dataset.result = data.message;
+          p.textContent = data.message;
+          output.append(p);
+        } else if (isInputError(error)) {
+          for (const [name, messages] of Object.entries(error.fields)) {
+            const span = document.createElement("span");
+            span.dataset.errorFor = name;
+            span.textContent = (messages ?? []).join(", ");
+            form.querySelector(`[data-errors="${name}"]`)?.append(span);
+          }
+        } else if (error) {
+          const p = document.createElement("p");
+          p.dataset.failure = "";
+          p.textContent = error.message;
+          output.append(p);
+        }
+      });
+      // Marks the form as handled by JS (the no-JS path never gets this attribute).
+      form.dataset.enhanced = "";
+    </script>
+  </body>
+</html>
