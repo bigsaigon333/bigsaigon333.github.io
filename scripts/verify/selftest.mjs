@@ -264,19 +264,36 @@ async function cacheCases(check, identical) {
     ],
   ]) {
     const dir = scratch("capture-cache-");
+    let mutant = null;
     try {
       const options = { args: { ...args, route }, captureCache: dir };
       const filled = await identicalRun(check, options);
       if (!filled.cache?.stored)
         throw new Error(`nothing was stored: ${JSON.stringify(filled.cache)}`);
-      poison(path.join(dir, check.name));
+      let changed = poison(path.join(dir, check.name));
+      // Guard a only runs when a comparison fails. When every entry holds the same bytes (a11y on a baseline
+      // without violations: every route is `{"violations":[]}`), swapping changes nothing, and the baseline
+      // compared with itself cannot fail. Then the candidate is the check's first mutation, which must fail,
+      // and the entries get other bytes for the same value, which only a fresh capture tells apart.
+      const mutation = check.selftest?.mutations?.[0];
+      if (!changed && poison === swapEntries && mutation) {
+        mutant = scratch("mutant-");
+        fs.cpSync(baselineDir, mutant, { recursive: true });
+        await mutation.apply?.(mutant);
+        changed = reencodeEntries(path.join(dir, check.name));
+      }
+      if (!changed)
+        throw new Error("the entries are all the same: nothing to make wrong");
       const result = await identicalRun(check, {
         ...options,
+        ...(mutant ? { candidateDir: mutant } : {}),
         captureSpotChecks: spotChecks,
       });
       const dropped = result.cache?.droppedBy?.invalidated ?? "";
       let detail = "";
-      if (!result.ok)
+      if (mutant && (result.ok || result.vacuous))
+        detail = `the check did not notice the mutation (${mutation.name}) after dropping the cache: ${JSON.stringify(result.cache)}`;
+      else if (!mutant && !result.ok)
         detail = `the wrong cache failed the check: ${result.failed[0]?.detail ?? "failed"}`;
       else if (!why.test(dropped))
         detail = `the wrong entries were not found (${why}): ${JSON.stringify(result.cache)}`;
@@ -291,12 +308,13 @@ async function cacheCases(check, identical) {
       });
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
+      if (mutant) fs.rmSync(mutant, { recursive: true, force: true });
     }
   }
   return found;
 }
 
-/** Every entry gets the bytes of the next one: each is a capture of something else. */
+/** Every entry gets the bytes of the next one: each is a capture of something else. → whether any entry changed */
 function swapEntries(dir) {
   const files = fs
     .readdirSync(dir)
@@ -307,9 +325,10 @@ function swapEntries(dir) {
   const contents = files.map((file) => fs.readFileSync(file));
   for (const [index, file] of files.entries())
     fs.writeFileSync(file, contents[(index + 1) % files.length]);
+  return contents.some((bytes) => !bytes.equals(contents[0]));
 }
 
-/** Every entry gets other bytes for the same thing: a PNG encoded again, JSON with a space after it. */
+/** Every entry gets other bytes for the same thing: a PNG encoded again, JSON with a space after it. → true */
 function reencodeEntries(dir) {
   for (const name of fs.readdirSync(dir)) {
     const file = path.join(dir, name);
@@ -323,6 +342,7 @@ function reencodeEntries(dir) {
     }
     fs.writeFileSync(file, other);
   }
+  return true;
 }
 
 // 2. mutations (the check must FAIL) and accepted changes (the check must still PASS)
