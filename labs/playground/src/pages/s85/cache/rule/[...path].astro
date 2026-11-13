@@ -1,0 +1,30 @@
+---
+// Matched by routeRules["/s85/cache/rule/[...path]"] = { maxAge: 60, tags: ["s85-rule"] }.
+//   plain    – no cache call: the config rule alone caches it
+//   override – a route call merges over the rule (maxAge 60 → 1, tags accumulate)
+//   off      – cache.set(false) opts out
+//   cookie   – Set-Cookie: memoryCache() skips it and warns through the logger
+export const prerender = false;
+
+const { path = "" } = Astro.params;
+if (path === "override") Astro.cache.set({ maxAge: 1, tags: ["s85-override"] });
+if (path === "off") Astro.cache.set(false);
+if (path === "cookie") Astro.cookies.set("s85-seen", "1", { path: "/s85" });
+const renderId = crypto.randomUUID();
+---
+
+<html lang="en">
+  <head>
+    <title>S8.5 routeRules</title>
+  </head>
+  <body>
+    <main
+      data-render-id={renderId}
+      data-cache-options={JSON.stringify(Astro.cache.options)}
+      data-variant={path}
+    >
+      <h1>routeRules: {path}</h1>
+      <p>Options: {JSON.stringify(Astro.cache.options)}</p>
+    </main>
+  </body>
+</html>

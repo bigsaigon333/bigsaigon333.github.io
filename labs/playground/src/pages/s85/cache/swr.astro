@@ -1,0 +1,23 @@
+---
+// maxAge 1 s + stale-while-revalidate 30 s: after a second the cache answers STALE with the old
+// body and renders this page again in the background for the next request.
+export const prerender = false;
+
+Astro.cache.set({ maxAge: 1, swr: 30 });
+const renderId = crypto.randomUUID();
+---
+
+<html lang="en">
+  <head>
+    <title>S8.5 swr</title>
+  </head>
+  <body>
+    <main
+      data-render-id={renderId}
+      data-cache-options={JSON.stringify(Astro.cache.options)}
+    >
+      <h1>stale-while-revalidate</h1>
+      <p>Rendered {new Date().toISOString()}</p>
+    </main>
+  </body>
+</html>

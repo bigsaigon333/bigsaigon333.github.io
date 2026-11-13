@@ -1,0 +1,27 @@
+---
+// Per-route cache: Astro.cache.set() emits CDN-Cache-Control/Cache-Tag, memoryCache() reads and
+// strips them, stores the body and answers the next GET (X-Astro-Cache: HIT) without rendering.
+export const prerender = false;
+
+Astro.cache.set({ maxAge: 60, tags: ["s85-page"] });
+const renderId = crypto.randomUUID();
+---
+
+<html lang="en">
+  <head>
+    <title>S8.5 cache.set()</title>
+  </head>
+  <body>
+    <main
+      data-render-id={renderId}
+      data-cache-options={JSON.stringify(Astro.cache.options)}
+      data-cache-enabled={String(Astro.cache.enabled)}
+    >
+      <h1>Astro.cache.set()</h1>
+      <p>
+        Rendered {new Date().toISOString()}. Options:{" "}
+        {JSON.stringify(Astro.cache.options)}
+      </p>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,39 @@
+---
+// getLiveEntry + the entry's cacheHint → Cache-Tag / Last-Modified; maxAge makes memoryCache()
+// keep it until /s85/live/api invalidates the note's tag.
+import { getLiveEntry } from "astro:content";
+
+export const prerender = false;
+
+const { entry, error } = await getLiveEntry("s85Notes", Astro.params.id ?? "");
+if (error) {
+  Astro.response.status = error.name === "LiveEntryNotFoundError" ? 404 : 500;
+} else if (entry) {
+  Astro.cache.set(entry);
+  Astro.cache.set({ maxAge: 60 });
+}
+---
+
+<html lang="en">
+  <head>
+    <title>S8.5 live entry</title>
+  </head>
+  <body>
+    {entry ? (
+      <main
+        data-title={entry.data.title}
+        data-cache-options={JSON.stringify(Astro.cache.options)}
+      >
+        <h1>{entry.data.title}</h1>
+        <p>
+          tag {entry.data.tag}, updated {entry.data.updatedAt}
+        </p>
+      </main>
+    ) : (
+      <main data-error={error?.name ?? "unknown"}>
+        <h1>{error?.name}</h1>
+        <p>{error?.message}</p>
+      </main>
+    )}
+  </body>
+</html>

@@ -1,0 +1,29 @@
+---
+// getLiveCollection at request time: a POST to /s85/live/api shows up on the next request.
+import { getLiveCollection } from "astro:content";
+
+export const prerender = false;
+
+const tag = Astro.url.searchParams.get("tag") ?? undefined;
+const { entries = [], error } = await getLiveCollection("s85Notes", { tag });
+if (error) Astro.response.status = 500;
+---
+
+<html lang="en">
+  <head>
+    <title>S8.5 live collection</title>
+  </head>
+  <body>
+    <main data-count={entries.length} data-error={error?.name ?? ""}>
+      <h1>Live notes</h1>
+      <ul>
+        {entries.map((entry) => (
+          <li data-note-id={entry.id}>
+            <a href={`/s85/live/${entry.id}/`}>{entry.data.title}</a> (
+            {entry.data.tag})
+          </li>
+        ))}
+      </ul>
+    </main>
+  </body>
+</html>
