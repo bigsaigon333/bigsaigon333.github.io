@@ -1,0 +1,29 @@
+---
+// Prerendered shell (no `prerender` export). Stamp is deferred to a per-request island route;
+// the Preact counters hydrate at different times depending on their client:* directive.
+import Counter from "../../s83/Counter";
+import Later from "../../s83/Later";
+import Stamp from "../../s83/Stamp.astro";
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>S8.3 islands</title>
+  </head>
+  <body>
+    <h1>Server island + client islands</h1>
+    <Stamp server:defer label="from-the-shell">
+      <p slot="fallback" data-s83-fallback>
+        Loading the island…
+      </p>
+    </Stamp>
+    <Counter name="load" client:load />
+    <Counter name="idle" client:idle />
+    <Counter name="media" client:media="(max-width: 600px)" />
+    <Counter name="none" />
+    <div style="height: 3000px">Scroll down for client:visible.</div>
+    <Later name="visible" client:visible />
+  </body>
+</html>

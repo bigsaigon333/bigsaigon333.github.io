@@ -1,0 +1,19 @@
+---
+// A server island: rendered per request on /_server-islands/Stamp, never at build time.
+// Astro.url here is the island route, not the page; the Referer header carries the page URL.
+interface Props {
+  label: string;
+}
+const { label } = Astro.props;
+const id = crypto.randomUUID();
+const at = new Date().toISOString();
+const referer = Astro.request.headers.get("referer") ?? "none";
+---
+
+<p
+  data-s83-island-id={id}
+  data-s83-label={label}
+  data-s83-route={Astro.url.pathname}
+>
+  Island {id} at {at} (label {label}, page {referer})
+</p>
