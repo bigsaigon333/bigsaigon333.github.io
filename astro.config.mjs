@@ -49,6 +49,9 @@ export default defineConfig({
   // .mdx 는 markdown 설정(Shiki 등)을 물려받는다(extendMarkdownConfig 기본값 true). 처리기만 위의 mdxProcessor 로 바꾼다.
   integrations: [mdx({ processor: mdxProcessor })],
   fonts,
+  // View Transitions(S6.2)의 <ClientRouter /> 와 함께 쓰는 prefetch. 같은 사이트의 모든 링크를 포인터를 올리거나
+  // 포커스할 때(hover) 미리 받는다. ClientRouter 가 있으면 prefetchAll 의 기본값이 true 지만 드러내 적는다.
+  prefetch: { prefetchAll: true, defaultStrategy: "hover" },
   vite: {
     build: {
       // Vite 8 의 기본 대상(safari16.4 이상)에서는 @media (max-width: 600px) 가 (width<=600px) 로 바뀌어 나오고,

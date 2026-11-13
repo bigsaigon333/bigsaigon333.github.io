@@ -7,6 +7,12 @@
 // theme 은 라이트의 boxy-light 그대로 나간다. 다크 모드(S6.1)에서는 BaseLayout <head> 의 인라인 스크립트가
 // client.js 가 실행되기 전에 이 속성을 github-dark 로 바꾸고, 토글하면 댓글 iframe 에 postMessage
 // ({ type: "set-theme", theme })로 알린다. 그래서 이 태그의 속성·자리는 그대로다(embeds 검사가 기준선과 비교한다).
+//
+// View Transitions(S6.2): 라우터는 이미 실행한 스크립트(외부 스크립트는 src 가 같으면)를 다음 페이지에서 다시 실행하지
+// 않는다. 그러면 글 A → 글 B 에서 client.js 가 돌지 않아 B 에 댓글이 없다. data-astro-rerun 이 붙은 스크립트는
+// 바꿔 넣을 때마다 다시 실행된다. 그때는 head 가 이미 새 페이지의 것이라 document.title 도 새 글의 제목이다.
+// 글이 아닌 페이지로 가면 <body> 가 통째로 바뀌므로 지난 글의 iframe 도 함께 사라진다.
+// (embeds 검사는 repo·issue-term·theme·crossorigin·async 와 자리를 비교한다. 이 속성은 그 밖이다.)
 // issue-term="title" 은 document.title 로 댓글 이슈를 찾는다. 글의 <title> 을 바꾸면 댓글이 끊긴다.
 
 // repo, theme 은 HTML 표준 속성이 아니라서 선언이 없으면 astro check 가 ts(2322) 로 막는다.
@@ -29,4 +35,5 @@ declare global {
   theme="boxy-light"
   crossorigin="anonymous"
   async
+  data-astro-rerun
 ></script>

@@ -7,6 +7,14 @@
 // 측정 ID 는 define:vars 로 넘긴다. Astro 는 그 스크립트 본문을
 //   (function(){ const gaId = "G-…"; … })();
 // 로 감싸므로 안에서 선언한 함수는 전역이 되지 않는다. 예전 사이트처럼 전역 gtag() 가 남도록 window 에 직접 단다.
+//
+// View Transitions(S6.2): <ClientRouter /> 로 옮겨 가면 문서가 다시 로드되지 않는다. <head> 의 이 두 스크립트는
+// 다음 페이지에도 글자 그대로 있으므로 라우터가 다시 실행하지 않는다(로더도, config 도 한 번). 그래서 첫 페이지의
+// page_view 는 config 가 보내고, 그 뒤의 페이지마다 astro:after-swap 에서 page_view 이벤트를 하나 보낸다.
+// after-swap 은 첫 로드에는 없고 옮겨 갈 때(뒤로·앞으로 포함)마다 한 번, 주소와 <title> 이 새 페이지로 바뀐 뒤에 온다.
+// 처음의 dataLayer 는 예전과 같다: js, config(embeds 검사가 기준선과 비교한다).
+// GA4 속성의 향상된 측정에서 "브라우저 기록 이벤트 기반 페이지 변경"이 켜져 있으면 gtag.js 도 pushState 를 보고
+// page_view 를 보내 두 번 세어진다. 그 설정은 GA 관리 화면에서 끈다(코드로는 끌 수 없다).
 // (is:inline 스크립트 안의 주석은 모든 페이지의 HTML 에 그대로 실리므로 설명은 여기에 적는다.)
 import { SITE } from "../lib/site";
 
@@ -26,4 +34,12 @@ const { gaId } = SITE;
   gtag("js", new Date());
 
   gtag("config", gaId);
+
+  document.addEventListener("astro:after-swap", () => {
+    gtag("event", "page_view", {
+      page_title: document.title,
+      page_location: location.href,
+      page_path: location.pathname,
+    });
+  });
 </script>

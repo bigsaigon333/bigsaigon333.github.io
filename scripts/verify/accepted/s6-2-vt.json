@@ -1,0 +1,11 @@
+{
+  "baseline": "fe19427f9446e285e8c524f3f089854e00c3af1b42f908ad59bf03f8b6adb2d0",
+  "reason": "S6.2: View Transitions(<ClientRouter />)와 hover prefetch. 모든 페이지의 JS 가 14913바이트 늘었다(홈·404 2308 → 17221, 글 3599 → 18512)",
+  "entries": [
+    {
+      "check": "budget",
+      "routes": ["/", "/404", "/posts/*"],
+      "reason": "모든 페이지 +14913바이트: 라우터 모듈 _astro/ClientRouter.*.js 14184 + prefetch 시작 모듈 _astro/page.*.js 47 + 인라인 682(GA 의 astro:after-swap page_view, 테마의 astro:before-swap, 토글을 document 클릭 위임으로). 두 모듈이 import 하는 _astro/prefetch.*.js 2493바이트는 HTML 이 참조하지 않아 budget 이 세지 않는다. 이 증가는 클라이언트 라우팅 자체의 값이다. 같은 라우트의 budget 은 s6-1-dark.json 의 항목이 먼저 받아 이 항목은 unused 로 보일 수 있다"
+    }
+  ]
+}

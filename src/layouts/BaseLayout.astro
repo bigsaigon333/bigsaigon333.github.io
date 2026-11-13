@@ -3,6 +3,8 @@
 // 맨 먼저 import 해서 묶음 안에서 Header·Footer 의 스타일보다 앞에 오게 한다.
 import "../styles/global.css";
 
+import { ClientRouter } from "astro:transitions";
+
 import Analytics from "../components/Analytics.astro";
 import Footer from "../components/Footer.astro";
 import HeadAssets from "../components/HeadAssets.astro";
@@ -30,6 +32,13 @@ const { seo, home = false } = Astro.props;
 // 기준선과 같이 theme="boxy-light" 로 나가므로, 파서가 그 태그를 넣는 순간 MutationObserver 가 속성을 지금 테마에
 // 맞춘다(관찰 콜백은 마이크로태스크라 async 스크립트가 실행되기 전에 돈다). 이미 만들어진 iframe 에는
 // { type: "set-theme", theme } 를 postMessage 로 보낸다(utterances 가 받는 메시지).
+//
+// View Transitions(S6.2): <ClientRouter /> 가 링크 클릭을 가로채 새 문서를 받아 바꿔 넣는다. 창(window)과 document 는
+// 그대로이고, 이 스크립트는 첫 로드에 한 번만 돈다(본문이 같은 인라인 스크립트는 다시 실행하지 않는다).
+// 바꿔 넣을 때 swapRootAttributes 가 <html> 의 속성을 새 문서의 것으로 갈아 끼우는데, 새 문서의 <html> 에는
+// data-theme 이 없다. 그대로 두면 바꿔 넣는 순간 라이트로 한 번 칠해진다. 그래서 astro:before-swap 에서
+// 새 문서(event.newDocument)의 <html> 에 지금 테마를, 새 문서의 utterances 스크립트에 그 테마 이름을 미리 적는다.
+// before-swap 은 새 문서가 화면에 들어가기 전이라 깜빡임이 없다.
 // (is:inline 스크립트 안의 주석은 모든 페이지의 HTML 에 그대로 실리므로 설명은 여기에 적는다.
 //  본문에 "<" 를 쓰지 않는다: 검증 장치의 theme 검사 자기 검사가 이 스크립트를 정규식으로 찾는다.)
 const themeKey = "theme";
@@ -76,6 +85,14 @@ const utterancesThemes = { light: "boxy-light", dark: "github-dark" };
       observer.observe(root, { childList: true, subtree: true });
       addEventListener("DOMContentLoaded", () => observer.disconnect());
 
+      document.addEventListener("astro:before-swap", (event) => {
+        const next = event.newDocument;
+        const theme = root.dataset.theme;
+        next.documentElement.dataset.theme = theme;
+        for (const script of next.querySelectorAll(widget))
+          script.setAttribute("theme", utterancesThemes[theme]);
+      });
+
       system.addEventListener("change", (event) => {
         if (!saved()) apply(event.matches ? "dark" : "light");
       });
@@ -98,6 +115,7 @@ const utterancesThemes = { light: "boxy-light", dark: "github-dark" };
       content={SITE.googleSiteVerification}
     />
     <Analytics />
+    <ClientRouter />
   </head>
   <body>
     <div class="layout">
@@ -107,6 +125,19 @@ const utterancesThemes = { light: "boxy-light", dark: "github-dark" };
     </div>
   </body>
 </html>
+
+<style is:global>
+  /* View Transitions(S6.2): 페이지를 바꿔 넣을 때 브라우저의 기본 전환(루트의 교차 페이드)이 돈다.
+     움직임을 줄이라는 설정이면 애니메이션 없이 바로 바꾼다. Astro 의 viewtransitions.css 에도 같은 규칙이 있지만
+     transition:animate 를 쓴 페이지에만 실린다. */
+  @media (prefers-reduced-motion: reduce) {
+    ::view-transition-group(*),
+    ::view-transition-old(*),
+    ::view-transition-new(*) {
+      animation: none !important;
+    }
+  }
+</style>
 
 <style>
   /* components/layout.style.ts 의 Body */
