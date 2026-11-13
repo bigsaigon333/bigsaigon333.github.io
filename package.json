@@ -20,7 +20,8 @@
     "verify:live": "node scripts/verify/live.mjs",
     "progress": "node scripts/progress/server.mjs",
     "progress:watch": "node scripts/progress/watch.mjs",
-    "prepare": "husky"
+    "prepare": "husky",
+    "test": "ASTRO_TELEMETRY_DISABLED=1 vitest run"
   },
   "engines": {
     "node": ">=24"
@@ -43,6 +44,7 @@
     "playwright": "^1.65.0",
     "pngjs": "^7.0.0",
     "prettier": "^3.10.1",
-    "prettier-plugin-astro": "^1.1.2"
+    "prettier-plugin-astro": "^1.1.2",
+    "vitest": "^5.1.0"
   }
 }
