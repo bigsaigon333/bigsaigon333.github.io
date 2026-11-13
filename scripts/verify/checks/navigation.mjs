@@ -499,17 +499,20 @@ export default {
       await browser.close();
     }
 
+    // The scenario needs "/" and two posts whatever --route selects; the grid (cells) covers only the selected
+    // routes. Items on the other pages still count and fail the check.
+    const selected = new Set(candidateRoutes(ctx));
     for (const item of items) {
       if (item.problems.length === 0) {
         pass++;
-        cells[item.route] ??= "pass";
+        if (selected.has(item.route)) cells[item.route] ??= "pass";
         continue;
       }
       failed.push({
         route: item.route,
         detail: `${item.step}: ${item.problems.join("; ")}`,
       });
-      cells[item.route] = "fail";
+      if (selected.has(item.route)) cells[item.route] = "fail";
     }
 
     return {

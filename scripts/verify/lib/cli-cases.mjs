@@ -172,6 +172,12 @@ const BUILD_INPUTS = [
 ];
 /** What Astro and Vite write under node_modules/. A copy starts without them and keeps its own. */
 const NODE_MODULES_CACHES = new Set([".astro", ".vite", ".cache"]);
+/**
+ * Packages copied into the copy instead of linked. Astro compiles the .astro components it ships (ClientRouter)
+ * and looks up their compile metadata under the copy's root joined with the link's real path, which a link to
+ * the repository's node_modules/astro makes a path that does not exist.
+ */
+const NODE_MODULES_COPIED = new Set(["astro"]);
 const BUILD_TIMEOUT_MS = 180_000;
 
 const isInside = (dir, root) => {
@@ -182,8 +188,8 @@ const isInside = (dir, root) => {
 /**
  * Fill `dir` with what a build reads: BUILD_INPUTS, the top-level posts (not posts/draft/, which the loader does
  * not read) and `posts` ({ "<file name>": "<content>" }). node_modules is a directory of links to the
- * repository's packages, not one link to the directory, so that the content store Astro writes to
- * node_modules/.astro stays in the copy. Throws when anything is missing.
+ * repository's packages (NODE_MODULES_COPIED copied instead), not one link to the directory, so that the content
+ * store Astro writes to node_modules/.astro stays in the copy. Throws when anything is missing.
  */
 function fillCopy(dir, posts) {
   if (isInside(dir, fs.realpathSync(repoRoot)))
@@ -207,7 +213,13 @@ function fillCopy(dir, posts) {
 
   fs.mkdirSync(path.join(dir, "node_modules"));
   for (const entry of fs.readdirSync(path.join(repoRoot, "node_modules")))
-    if (!NODE_MODULES_CACHES.has(entry))
+    if (NODE_MODULES_COPIED.has(entry))
+      fs.cpSync(
+        path.join(repoRoot, "node_modules", entry),
+        path.join(dir, "node_modules", entry),
+        { recursive: true },
+      );
+    else if (!NODE_MODULES_CACHES.has(entry))
       fs.symlinkSync(
         path.join(repoRoot, "node_modules", entry),
         path.join(dir, "node_modules", entry),
