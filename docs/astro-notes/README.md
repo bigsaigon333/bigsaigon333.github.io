@@ -139,6 +139,8 @@ git commit --no-edit
 
 그다음 그 릴리스가 담은 accept 파일(`scripts/verify/accepted/*.json`)을 모두 지우고 커밋한다. 새 기준선(`origin/main`)이 그 차이를 이미 담고 있어 `stale accept file ignored`로만 남기 때문이다. 지운 뒤 `npm run verify:setup && npm run verify`가 `0 accepted`, stale·unused 경고 없이 통과해야 한다. 노트가 지운 파일을 가리키면 `git show <커밋>:scripts/verify/accepted/<파일>` 꼴로 고친다(`git log -- scripts/verify/accepted/<파일>`로 커밋을 찾는다).
 
+**릴리스 병합 뒤 건강 검사.** 병합·accept 삭제 직후, 다음 웨이브를 시작하기 전에 한 번 돌린다. 기준선이 바뀌면 검사나 selftest 의 돌연변이가 낡아 있을 수 있기 때문이다. 순서는 병합 → accept 파일 삭제 → `npm run verify:setup` → 전체 `npm run verify`(`0 accepted`) + 전체 `npm run verify:selftest` → 어긋난 것은 검사를 약하게 하지 말고 뿌리에서 고친 뒤 다음 웨이브로 간다.
+
 ### 검증
 
 현재 운영본(`origin/main`)의 빌드를 기준선으로 삼아 새 빌드(`dist/`)와 비교한다.
