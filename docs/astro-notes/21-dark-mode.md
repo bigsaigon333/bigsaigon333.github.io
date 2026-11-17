@@ -40,7 +40,7 @@
 
 끝나면 `git checkout src/`로 되돌린다.
 
-1. `BaseLayout.astro`의 테마 `<script is:inline …>` 블록을 `<head>`에서 `</body>` 바로 앞으로 옮기고 `npm run verify -- --no-check --only=theme --route=/`.
+1. `BaseLayout.astro`의 테마 스크립트 `<script is:inline set:html={themeScript} />`(S7.2 전에는 `define:vars` 블록)를 `<head>`에서 `</body>` 바로 앞으로 옮기고 `npm run verify -- --no-check --only=theme --route=/`.
    <details><summary>예상 결과</summary>동작은 같지만 본문이 먼저 칠해진다. `first-paint: data-theme when <body> was parsed: null, expected "dark"`로 실패한다(자기 검사의 첫 변이와 같다).</details>
 2. `global.css`의 `:root[data-theme="dark"]`에서 `--color-muted`를 `#4b5157`로 바꾸고 같은 검사를 `/posts/proxy-to-built-in-objects`에 돌린다.
    <details><summary>예상 결과</summary>`contrast: color-contrast .reading-time …`. 읽는 시간 줄이 #0d1117 위에서 4.5:1을 넘지 못한다.</details>

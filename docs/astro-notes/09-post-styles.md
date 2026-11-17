@@ -48,14 +48,12 @@ CSS가 페이지에 들어가는 길은 넷이고, 길마다 Astro가 손대는 
 
 ## 직접 해볼 실험
 
-끝나면 매번 `git checkout src`로 되돌린다.
+위의 네 길 중 셋은 뒤 단계가 바꿨다: monokai는 Shiki의 `src/styles/code.css`(12), KaTeX `<link>`는 `HeadAssets.astro`의 `import "katex/dist/katex.min.css"`(13), 글꼴 `<style is:inline>`은 `<Font>`(13). CSP(28) 이후로는 묶음이 모두 `dist/_astro/*.css` 파일이다. 실험은 지금 트리에 맞췄다. 끝나면 매번 `git checkout src`로 되돌린다.
 
-1. `HeadAssets.astro`의 `<style is:inline>`을 `<style>`로 바꾸고 `npm run build`, `ls -l dist/_astro`, `grep -c '<style' dist/index.html`.
-   <details><summary>예상 결과</summary>`BaseLayout.<해시>.css`(5,578바이트)가 생기고 모든 페이지가 `<link rel="stylesheet" href="/_astro/BaseLayout.<해시>.css">`로 건다. grep은 1. `@font-face`가 "모든 페이지가 쓰는 묶음"에 합쳐져(3,185 + 줄어든 2,393) 4,096바이트를 넘었기 때문이다. 남은 인라인 `<style>`은 홈 666, 404 107, 글 2,763바이트이고 `npm run -s verify -- --only=visual --no-check`는 78/78 그대로다.</details>
-2. `[id].astro`에서 `import "highlight.js/styles/base16/monokai.css";` 한 줄만 펜스 맨 위로 옮기고 빌드한 뒤 위의 "순서" grep을 다시 돌린다.
-   <details><summary>예상 결과</summary>`pre code.hljs .prose{ [hidden]`. 옮기지 않은 prose까지 `global.css` 앞으로 갔다. 둘은 한 묶음이고 묶음은 가장 이른 import의 자리에 놓인다. 지금은 특이도가 같으면서 같은 속성을 다투는 규칙이 없어서 `visual 78/78`이다.</details>
-3. `HeadAssets.astro`에서 KaTeX `<link … />`를 지우고 `npm run -s verify -- --only=visual --no-check`.
-   <details><summary>예상 결과</summary>`FAIL visual 72/78`. `/posts/how-to-check-two-types-are-equal-in-ts`의 여섯 뷰포트만 실패한다. 375는 `height 4722 ≠ 4850 (+128)`, 768과 1280은 `height 3456 ≠ 3516 (+60)`이고 그 사이 너비도 페이지가 길어진다. KaTeX는 수식마다 MathML과 HTML을 함께 내보내고 스타일시트가 MathML 쪽을 숨긴다. 스타일시트가 없으면 수식이 `𝐴A`처럼 두 번 보인다.</details>
+1. `HeadAssets.astro`에서 `import "katex/dist/katex.min.css";`를 지우고 `npm run -s verify -- --no-check --only=visual --route=/,/posts/how-to-check-two-types-are-equal-in-ts`.
+   <details><summary>예상 결과</summary>`FAIL visual 6/12`. 수식 글의 여섯 뷰포트만 실패하고(375는 `height 4804 ≠ 4932 (+128)`) 홈은 통과한다. `dist/_astro`에 `KaTeX_*` 글꼴도 없다. KaTeX는 수식마다 MathML과 HTML을 함께 내보내고 스타일시트가 MathML 쪽을 숨긴다. 스타일시트가 없으면 수식이 `𝐴A`처럼 두 번 보인다.</details>
+2. 그 import를 `HeadAssets.astro`에서 `[id].astro`의 `import "../../styles/prose.css";` 다음 줄로 옮기고 같은 명령, 이어서 `ls -l dist/_astro/*.css`.
+   <details><summary>예상 결과</summary>`visual 12/12`. `BaseLayout.<해시>.css`가 29,030에서 5,008바이트로 줄고 글만 쓰는 `_id_.<해시>.css`가 4,027에서 28,049바이트로 는다. "import 한 페이지에만 실린다"는 그대로라 홈은 KaTeX CSS를 받지 않게 된다. 배포본과 같게 하려고 모든 페이지에 두었다.</details>
 
 ## 문서 근거
 

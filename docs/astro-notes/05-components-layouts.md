@@ -47,7 +47,7 @@
 1. `src/pages/index.astro`의 `<BaseLayout … home>`에서 `home`을 지우고 `npm run build && grep -o 'class="link-list"' dist/index.html | wc -l`.
    <details><summary>예상 결과</summary>`0`(지금은 1). `Header`의 `{home && (…)}`가 `false`가 되어 `<ul class="link-list">`가 통째로 빠지고 `<header>` 안에는 `<h1>`만 남는다. 빌드는 성공한다.</details>
 2. `src/pages/index.astro`의 `seo`에서 `type: "website",` 줄을 지우고 `npm run check`, 이어서 `npm run build && grep -o '<meta property="og:type"[^>]*>' dist/index.html`.
-   <details><summary>예상 결과</summary>`check`는 `src/pages/index.astro:11:3 - error ts(2741): Property 'type' is missing in type '{ … }' but required in type 'Props'.`로 실패한다. `build`는 성공하고 `<meta property="og:type">`이 나온다(`undefined`라서 `content` 속성이 빠졌다). props 타입은 `npm run check`만 지킨다.</details>
+   <details><summary>예상 결과</summary>`check`는 `src/pages/index.astro:12:3 - error ts(2741): Property 'type' is missing in type '{ … }' but required in type 'Props'.`로 실패한다. `build`는 성공하고 `<meta property="og:type">`이 나온다(`undefined`라서 `content` 속성이 빠졌다). props 타입은 `npm run check`만 지킨다.</details>
 3. `src/components/Footer.astro`에서 `</footer>`를 지우고 `npm run build`.
    <details><summary>예상 결과</summary>`[CompilerError] Unexpected token`과 파일 끝을 가리키는 `Location: …/src/components/Footer.astro:14:0`으로 빌드가 멈춘다. v7의 Rust 컴파일러는 닫지 않은 태그를 고쳐 주지 않는다.</details>
 

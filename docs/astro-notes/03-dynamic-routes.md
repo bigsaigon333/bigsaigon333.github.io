@@ -42,12 +42,12 @@
 
 ## 직접 해볼 실험
 
-1. `[id].astro`의 `<Comments />` 위에 `<pre>{Astro.url.pathname} / {Astro.params.id}</pre>`를 넣고 빌드한 뒤 `dist/posts/regular-expression-1.html`의 끝부분을 본다.
+1. `[id].astro`의 `<SeriesNav postId={post.id} />` 바로 아래에 `<pre>{Astro.url.pathname} / {Astro.params.id}</pre>`를 넣고 빌드한 뒤 `dist/posts/regular-expression-1.html`의 끝부분을 본다.
    <details><summary>예상 결과</summary>`/posts/regular-expression-1.html / regular-expression-1`. `astro.config.mjs`에서 `build.format`을 지우면 `/posts/regular-expression-1`로 바뀐다(파일은 `dist/posts/regular-expression-1/index.html`).</details>
 2. `getStaticPaths`의 `posts.map(`을 `posts.slice(0, 3).map(`으로 바꾸고 빌드한다.
-   <details><summary>예상 결과</summary>`5 page(s) built`(엔드포인트 `/sitemap.xml`은 세지 않는다). `dist/posts`에 최신 글 3개만 남는다. 홈과 `sitemap.xml`은 여전히 12개를 실으므로 나머지 9개는 깨진 링크가 된다. 경로 목록과 링크 목록은 따로 관리된다는 뜻이다.</details>
-3. `const { Content } = await render(post);`를 `const { Content, headings } = …`로 바꾸고 `<Comments />` 위에 `<pre>{JSON.stringify(headings, null, 2)}</pre>`를 찍은 뒤 `dist/posts/ts-ambient-type-declaration.html`의 끝부분을 본다.
-   <details><summary>예상 결과</summary>`{ depth, slug, text }` 배열이 나온다. 예: `{"depth": 2, "slug": "i-앰비언트-타입-선언", "text": "I. 앰비언트 타입 선언"}`. 파일 안에서는 `"`가 `&quot;`로 이스케이프되어 있다(`{…}` 표현식은 HTML 이스케이프된다). S5.3(계획)의 목차를 이것으로 만든다.</details>
+   <details><summary>예상 결과</summary>`dist/posts`에 최신 글 3개만 남는다. 홈, 태그 페이지, `sitemap.xml`은 여전히 12개를 실으므로 나머지 9개는 깨진 링크가 된다. 경로 목록과 링크 목록은 따로 관리된다는 뜻이다. S7.3(25) 뒤로는 site-guard가 `깨진 링크 /: <a href="/posts/date-time-string-format-in-js"> → … 에 해당하는 파일이 없다`를 줄줄이 찍고 빌드를 1로 끝낸다(그 전에는 성공했다).</details>
+3. `render(post)`는 이제 `{ Content, headings }`를 돌려받는다(S5.3 목차). `<SeriesNav … />` 아래에 `<pre>{JSON.stringify(headings, null, 2)}</pre>`를 찍은 뒤 `dist/posts/ts-ambient-type-declaration.html`의 끝부분을 본다.
+   <details><summary>예상 결과</summary>`{ depth, slug, text }` 배열이 나온다. 예: `{"depth": 2, "slug": "i-앰비언트-타입-선언", "text": "I. 앰비언트 타입 선언"}`. 파일 안에서는 `"`가 `&quot;`로 이스케이프되어 있다(`{…}` 표현식은 HTML 이스케이프된다). S5.3의 목차(18)가 이것으로 그려진다.</details>
 4. `[id].astro`에서 `getStaticPaths`를 통째로 지우고 빌드한다.
    <details><summary>예상 결과</summary>`` [GetStaticPathsRequired] `getStaticPaths()` function is required for dynamic routes. ``와 `Location: src/pages/posts/[id].astro:0:0`으로 실패한다.</details>
 

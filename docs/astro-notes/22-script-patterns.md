@@ -40,8 +40,8 @@
 
 끝나면 `git checkout src/components`로 되돌린다.
 
-1. `CopyCode.astro`의 `<script>`를 `<script is:inline>`으로 바꾸고 `npm run build`, 이어서 `npm run -s verify -- --no-check --no-build --only=interactions --route=/posts/proxy-to-built-in-objects`.
-   <details><summary>예상 결과</summary>`<copy-code hidden="true"></copy-code><script>` 뒤에 압축되지 않은 원문(1170바이트, 처리되면 670)이 나가고 `FAIL interactions 0/1 … 0 buttons named "복사" for 5 code blocks`. 클래식 스크립트는 파싱 도중 바로 실행되어, `define`이 `<copy-code>`를 곧바로 업그레이드하고 `connectedCallback`이 아직 파싱되지 않은 `<main>`에서 `pre`를 찾는다. 모듈은 파싱이 끝난 뒤 실행된다.</details>
+1. `CopyCode.astro`의 `<script>`를 `<script is:inline>`으로 바꾸고 `npm run build`, 이어서 `npm run -s verify -- --no-check --no-build --only=interactions,csp --route=/posts/proxy-to-built-in-objects`.
+   <details><summary>예상 결과</summary>`<copy-code hidden="true"></copy-code><script>` 뒤에 압축되지 않은 원문이 나간다(처리되면 `/_astro/CopyCode….js` 670바이트 파일). `FAIL interactions 0/1 … 0 buttons named "복사" for 5 code blocks`. S7.2(28) 뒤로는 이유가 하나 더 앞선다: 해시 없는 인라인 스크립트라 `FAIL csp 3/5 … blocked by CSP: script-src-elem blocked inline`으로 아예 실행되지 않는다. CSP 전에도 실패했던 이유는 이렇다. 클래식 스크립트는 파싱 도중 바로 실행되어, `define`이 `<copy-code>`를 곧바로 업그레이드하고 `connectedCallback`이 아직 파싱되지 않은 `<main>`에서 `pre`를 찾는다. 모듈은 파싱이 끝난 뒤 실행된다.</details>
 2. `Toc.astro`의 `link.setAttribute("aria-current", "true")`를 `"location"`으로 바꾸고 `npm run build` 뒤 1과 같은 검사.
    <details><summary>예상 결과</summary>`heading #… at the top: aria-current on [], expected [#…]`. 검사는 값이 정확히 `"true"`인 링크 하나를 찾는다(자기 검사의 변이 "스크롤 스파이가 aria-current 대신 다른 속성을 단다"와 같은 실패).</details>
 

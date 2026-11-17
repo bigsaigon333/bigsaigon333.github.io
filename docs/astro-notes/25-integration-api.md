@@ -43,7 +43,7 @@
 1. `src/components/Header.astro`의 `href="/"`를 `href="/home"`으로 바꾸고 `npm run build; echo $?`.
    <details><summary>예상 결과</summary>모든 페이지에서 `깨진 링크 …: <a href="/home"> → /home 에 해당하는 파일이 없다`, 종료 코드 1. `/home`, `home.html`, `home/index.html` 어느 것도 없다. `href="/tags"`로 바꾸면 `tags.html`로 풀려 통과한다.</details>
 2. `config/integrations.mjs`의 `jsBudget`을 `20000`으로 줄이고 빌드.
-   <details><summary>예상 결과</summary>글 페이지 12장만 `JS 21005바이트 > 예산 20000바이트`로 실패한다. 다른 페이지는 19714바이트라 통과. 차이 1291바이트는 글에만 있는 인라인 모듈 둘(`<toc-spy>` 621, `<copy-code>` 670)이다.</details>
+   <details><summary>예상 결과</summary>글 페이지 12장만 `JS 20663바이트 > 예산 20000바이트 (파일 6개 + 인라인 2개)`로 실패한다. 다른 페이지는 19372바이트(파일 4개)라 통과. 차이 1291바이트는 글에만 있는 모듈 둘(`Toc` 621, `CopyCode` 670)이다. S7.2(28) 전에는 이 둘이 인라인이었고 글 페이지가 21005바이트였다.</details>
 3. 훅에서 `throw`를 지우고(로그만 남기고) 실험 1을 다시 한다.
    <details><summary>예상 결과</summary>`[ERROR]` 줄은 그대로 나오지만 종료 코드는 0이다. logger는 빌드를 멈추지 않는다.</details>
 

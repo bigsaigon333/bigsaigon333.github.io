@@ -47,12 +47,14 @@ styled-components 4개 파일(`global-style.ts`, `layout.style.ts`, `header.styl
 
 ## 직접 해볼 실험
 
-1. `src/pages/index.astro`의 `section :global(a:hover)`를 `section a:hover`로 바꾸고 `npm run build`, `grep -o 'section\[[^{]*hover' dist/index.html`, `grep -o '<article[^>]*><a[^>]*>' dist/index.html | head -1`. 이어서 `npm run -s verify -- --only=visual --route=/ --no-check`.
-   <details><summary>예상 결과</summary>선택자는 `section[data-astro-cid-A] a[data-astro-cid-A]:hover`인데 `<a>`의 속성은 `PostHeader`의 `data-astro-cid-B`다. 두 id가 달라서 제목에 마우스를 올려도 밑줄이 생기지 않는다. 그런데도 검사는 `PASS visual 6/6`이다. 스크린샷은 마우스를 올리지 않는다. `--only=hover`로 바꾸면 `FAIL hover 0/1  /: a[href="/posts/proxy-to-built-in-objects"]#3 text-decoration-line on hover: underline → none`으로 잡힌다.</details>
-2. `src/components/Footer.astro`의 `<style>`을 `<style is:global>`로 바꾸고 빌드한 뒤 `grep -o '<footer[^>]*>' dist/index.html`.
-   <details><summary>예상 결과</summary>`<footer>`. 속성이 사라지고 CSS는 `footer{border-top:…;display:flex}`가 된다. `global.css`의 `footer{display:block}`보다 뒤에 있어서 화면은 그대로다(`visual 78/78`). 대신 이제 Markdown 본문 안의 `<footer>`에도 걸린다.</details>
-3. `astro.config.mjs`의 `build`를 `{ format: "file", inlineStylesheets: "never" }`로 바꾸고 빌드한 뒤 `ls -l dist/_astro`, `grep -o '<link rel="stylesheet" href="/_astro[^>]*>' dist/index.html dist/404.html dist/posts/regular-expression-1.html`.
-   <details><summary>예상 결과</summary>CSS 파일이 다섯 개 생긴다. 가장 큰 `BaseLayout.<해시>.css`(`global.css` + Footer + Header + `.layout`)도 4096바이트보다 작다. 나머지는 `PostHeader`, `index`, `404`, `_id_`(monokai + prose, 09)의 것이다. 홈은 `BaseLayout`·`PostHeader`·`index`, 글은 `BaseLayout`·`PostHeader`·`_id_`, `404.html`은 `BaseLayout`·`404`를 `<link>`로 건다. 남는 `<style>`은 `HeadAssets`의 `is:inline` 글꼴 하나이고 화면은 같다.</details>
+CSP(28) 이후로는 CSS 묶음이 모두 `dist/_astro/*.css` 파일로 나간다(`assetsInlineLimit: 0`). 그래서 선택자는 HTML이 아니라 CSS 파일에서 찾는다. 끝나면 `git checkout src astro.config.mjs`로 되돌린다.
+
+1. `src/pages/index.astro`의 `section :global(a:hover)`를 `section a:hover`로 바꾸고 `npm run build`, `grep -o 'section\[[^{]*hover' dist/_astro/index.*.css`, `grep -o '<article[^>]*><a[^>]*>' dist/index.html | head -1`. 이어서 `npm run -s verify -- --no-build --no-check --only=visual,hover --route=/`.
+   <details><summary>예상 결과</summary>선택자는 `section[data-astro-cid-A] a[data-astro-cid-A]:hover`인데 `<a>`의 속성은 `PostHeader`의 `data-astro-cid-B`다. 두 id가 달라서 제목에 마우스를 올려도 밑줄이 생기지 않는다. 그런데도 `PASS visual 6/6`이다. 스크린샷은 마우스를 올리지 않는다. `hover`가 `FAIL hover 0/1  /: a[href="/posts/proxy-to-built-in-objects"]#3 text-decoration-line on hover: underline → none`으로 잡는다.</details>
+2. `src/components/Footer.astro`의 `<style>`을 `<style is:global>`로 바꾸고 빌드한 뒤 `grep -o '<footer[^>]*>' dist/index.html`, `grep -o 'footer{[^}]*}' dist/_astro/BaseLayout.*.css`.
+   <details><summary>예상 결과</summary>`<footer>`. 속성이 사라지고 CSS는 `footer{border-top:…;display:flex}`가 된다. 화면은 그대로다(`--route=/,/posts/proxy-to-built-in-objects`로 `visual 12/12`). 대신 이제 Markdown 본문 안의 `<footer>`에도 걸린다.</details>
+3. `astro.config.mjs`의 `build`를 `{ format: "file", inlineStylesheets: "always" }`로 바꾸고 `npm run build`.
+   <details><summary>예상 결과</summary>`astro:build:done`에서 `[csp]`가 `페이지마다 CSP 가 다르다(5가지): 404.html, index.html, tags.html, posts/css-masters-2-week1.html, tags/built-in-object.html`로 멈춘다. 인라인된 묶음은 페이지 종류마다 달라 `style-src` 해시도 달라지고, `<ClientRouter />`는 첫 페이지의 정책을 그대로 두기 때문이다. `<link>`는 0개가 된다. 인라인 판단(기본 `"auto"`, 4kB 미만)은 이 사이트에서 CSP 때문에 끈 셈이다.</details>
 
 ## 문서 근거
 

@@ -47,14 +47,12 @@
 
 ## 직접 해볼 실험
 
-끝나면 매번 `git checkout config/markdown.mjs`로 되돌린다.
+S4.1(12)에서 unified 체인을 Sätteri로 바꿨으므로 위의 `unified()`·rehype-highlight 설정은 이제 트리에 없다. 같은 생각("기본값이 바뀌면 예전 값으로 되돌린다")을 지금의 `config/markdown.mjs`로 해 본다. 끝나면 매번 `git checkout config/markdown.mjs`로 되돌린다.
 
-1. 기본 엔진(Sätteri)으로 빌드하기: `echo 'export default {};' > config/markdown.mjs` 후 `npm run -s verify -- --only=content --no-check`.
-   <details><summary>예상 결과</summary>`FAIL content 8/13`. 실패한 글은 `css-masters-2-week1`, `how-to-check-two-types-are-equal-in-ts`, `react-scripts-react-app-polyfill-promise-any`, `regular-expression-1`, `ts-ambient-type-declaration`. `grep -o astro-code dist/posts/*.html | wc -l` → 71(코드 블록이 전부 Shiki의 `<pre class="astro-code github-dark" style="background-color:#24292e;…">`), `grep -o 'class="katex"' dist/posts/*.html | wc -l` → 0, `grep -o 'class="hljs' dist/posts/*.html | wc -l`도 0(그냥 `hljs`를 세면 글 페이지에 실린 monokai CSS의 선택자까지 센다).</details>
-2. `detect: true, `를 지우고 같은 명령을 돌린 뒤 `grep -c 'hljs language-javascript' dist/posts/proxy-to-built-in-objects.html`.
-   <details><summary>예상 결과</summary>`PASS content 13/13`인데 grep은 0이다(지금은 1). 그 블록은 `<pre><code>Uncaught TypeError…`로 나온다. 텍스트만 보는 검사로는 색이 빠진 것을 알 수 없다. `--only=visual --route=/posts/proxy-to-built-in-objects`로 돌리면 `FAIL visual 0/6`(페이지 높이 -27)이다.</details>
-3. `{ detect: true, languages }`를 `{ detect: true }`로 바꾸고 같은 명령을 돌린 뒤 `grep -o 'hljs-title function_">assertIsString' dist/posts/react-programming-ch09.html | wc -l`.
-   <details><summary>예상 결과</summary>`PASS content 13/13`, grep은 4(지금과 배포본은 3). 새 문법은 `const assertIsString (val: any) => …` 줄의 `assertIsString`을 함수 이름으로 더 잡고, `function assertIsString(val: any)`의 `val`과 `function yell(str: any)`의 `str`에 `hljs-attr`를 붙인다.</details>
+1. `smartPunctuation: false,` 줄을 지우고 `npm run -s verify -- --only=content --no-check`.
+   <details><summary>예상 결과</summary>`FAIL content 26/31`. `css-masters-2-week1`의 `type="text"`가 `type=“text”`로, `react-scripts-react-app-polyfill-promise-any`의 `"usage"`가 `“usage”`로 바뀌는 등 다섯 글이다. 위 Red의 smartypants와 같은 차이이고, 엔진이 바뀌어도 기본값이 켜져 있다.</details>
+2. `gfm: { footnotes: { backLabel: "Back to content" } },` 줄을 지우고 `npm run build`, `grep -o 'aria-label="Back to [^"]*"' dist/posts/how-to-check-two-types-are-equal-in-ts.html`. 이어서 `npm run -s verify -- --no-build --no-check --only=content,a11y --route=/posts/how-to-check-two-types-are-equal-in-ts`.
+   <details><summary>예상 결과</summary>`aria-label="Back to reference 1"`(되돌리면 `Back to content`). 그냥 `npm run build`여도 바뀐 설정 값은 스토어가 알아채고 다시 렌더한다. 그런데 검사는 `ALL PASS 2/2`다. `content`는 텍스트만, `a11y`는 이름이 있는지만 보므로 이 차이는 이 노트의 "차이 3"처럼 사람이 찾아야 한다.</details>
 
 ## 문서 근거
 

@@ -52,12 +52,14 @@
 
 ## 직접 해볼 실험
 
+검사 수는 태그 페이지(16)가 생긴 뒤의 31개 라우트 기준이다. 끝나면 `git checkout src`로 되돌린다.
+
 1. `src/lib/site.ts`의 `ogImageWidth: 380`을 `1200`으로 바꾸고 `npm run -s verify -- --only=head,seo`.
-   <details><summary>예상 결과</summary>`PASS head 14/14`, `FAIL seo 0/14  /: og:image:width: 1200, but /main-og-image.jpg is 380x240 | …`. `head`는 기준선에 없던 `og:image:width`를 보지 않고, `seo`는 `dist/main-og-image.jpg`의 헤더를 읽어 대조한다.</details>
+   <details><summary>예상 결과</summary>`PASS head 31/31`, `FAIL seo 0/31  /: og:image:width: 1200, but /main-og-image.jpg is 380x240 | …`. `head`는 기준선에 없던 `og:image:width`를 보지 않고, `seo`는 `dist/main-og-image.jpg`의 헤더를 읽어 대조한다.</details>
 2. `src/pages/posts/[id].astro`에서 `publishedTime: date,` 줄을 지우고 같은 명령.
-   <details><summary>예상 결과</summary>`check`, `build`, `head 14/14`는 PASS다(선택 prop이라 타입 오류가 아니다). `FAIL seo 2/14  /posts/css-masters-2-week1: article:published_time: missing | … (+9 more)`. JSON-LD에서도 키가 빠진다: `grep -c datePublished dist/posts/css-masters-2-week1.html` → 0.</details>
+   <details><summary>예상 결과</summary>`check`, `build`, `head 31/31`은 PASS다(선택 prop이라 타입 오류가 아니다). `FAIL seo 19/31  /posts/css-masters-2-week1: article:published_time: missing | … (+9 more)`. JSON-LD에서도 키가 빠진다: `grep -c datePublished dist/posts/css-masters-2-week1.html` → 0.</details>
 3. `src/lib/site.ts`의 `description`을 `"</script><b>프론트엔드</b>"`로 바꾸고 `npm run -s verify -- --only=seo --no-check`, `grep -o '"description":"[^"]*"' dist/index.html`. 이어서 `Seo.astro`의 `.replace(/</g, "\\u003c")`를 지우고 두 명령을 다시.
-   <details><summary>예상 결과</summary>처음에는 `PASS seo 14/14`이고 `"description":"\u003c/script>\u003cb>프론트엔드\u003c/b>"`다. 이스케이프를 지우면 `"description":"</script><b>프론트엔드</b>"`가 그대로 나가고 `FAIL seo 13/14  /: JSON-LD #1 does not parse: Unterminated string in JSON at position 125 (line 1 column 126)`이다. HTML 파서가 첫 `</script>`에서 스크립트를 끝내고 나머지 `<b>프론트엔드</b>","inLanguage":…`를 HTML로 읽는다.</details>
+   <details><summary>예상 결과</summary>처음에는 `PASS seo 31/31`이고 `"description":"\u003c/script>\u003cb>프론트엔드\u003c/b>"`다. 이스케이프를 지우면 `"description":"</script><b>프론트엔드</b>"`가 그대로 나가고 `FAIL seo 30/31  /: JSON-LD #1 does not parse: Unterminated string in JSON at position 125 (line 1 column 126)`이다. HTML 파서가 첫 `</script>`에서 스크립트를 끝내고 나머지 `<b>프론트엔드</b>","inLanguage":…`를 HTML로 읽는다.</details>
 
 ## 문서 근거
 

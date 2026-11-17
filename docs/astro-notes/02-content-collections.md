@@ -46,9 +46,9 @@
 
 1. `src/content.config.ts`의 패턴을 `"**/*.md"`로 바꾸고 `npm run build`.
    <details><summary>예상 결과</summary>초안까지 읽다가 `posts → draft/draft:from-mathematics-to-generic-programming-ch07 data does not match collection schema`로 실패한다. `title: Required`와 날짜 문구(`date: date 는 따옴표로 감싼 …`)가 나온다. frontmatter가 없는 초안이다. 패턴을 되돌린다.</details>
-2. 아무 글이나 복사해 `posts/zz-test.md`를 만들고 `date:` 줄을 따옴표 없이 `date: 2022-02-30`으로 바꿔 빌드한다. 다음에는 `src/content.config.ts`의 `date: z.iso.date({…}).transform(…)`(다섯 줄)를 `date: z.coerce.date(),`로 바꿔 다시 빌드하고 `grep -o '<time[^>]*>' dist/posts/zz-test.html`. 끝나면 되돌리고 파일을 지운다.
+2. 아무 글이나 복사해 `posts/zz-test.md`를 만들고 `date:` 줄을 따옴표 없이 `date: 2022-02-30`으로 바꿔 빌드한다. 다음에는 `src/content.config.ts`의 `const date = z.iso.date({…}).transform(…);`(다섯 줄. 지금은 `posts`와 `drafts`가 함께 쓰도록 스키마 밖의 상수다)를 `const date = z.coerce.date();`로 바꿔 다시 빌드하고 `grep -o '<time[^>]*>' dist/posts/zz-test.html`. 끝나면 되돌리고 파일을 지운다.
    <details><summary>예상 결과</summary>첫 번째는 `posts → zz-test`와 `date: date 는 따옴표로 감싼 "YYYY-MM-DD" 형식의 실제 날짜여야 한다`로 실패한다. YAML이 따옴표 없는 날짜를 `Date` 객체로 넘기고 스키마는 문자열만 받기 때문이다. 두 번째(문자열도 `Date`도 받는 스키마)는 빌드가 성공하고 `datetime="2022-03-02T00:00:00.000Z"`가 나온다. YAML이 없는 날짜를 조용히 다음 달로 넘긴 것이다. 그래서 스키마가 문자열만 받게 해 두었다. (`z.date()`로 바꾸면 따옴표를 쓴 첫 글에서 `` date: Expected type `"date"`, received `"string"` ``으로 멈춘다.)</details>
-3. `src/content.config.ts`에서 `generateId` 줄을 지우고 `posts/Zz_Test Upper.md`를 만들어 빌드한 뒤 `grep -o 'href="/posts/[Zz][^"]*"' dist/index.html`. 끝나면 되돌린다.
+3. `src/content.config.ts`의 `posts` 로더(`glob({ pattern, base: "./posts", generateId })`)에서 `generateId,` 줄을 지우고 `posts/Zz_Test Upper.md`를 만들어 빌드한 뒤 `grep -o 'href="/posts/[Zz][^"]*"' dist/index.html`. 끝나면 되돌린다.
    <details><summary>예상 결과</summary>`href="/posts/zz_test-upper"`. `generateId`가 있으면 `href="/posts/Zz_Test Upper"`다.</details>
 
 ## 문서 근거

@@ -42,7 +42,7 @@
 ## 직접 해볼 실험
 
 1. `git mv src/pages/sitemap.xml.ts src/pages/sitemap.ts` 뒤 `npm run -s verify -- --only=sitemap --no-check`, `ls dist`. 끝나면 되돌린다.
-   <details><summary>예상 결과</summary>`FAIL sitemap 1/2 /sitemap.xml: missing in candidate`. `dist/sitemap.xml`은 없고 확장자 없는 XML 파일 `dist/sitemap`이 생긴다(`npm run build`의 로그에는 `├─ /sitemap`). URL은 파일 이름이 정한다.</details>
+   <details><summary>예상 결과</summary>S7.3(25) 뒤로는 검사까지 가지 않는다: `FAIL build 0/1 … [site-guard] 깨진 링크 /: <link href="/sitemap.xml"> → /sitemap.xml 에 해당하는 파일이 없다`(그 전에는 `FAIL sitemap 1/2 /sitemap.xml: missing in candidate`). `dist/sitemap.xml`은 없고 확장자 없는 XML 파일 `dist/sitemap`이 생긴다(`npm run build`의 로그에는 `├─ /sitemap`). URL은 파일 이름이 정한다.</details>
 2. `npm run build && shasum dist/sitemap.xml`. 그다음 `sitemap.xml.ts`의 마지막 `return new Response(xml, { headers: … });`를 `return new Response(xml);`로 바꾸고 같은 명령을 다시 돌린다. 끝나면 되돌린다.
    <details><summary>예상 결과</summary>두 sha1이 같다. 정적 빌드는 헤더를 버리고 본문만 파일로 쓴다. 헤더가 쓰이는 곳은 `astro dev`의 응답뿐이다.</details>
 3. 검증 장치가 GitHub Pages의 경로 규칙을 흉내 낸 `resolve()`로 주소 네 개를 풀어 본다: `npm run build && node -e 'import("./scripts/verify/lib/resolve.mjs").then(({resolve})=>{for(const p of ["/no/such/page","/404","/posts/regular-expression-1","/sitemap.xml"])console.log(p,resolve("dist",p).status)})'`. 그다음 `astro.config.mjs`의 `format: "file"`을 `"directory"`로 바꾸고 같은 명령, `ls dist dist/posts/regular-expression-1`. 끝나면 되돌린다.
