@@ -6,6 +6,8 @@
 
 ## 개념
 
+> **제거함(2026-11)**: MDX 지원(`@astrojs/mdx`, MDX 전용 처리기, `mdx-demo.mdx`, `Callout.astro`)을 지우고 컬렉션 glob을 `*.md`로 되돌렸다. 초안 전용이라 운영 빌드는 그대로다. 필요하면 아래 기록대로 다시 추가한다.
+
 - **통합(integration)**: `astro.config.mjs`의 `integrations: [mdx()]`. `.mdx`를 Vite 모듈로 컴파일하고 콘텐츠 컬렉션에 `.mdx` 엔트리 타입을 등록한다.
 - **설정 상속**: `extendMarkdownConfig`(기본 `true`)면 `markdown.*`(Shiki 설정 포함)과 `markdown.processor`를 그대로 쓴다. `mdx({ processor })`를 주면 처리기만 바뀌고 나머지 상속은 유지된다.
 - **MDX는 결과가 JSX다.** `.md`에서는 불투명한 raw HTML 노드가 그대로 출력되지만, MDX 컴파일러(mdxjs-rs)는 그런 노드를 JSX로 만들 수 없어 `MDXError ... (mdxjs-rs:raw-html)`로 멈춘다. Sätteri 플러그인이 `{ raw: html, mdxExpressions: false }`를 돌려주면 그 HTML을 JSX로 파싱한다(`{`는 식으로 읽지 않음).

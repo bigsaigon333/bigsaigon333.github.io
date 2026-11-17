@@ -2,8 +2,8 @@ import { experimental_AstroContainer as AstroContainer } from "astro/container";
 import { load, type CheerioAPI } from "cheerio";
 import { beforeAll, describe, expect, test } from "vitest";
 
-import Seo from "../src/components/Seo.astro";
-import { SITE } from "../src/lib/site";
+import Seo from "./Seo.astro";
+import { SITE } from "../lib/site";
 
 // Seo 의 렌더링 결과(HTML)만 본다. 토큰·설정을 어디서 읽는지 같은 속은 보지 않는다.
 let container: AstroContainer;

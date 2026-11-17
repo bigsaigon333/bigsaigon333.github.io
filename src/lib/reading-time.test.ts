@@ -5,7 +5,7 @@ import {
   readableCharacters,
   readingMinutes,
   withoutFencedCode,
-} from "../src/lib/reading-time";
+} from "./reading-time";
 
 describe("withoutFencedCode", () => {
   test("``` 와 ~~~ 펜스 블록을 통째로 뺀다", () => {

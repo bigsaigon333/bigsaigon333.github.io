@@ -46,7 +46,7 @@
 |                  | 라우트 캐시                   | 32 · `lab/config/s85.mjs`(`cache`, `routeRules`), `lab/src/pages/s85/cache/`                 |
 | Recipes(일부)    | RSS, 읽는 시간, 툴바 앱, 폼   | 19, 18, 32, 29 · `src/pages/rss.xml.ts`, `src/lib/reading-time.ts`                           |
 | Deploy           | GitHub Pages                  | PLAN.md S3.2 · `.github/workflows/deploy.yml`(노트는 없다)                                   |
-| Testing          | Vitest                        | 26 · `vitest.config.ts`, `test/*.test.ts`                                                    |
+| Testing          | Vitest                        | 26 · `vitest.config.ts`, `src/**/*.test.ts`                                                  |
 
 ## Reference
 
@@ -75,7 +75,7 @@
 |                   | Dev Toolbar App API                              | 32 · `lab/src/s85/toolbar-integration.mjs`                                                      |
 |                   | Logger API                                       | 32 · `lab/src/s85/log-recorder.mjs`                                                             |
 |                   | Cache Provider·Session Driver·Font Provider API  | 쓰기만 함: 내장 `memoryCache()`(32), `sessionDrivers.lruCache`(29), `fontProviders.local()`(13) |
-|                   | Container API                                    | 26 · `test/seo.test.ts`                                                                         |
+|                   | Container API                                    | 26 · `src/components/Seo.test.ts`                                                               |
 |                   | Adapter·Renderer·Image Service API               | 다루지 않음: 공식 어댑터·Preact·기본 이미지 서비스로 충분했다                                   |
 |                   | Programmatic API                                 | 다루지 않음: 검증 장치는 CLI(`astro build --force`)를 부른다                                    |
 | Experimental      | 실험 플래그 전부                                 | 다루지 않음: 운영 블로그에는 정식 기능만 쓴다. 7에서 정식이 된 것은 32가 다룬다                 |

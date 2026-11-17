@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { EXCERPT_LENGTH, excerpt, plainText } from "../src/lib/excerpt";
+import { EXCERPT_LENGTH, excerpt, plainText } from "./excerpt";
 
 describe("plainText", () => {
   test("제목·구분선·표·HTML 블록·코드 블록은 빼고 문단을 공백 하나로 잇는다", () => {

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
-import { tagPath, tagSlug, tagUrl } from "../src/lib/tags";
-import { SITE } from "../src/lib/site";
+import { tagPath, tagSlug, tagUrl } from "./tags";
+import { SITE } from "./site";
 
 describe("tagSlug", () => {
   test.each([

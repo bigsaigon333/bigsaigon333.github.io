@@ -32,7 +32,7 @@ const seriesOf = (name: string, ids: string[]): FakeSeries => ({
 });
 
 // series.ts 는 운영 빌드에서 결과를 모듈 안에 담아 둔다. 시험마다 새로 읽는다.
-const load = async () => (await import("../src/lib/series")).getSeriesPosition;
+const load = async () => (await import("./series")).getSeriesPosition;
 
 beforeEach(() => {
   vi.resetModules();
