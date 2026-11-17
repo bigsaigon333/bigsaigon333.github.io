@@ -9,6 +9,10 @@
 // An entry without "mask" turns the check's failures on those routes into accepted ones (ACCEPT, not PASS).
 // An entry with "mask" (visual and hover only) accepts nothing: it paints the matched elements an opaque fixed colour
 // on both sides before the comparison, and the rest of the page must still match.
+// Only a parity check (one that compares with the baseline) can be named: a feature check (drafts, csp, seo, …) has
+// no baseline to differ from, so its failures are never intended differences. loadAccepts() refuses such an entry
+// when it is told the parity checks, and runCheck() never applies an entry to a check that does not read the
+// baseline (W9).
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -68,8 +72,8 @@ const globToRegExp = (pattern) =>
 const routeMatches = (patterns, route) =>
   patterns.some((pattern) => globToRegExp(pattern).test(route));
 
-/** Why `data` is not an accept file, or null. */
-function malformed(data) {
+/** Why `data` is not an accept file, or null. `parity`: the names of the checks an entry may name (null: any). */
+function malformed(data, parity) {
   if (typeof data?.baseline !== "string") return 'no "baseline" hash';
   if (typeof data.reason !== "string" || !data.reason.trim())
     return 'no "reason"';
@@ -77,6 +81,8 @@ function malformed(data) {
     return 'no "entries"';
   for (const [index, entry] of data.entries.entries()) {
     if (typeof entry?.check !== "string") return `entry ${index}: no "check"`;
+    if (parity && !parity.has(entry.check))
+      return `entry ${index}: "${entry.check}" is not a check that compares with the baseline (one of ${[...parity].sort().join(", ")})`;
     if (
       !Array.isArray(entry.routes) ||
       entry.routes.length === 0 ||
@@ -105,9 +111,10 @@ function malformed(data) {
  * The accept files of `dir` against a baseline whose hash is `hash`.
  * Returns { entries, notices }: the entries of the files that apply, each { file, check, routes, reason, mask?,
  * used: false }, and one line for every file that does not ("stale accept file ignored: …"). A file that is not
- * an accept file at all throws: a typo must not silently accept nothing.
+ * an accept file at all throws: a typo must not silently accept nothing. With `parity` (the names of the checks that
+ * compare with the baseline), an entry naming any other check throws too, whatever its baseline.
  */
-export function loadAccepts(hash, dir = acceptedDir) {
+export function loadAccepts(hash, dir = acceptedDir, { parity = null } = {}) {
   const entries = [];
   const notices = [];
   if (hash === null || !fs.existsSync(dir)) return { entries, notices };
@@ -122,7 +129,7 @@ export function loadAccepts(hash, dir = acceptedDir) {
     } catch (error) {
       throw new Error(`accept file ${name} is not JSON: ${error.message}`);
     }
-    const problem = malformed(data);
+    const problem = malformed(data, parity ? new Set(parity) : null);
     if (problem) throw new Error(`accept file ${name}: ${problem}`);
     if (data.baseline !== hash) {
       notices.push(

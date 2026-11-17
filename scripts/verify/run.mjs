@@ -86,6 +86,8 @@ if (!args.feature && !fs.existsSync(path.join(baselineDir, "index.html"))) {
 // would otherwise end in a run with nothing to fail. With --feature the routes are the build's, so before the build
 // a route is only checked for how it is written, and against the build's routes after it (checkCandidateRoutes).
 let checks;
+/** Names of the checks that compare with the baseline: the only ones an accept file may name. */
+let parityChecks;
 try {
   if (args.candidate && args.candidateUrl)
     throw new UsageError("give at most one of --candidate and --candidate-url");
@@ -104,6 +106,9 @@ try {
     );
 
   const available = await loadChecks();
+  parityChecks = available
+    .filter((check) => readsBaseline(check))
+    .map((check) => check.name);
   if (args.feature) {
     const flags = Object.entries(PARITY_FLAGS)
       .filter(([key]) => args[key] !== undefined)
@@ -318,6 +323,7 @@ const ctx = createContext({
   // --feature: no baseline. The routes are the candidate's, and a check that reads the baseline crashes (FAIL).
   baseline: args.feature ? null : baselineDir,
   args,
+  parityChecks,
 });
 
 try {
