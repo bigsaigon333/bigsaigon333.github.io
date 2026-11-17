@@ -31,7 +31,7 @@
 - `grep -o 'class="katex"' dist/posts/*.html | wc -l` → 121(배포본과 같다).
 - `dist/posts/proxy-to-built-in-objects.html`: 언어 없는 블록이 `data-language="plaintext"`, `<code class="language-plaintext">`, 토큰 색 없이 글자만 있다.
 - 각주: `aria-label="Back to content"`.
-- `npm run verify` 전체 통과. `visual`은 `scripts/verify/accepted/s4-1-shiki.json`의 `mask: ["pre"]`(글 라우트)로 코드 블록만 가리고 비교한다.
+- `npm run verify` 전체 통과. `visual`은 `git show bfa00d0:scripts/verify/accepted/s4-1-shiki.json`의 `mask: ["pre"]`(글 라우트)로 코드 블록만 가리고 비교한다.
 
 ## 닫힌 고리가 잡아낸 것
 

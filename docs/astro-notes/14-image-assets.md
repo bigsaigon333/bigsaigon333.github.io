@@ -34,7 +34,7 @@
 - **가설 1(채택)**: mdast `html` → `image`. 실험 스크립트로 `createSatteriMarkdownProcessor({ mdastPlugins: [plugin] })`를 돌려 `localImagePaths`에 경로가 모이고 `__ASTRO_IMAGE_`에 `width`가 실리는 것을 먼저 확인했다.
 - **`densities: [1, 2]`가 사라졌다**: 빌드 결과에 `srcset`이 없었다. `__ASTRO_IMAGE_`를 찍어 보니 `"densities":[]`. hast 속성 배열은 문자열만 남는다. `["1x", "2x"]`로 쓰자 `srcset="… 1x, … 2x"`가 나왔다.
 - **캐시**: 플러그인을 고친 뒤 그냥 `npm run build`는 예전 HTML을 냈다(`data-store.json`). `--force`로 확인해야 한다(게이트는 이미 `--force`).
-- **visual**: `scripts/verify/accepted/s4-3-assets.json`의 `mask: ["img"]`만으로 84/84. img 상자만 칠하므로 상자 위치·크기가 1px이라도 달랐다면 실패했을 것이다.
+- **visual**: `git show 46efe0e:scripts/verify/accepted/s4-3-assets.json`의 `mask: ["img"]`만으로 84/84. img 상자만 칠하므로 상자 위치·크기가 1px이라도 달랐다면 실패했을 것이다.
 - **`posts/images/`에서 옮겼다**: 처음엔 글 옆 `posts/images/`에 두었는데 `verify:selftest`의 프로젝트 사본 사례 3개가 `Build failed`였다. 사본(`scripts/verify/lib/cli-cases.mjs`)은 `posts/`의 최상위 `.md`만 복사하기 때문이다. 사본이 늘 가져가는 `src/` 아래로 옮기고 글에서는 `../src/assets/posts/…`로 가리킨다.
 - **새 검사 `images`**: 기준선(`--candidate=.verify/baseline`)은 0/14로 실패(`/profile.webp`, width 없는 img), 새 빌드는 14/14. 자기 검사 변이 7개(원격 주소, 처리 안 된 `./images/x.png`, `public/` 원본, 없는 2x 파일, alt·width 삭제, 이미지 0개)가 모두 실패한다.
 

@@ -27,7 +27,7 @@
 - `grep -o '<nav class="post-tags.*</nav>' dist/posts/css-masters-2-week1.html` → `href="/tags/%EC%9B%B9%ED%91%9C%EC%A4%80"` 처럼 인코딩된 링크, 글자는 `#웹표준`.
 - `grep -c '/tags' dist/sitemap.xml` → 17(`/tags` + 태그 16개). loc 은 인코딩되어 있다.
 - keywords 가 있는 발행 글은 2개뿐이라 태그는 모두 글 1편짜리다. 나머지 10개 글은 `PostTags`가 아무것도 그리지 않아 기준선과 픽셀까지 같다.
-- 새 기능 검사 `tags`(`scripts/verify/checks/tags.mjs`): `posts/*.md`를 직접 읽어 계산한 태그별 글 집합과 각 태그 페이지가 링크하는 글 집합이 같은지, `/tags`의 글 수, 글 페이지의 태그 링크 집합과 200 응답을 본다. 기준선과의 차이는 `scripts/verify/accepted/s5-1-tags.json`(routes·sitemap 은 새 페이지, visual 은 태그 줄이 생긴 두 글, hover 는 `nav.post-tags` mask).
+- 새 기능 검사 `tags`(`scripts/verify/checks/tags.mjs`): `posts/*.md`를 직접 읽어 계산한 태그별 글 집합과 각 태그 페이지가 링크하는 글 집합이 같은지, `/tags`의 글 수, 글 페이지의 태그 링크 집합과 200 응답을 본다. 기준선과의 차이는 `git show 42bfbf5:scripts/verify/accepted/s5-1-tags.json`(routes·sitemap 은 새 페이지, visual 은 태그 줄이 생긴 두 글, hover 는 `nav.post-tags` mask).
 
 ## 닫힌 고리가 잡아낸 것
 

@@ -52,6 +52,7 @@ npm run verify -- --write-accept=<이름> --reason="<왜 바뀌었는지>"
 
 - `--write-accept`는 이번 실행의 parity 실패로 파일을 쓴다. 실패한 검사마다 항목 하나, 실패한 라우트를 모두 싣는다. `--reason`이 없으면 빌드 전에 2로 거부한다. `check`나 `build`가 실패하면 쓰지 않는다.
 - 파일은 PR에 함께 커밋한다. 쓴 뒤 항목을 손으로 좁혀도 된다(라우트, 사유, mask).
+- accept 파일은 릴리스 하나의 것이다. 그 릴리스가 `main`에 머지되어 배포되면 지운다. 그래서 `main`에는 보통 accept 파일이 없고, `npm run verify`는 `0 accepted`에 stale·unused 경고 없이 통과해야 한다. 지운 파일은 `git show <커밋>:scripts/verify/accepted/<파일>`로 다시 볼 수 있다.
 - **새 글을 쓰면** 홈(`/`), `sitemap.xml`, 라우트 목록이 바뀐다. 글쓴이가 그 PR에서 `--write-accept`를 돌린다.
 
 ```json
@@ -74,7 +75,7 @@ npm run verify -- --write-accept=<이름> --reason="<왜 바뀌었는지>"
 }
 ```
 
-- `baseline`이 지금 기준선의 `hash`와 같은 파일만 적용한다. 다른 파일은 `stale accept file ignored: …` 한 줄을 남기고 무시한다. 그래서 병합된 뒤에는 저절로 효력을 잃는다(다음 기준선은 그 변경을 담은 빌드다). 지워도 된다.
+- `baseline`이 지금 기준선의 `hash`와 같은 파일만 적용한다. 다른 파일은 `stale accept file ignored: …` 한 줄을 남기고 무시한다. 그래서 병합된 뒤에는 저절로 효력을 잃는다(다음 기준선은 그 변경을 담은 빌드다). 경고가 남지 않게 지운다(위).
 - 적용된 항목은 그 검사의 그 라우트 실패를 허용으로 바꾼다. 결과 줄은 `PASS`가 아니라 `ACCEPT  <검사>  … N accepted`다. 종료 코드는 0이다.
 - `routes`에는 라우트나 glob을 쓴다. `*`는 `/`를 넘지 않고 `**`는 넘는다. 라우트가 없는 실패는 `-`다.
 - `mask`(visual, hover만)는 허용하지 않고 가린다. 고른 요소의 상자를 기준선과 후보 모두 같은 불투명 색으로 칠한 뒤 비교한다(hover는 그 안의 링크를 빼고 비교한다). 나머지는 같아야 한다. 라우트 전체를 허용하기보다 mask를 먼저 쓴다.
@@ -231,7 +232,7 @@ export default {
 ## 자기 검사 (`verify:selftest`)
 
 1. 기준선 ↔ 기준선: 모든 parity 검사가 PASS. `dist/` 그대로: 모든 feature 검사가 PASS.
-2. 변이본: 변이를 선언한 검사가 FAIL(`mutation: …`), 차이가 아닌 변화에는 PASS(`accepted: …`). 아무것도 보지 않아서 난 실패는 변이를 잡은 것으로 치지 않는다. `seo`, `links`, `listed`에는 기준선에 없는 새 글 페이지를 더해 거기에만 문제를 두는 변이가 있다(`기준선에 없는 새 …`). 기준선의 라우트를 돌면 놓친다.
+2. 변이본: 변이를 선언한 검사가 FAIL(`mutation: …`), 차이가 아닌 변화에는 PASS(`accepted: …`). 아무것도 보지 않아서 난 실패는 변이를 잡은 것으로 치지 않는다. `seo`, `links`, `listed`에는 기준선에 없는 새 글 페이지를 더해 거기에만 문제를 두는 변이가 있다(`기준선에 없는 새 …`). 기준선의 라우트를 돌면 놓친다. 인라인 `<script>`·`<style>`을 고친 변이는 `editPages`(`lib/html.mjs`)가 CSP meta 의 해시도 새 내용의 것으로 바꾼다. 그러지 않으면 CSP 가 그 요소를 막아, 변이가 아니라 "아무것도 돌지 않음"으로 잡힌다.
 3. 명령 수준 시험(`cli`, `lib/cli-cases.mjs`): 명령을 실제로 돌려 본다. 지금 빌드가 기준선과 같은지는 묻지 않는다. 그것은 parity 실행이 답하고, CI는 기준선과 다른 것이 정상인 PR(새 글)에서 이 시험을 돌린다.
    - 없는 라우트·검사 이름·플래그는 빌드 전에 2로 거부된다(세 명령 모두). 예전에 있던 `scope`·`stage`·`agent` 플래그도 모르는 플래그다.
    - **reporter**(아래 "실행 요약 넘기기"). 임시 디렉터리에 모듈을 써서 `VERIFY_REPORTER`로 준다. 이 시험이 아닌 명령은 모두 `VERIFY_REPORTER=off`로 돈다.
@@ -293,6 +294,16 @@ npm run verify:selftest -- --shard=2/3          # 사례를 셋으로 나눈 것
 | `ctx.args`                            | CLI 인자(`only`, `route`, `selector` 등)                                             |
 
 경로 해석은 `lib/resolve.mjs`가 GitHub Pages와 같게 한다: `/p` → `p` → `p.html` → `p/index.html` → `404.html`.
+
+## 워크플로 문법 검사 (actionlint)
+
+`.github/workflows/*.yml`은 actionlint 로 검사한다. `run:` 블록의 셸 검사에 shellcheck 가 필요하므로 둘을 함께 띄운다([mise](https://mise.jdx.dev)).
+
+```sh
+mise exec aqua:rhysd/actionlint@latest aqua:koalaman/shellcheck@0.11.0 -- actionlint .github/workflows/*.yml
+```
+
+shellcheck 없이 돌리면 actionlint 는 셸 검사를 조용히 건너뛴다.
 
 ## 허용한 차이
 

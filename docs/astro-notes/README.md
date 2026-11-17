@@ -76,12 +76,12 @@ Next.js 13 블로그를 Astro 7로 옮기면서 단계마다 하나씩 쓴 노�
 깨끗한 `astro` 트리에서 돌린다(`git status --short`가 비어 있어야 한다). 스크립트는 push하지 않는다.
 
 ```sh
-node scripts/release.mjs --branch=release/<이름> --dry-run   # 예행연습: 끝까지 검증하고 브랜치를 지운다
-node scripts/release.mjs --branch=release/<이름>             # 같은 일을 하고 브랜치를 남긴다
-git push -u origin release/<이름>                            # 그다음 main 으로 PR 을 연다
+node scripts/release.mjs --branch=release/<이름> --message="<PR 제목>" --dry-run   # 예행연습: 끝까지 검증하고 브랜치를 지운다
+node scripts/release.mjs --branch=release/<이름> --message="<PR 제목>"             # 같은 일을 하고 브랜치를 남긴다
+git push -u origin release/<이름>                                                  # 그다음 main 으로 PR 을 연다
 ```
 
-`--from=<ref>`(기본 `HEAD`)로 릴리스할 커밋을, `--message=<메시지>`(기본 `feat: 블로그를 Astro 로 옮긴다`)로 커밋 메시지를 고른다. 메시지 뒤에는 `Co-Authored-By` 줄이 붙는다. 한 단계에 한 줄을 찍고, 첫 실패에서 이유 한 줄과 함께 0이 아닌 코드로 끝난다. 일은 `os.tmpdir()` 아래의 임시 worktree에서 한다.
+`--from=<ref>`(기본 `HEAD`)로 릴리스할 커밋을, `--message=<메시지>`(필수, 보통 PR 제목)로 커밋 메시지를 고른다. 메시지 뒤에는 `Co-Authored-By` 줄이 붙는다. 한 단계에 한 줄을 찍고, 첫 실패에서 이유 한 줄과 함께 0이 아닌 코드로 끝난다. 일은 `os.tmpdir()` 아래의 임시 worktree에서 한다.
 
 1. 작업 트리가 더럽거나 브랜치가 이미 있으면 거부한다. `git fetch origin main`.
 2. `origin/main`에서 새 브랜치를 만들고, 추적 파일을 모두 지운 뒤 `git archive <from> | tar -x`로 `--from`의 트리를 푼다(트리 해시가 같은지 확인한다).
@@ -115,9 +115,11 @@ git commit --no-edit
 
 `main`에 릴리스가 아닌 커밋(예: 의존성 자동 업데이트)이 들어왔다면 그 파일은 `--ours`로 덮지 말고 손으로 합친다.
 
+그다음 그 릴리스가 담은 accept 파일(`scripts/verify/accepted/*.json`)을 모두 지우고 커밋한다. 새 기준선(`origin/main`)이 그 차이를 이미 담고 있어 `stale accept file ignored`로만 남기 때문이다. 지운 뒤 `npm run verify:setup && npm run verify`가 `0 accepted`, stale·unused 경고 없이 통과해야 한다. 노트가 지운 파일을 가리키면 `git show <커밋>:scripts/verify/accepted/<파일>` 꼴로 고친다(`git log -- scripts/verify/accepted/<파일>`로 커밋을 찾는다).
+
 ### 검증
 
-현재 배포본(`origin/gh-pages`)을 기준선으로 삼아 새 빌드(`dist/`)와 비교한다.
+현재 운영본(`origin/main`)의 빌드를 기준선으로 삼아 새 빌드(`dist/`)와 비교한다.
 
 ```sh
 npm run verify:setup      # node_modules 와 기준선(.verify/baseline) 준비

@@ -1,4 +1,4 @@
-// node scripts/release.mjs --branch=release/<name> [--from=<ref>] [--message=<msg>] [--dry-run]
+// node scripts/release.mjs --branch=release/<name> --message=<msg> [--from=<ref>] [--dry-run]
 //
 // Builds the branch that main receives. main gets the product (the site) and the tooling that keeps
 // being used after this migration: the verification harness (scripts/verify/) and its npm scripts
@@ -20,7 +20,7 @@
 // Temporary worktrees are always removed. The branch is kept only when every step passed and
 // --dry-run is not given. Nothing is pushed.
 //
-//   --message=<msg>       commit message (default below); the Co-Authored-By trailer is appended
+//   --message=<msg>       commit message, required (usually the PR title); the Co-Authored-By trailer is appended
 //   --dry-run             do everything, then delete the branch
 //   --compare-from=<ref>  self-test of (d): build this ref instead of --from for the comparison.
 //                         Needs --dry-run, so a branch is never kept from a different comparison.
@@ -33,7 +33,6 @@ import os from "node:os";
 import path from "node:path";
 import { isDeepStrictEqual } from "node:util";
 
-const DEFAULT_MESSAGE = "feat: 블로그를 Astro 로 옮긴다";
 const TRAILER = "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>";
 
 // The one-off tooling: removed from the release tree (directories and files).
@@ -114,7 +113,7 @@ const say = (status, step, detail = "") =>
 // ---------------------------------------------------------------- command line
 
 const USAGE =
-  "usage: node scripts/release.mjs --branch=release/<name> [--from=<ref>] [--message=<msg>] [--dry-run] [--compare-from=<ref>]";
+  "usage: node scripts/release.mjs --branch=release/<name> --message=<msg> [--from=<ref>] [--dry-run] [--compare-from=<ref>]";
 
 function usage(problem) {
   console.error(`${problem}\n${USAGE}`);
@@ -122,7 +121,7 @@ function usage(problem) {
 }
 
 function parseArgs(argv) {
-  const args = { from: "HEAD", message: DEFAULT_MESSAGE, dryRun: false };
+  const args = { from: "HEAD", dryRun: false };
   const valued = {
     "--branch": "branch",
     "--from": "from",
@@ -146,6 +145,8 @@ function parseArgs(argv) {
     args[valued[key]] = value;
   }
   if (!args.branch) usage("--branch=release/<name> is required");
+  if (!args.message)
+    usage("--message=<msg> is required (usually the PR title)");
   if (!/^release\/[^/]/.test(args.branch))
     usage(`--branch must start with release/: ${args.branch}`);
   if (args.compareFrom !== undefined && !args.dryRun)

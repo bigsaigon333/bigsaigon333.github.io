@@ -29,14 +29,14 @@
 
 - `dist/index.html`의 `<head>`: `<meta name="astro-view-transitions-enabled" content="true">`, `<meta name="astro-view-transitions-fallback" content="animate">`, `<script type="module" src="/_astro/ClientRouter.astro_astro_type_script_index_0_lang.*.js">`(14184바이트), `/_astro/page.*.js`(47바이트, prefetch 시작).
 - 글 페이지: `<script src="https://utteranc.es/client.js" … async data-astro-rerun>`.
-- `budget`: 모든 페이지 +14913바이트(`accepted/s6-2-vt.json`). 다른 parity 검사(`head`, `content`, `embeds`, `visual` …)는 새 차이가 없다.
+- `budget`: 모든 페이지 +14913바이트(`git show e08ae8e:scripts/verify/accepted/s6-2-vt.json`). 다른 parity 검사(`head`, `content`, `embeds`, `visual` …)는 새 차이가 없다.
 - `npm run verify -- --no-check --only=navigation` → `PASS navigation 7/7`. 자기 검사 변이 3개(page_view 중복, utterances 재실행 없음, before-swap 리스너 없음)를 모두 잡는다.
 
 ## 닫힌 고리가 잡아낸 것
 
 - 검사를 `<ClientRouter />`를 뺀 빌드(`astro build --outDir`)에 돌리면 `FAIL navigation 2/7 … the window marker is gone: the page was loaded as a new document`. 마커가 문서 재로드를 잡는다는 것을 먼저 확인했다.
 - 검사 안에서 gtag.js와 utteranc.es는 막혀 있다(lib/browser.mjs). 그래서 dataLayer는 페이지가 넣은 것만 담고, `client.js`는 iframe을 넣고 실행 횟수·`document.title`·`theme`을 적는 대역으로 답한다. "다시 실행되었는가"는 실행 횟수로 본다.
-- `budget`은 `s6-1-dark.json`의 라우트 전체 항목이 먼저 받아 증가가 숨는다. 바이트는 `.verify/report/budget.json`의 `extra.table`에서 읽어 사유에 적었다.
+- `budget`은 `git show 6656226:scripts/verify/accepted/s6-1-dark.json`의 라우트 전체 항목이 먼저 받아 증가가 숨는다. 바이트는 `.verify/report/budget.json`의 `extra.table`에서 읽어 사유에 적었다.
 - GA4 속성의 향상된 측정 "브라우저 기록 이벤트 기반 페이지 변경"이 켜져 있으면 gtag.js가 `pushState`를 보고 page_view를 또 보낸다. 코드로는 끌 수 없어 GA 관리 화면에서 꺼야 한다.
 
 ## 직접 해볼 실험

@@ -18,7 +18,7 @@
 //   - site header text   normalized text
 //
 // Only element names and attributes are used to find things — no class names, ids or wrapper divs — so the same
-// extraction works on the Next.js baseline and on an Astro build. One failed item per route.
+// extraction survives markup refactors between the baseline and the candidate. One failed item per route.
 //
 // Allowlist item: "route:<route>".
 import {

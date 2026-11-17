@@ -27,7 +27,7 @@
 
 - `dist/posts/css-masters-2-week2.html`: `<nav class="series" aria-label="시리즈">` 안에 `<p>시리즈: css-masters-2 (2/4)</p>`, `<a href="/posts/css-masters-2-week1" rel="prev">← 이전 글: css-masters-2 1주차 정리</a>`, `rel="next"`는 3주차.
 - 1주차에는 `rel="prev"`가, 4주차에는 `rel="next"`가 없다. 다른 글 8개에는 `nav.series`가 없다.
-- `npm run verify`: 새 feature 검사 `series` 12/12. `embeds`·`visual`은 4개 글 라우트만, `hover`는 `mask: ["nav.series"]`로(`scripts/verify/accepted/s5-2-series.json`).
+- `npm run verify`: 새 feature 검사 `series` 12/12. `embeds`·`visual`은 4개 글 라우트만, `hover`는 `mask: ["nav.series"]`로(`git show e11f2de:scripts/verify/accepted/s5-2-series.json`).
 
 ## 닫힌 고리가 잡아낸 것
 

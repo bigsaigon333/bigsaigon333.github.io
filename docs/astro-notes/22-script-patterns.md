@@ -15,12 +15,12 @@
 
 ## Next.js 대응
 
-| 예전 (배포본)                            | 지금 (S6.3)                                                                        |
-| ---------------------------------------- | ---------------------------------------------------------------------------------- |
-| 코드 복사 없음                           | `<copy-code>`: `connectedCallback`에서 버튼 생성, 처리되는 `<script>`              |
-| 목차 없음(S5.3에서 정적 목차)            | `<toc-spy>`가 `<nav aria-label="목차">`를 감싸고 `IntersectionObserver`            |
-| React라면 `useEffect` + `ref` + 정리함수 | `connectedCallback` / `disconnectedCallback`. 프레임워크 런타임 없이 브라우저 표준 |
-| 글 페이지 JS 213바이트(GA 인라인)        | 1504바이트(+621 스크롤 스파이, +670 복사). `accepted/s6-3-scripts.json`의 `budget` |
+| 예전 (배포본)                            | 지금 (S6.3)                                                                                                        |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| 코드 복사 없음                           | `<copy-code>`: `connectedCallback`에서 버튼 생성, 처리되는 `<script>`                                              |
+| 목차 없음(S5.3에서 정적 목차)            | `<toc-spy>`가 `<nav aria-label="목차">`를 감싸고 `IntersectionObserver`                                            |
+| React라면 `useEffect` + `ref` + 정리함수 | `connectedCallback` / `disconnectedCallback`. 프레임워크 런타임 없이 브라우저 표준                                 |
+| 글 페이지 JS 213바이트(GA 인라인)        | 1504바이트(+621 스크롤 스파이, +670 복사). `git show f01feac:scripts/verify/accepted/s6-3-scripts.json`의 `budget` |
 
 ## 빌드 결과물에서 확인하기
 

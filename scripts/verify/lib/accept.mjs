@@ -16,10 +16,10 @@ import path from "node:path";
 import { acceptedDir } from "./paths.mjs";
 
 /** Checks whose entries may carry a mask: the ones that compare pictures. */
-export const MASKABLE = new Set(["visual", "hover"]);
+const MASKABLE = new Set(["visual", "hover"]);
 
 /** The fixed colour a mask paints. */
-export const MASK_COLOR = "#ff00ff";
+const MASK_COLOR = "#ff00ff";
 
 const sha256 = (data) => crypto.createHash("sha256").update(data).digest("hex");
 
@@ -65,7 +65,7 @@ const globToRegExp = (pattern) =>
       .join("")}$`,
   );
 
-export const routeMatches = (patterns, route) =>
+const routeMatches = (patterns, route) =>
   patterns.some((pattern) => globToRegExp(pattern).test(route));
 
 /** Why `data` is not an accept file, or null. */

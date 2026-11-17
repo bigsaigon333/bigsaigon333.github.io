@@ -27,7 +27,7 @@
 - `dist/posts/proxy-to-built-in-objects.html`: `<p class="reading-time">읽는 시간 약 2분</p><nav class="toc" aria-label="목차"><details><summary>목차</summary><ol><li><a href="#i-문제상황">I. 문제상황</a>…`.
 - `dist/posts/how-to-check-two-types-are-equal-in-ts.html`: 목차의 `#임의의-집합-` 링크 안에 본문과 같은 `<span class="katex">`가 있다.
 - `npm run verify -- --feature --only=toc` → `PASS toc 12/12`.
-- `hover`는 `accepted/s5-3-toc.json`의 `mask: [".post-extra"]`로 새 상자만 빼고 통과, `visual`은 페이지가 82px 길어져 글 라우트를 허용했다. `content`·`a11y`는 그대로 통과(목차는 `<main>` 밖이다).
+- `hover`는 `git show 523a72d:scripts/verify/accepted/s5-3-toc.json`의 `mask: [".post-extra"]`로 새 상자만 빼고 통과, `visual`은 페이지가 82px 길어져 글 라우트를 허용했다. `content`·`a11y`는 그대로 통과(목차는 `<main>` 밖이다).
 
 ## 닫힌 고리가 잡아낸 것
 
