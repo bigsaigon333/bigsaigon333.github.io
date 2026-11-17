@@ -116,7 +116,7 @@ const isPost = (route) => /^\/posts\/[^/]+$/.test(route);
 // ── the policy, from the HTML ───────────────────────────────────────────────────────────────────
 
 /** "a b; c d" → Map(name → tokens). Names lower-cased; the first of a repeated directive wins (as browsers do). */
-export function parsePolicy(text) {
+function parsePolicy(text) {
   const directives = new Map();
   for (const part of text.split(";")) {
     const [name, ...tokens] = part.trim().split(/\s+/).filter(Boolean);
@@ -162,7 +162,7 @@ const isHostSource = (token) =>
   /[.]/.test(token);
 
 /** Problems of one page's HTML; also returns the policy text (null when there is not exactly one). */
-export function policyProblems(html) {
+function policyProblems(html) {
   const problems = [];
   const metas = [...html.matchAll(META)];
   if (metas.length !== 1)

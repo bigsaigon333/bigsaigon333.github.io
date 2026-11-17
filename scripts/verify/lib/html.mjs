@@ -97,14 +97,14 @@ export function quote(value, max = 80) {
 }
 
 /** Index of the first differing UTF-16 unit, or -1 when the strings are equal. */
-export function firstDiff(a, b) {
+function firstDiff(a, b) {
   const n = Math.min(a.length, b.length);
   for (let i = 0; i < n; i++) if (a[i] !== b[i]) return i;
   return a.length === b.length ? -1 : n;
 }
 
 /** About 2×radius characters of `text` around position `at`. */
-export function contextAt(text, at, radius = 20) {
+function contextAt(text, at, radius = 20) {
   const from = Math.max(0, at - radius);
   const to = Math.min(text.length, at + radius);
   return quote(
@@ -162,7 +162,7 @@ export function listFiles(root) {
   return files.sort();
 }
 
-/** Relative paths of the baseline files that are not HTML pages: public assets, sitemap.xml, robots.txt, _next/. */
+/** Relative paths of the baseline files that are not HTML pages: public assets, sitemap.xml, robots.txt, _astro/. */
 export const listAssets = (root) =>
   listFiles(root).filter((rel) => !rel.endsWith(".html"));
 
@@ -378,10 +378,33 @@ export function postRoutesWith(dir, pattern, limit = 1) {
   return routes;
 }
 
+const INLINE_BODY = /<(script|style)(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/\1>/g;
+const cspHash = (text) =>
+  `'sha256-${crypto.createHash("sha256").update(text).digest("base64")}'`;
+
+/**
+ * The page's CSP (S7.2) allows each inline <script> and <style> by the hash of its text, so an edited one would be
+ * blocked and the mutation caught for the wrong reason (nothing ran). Swap the old hash of every inline element whose
+ * text changed for the new one. Elements pair by position; when the edit added or removed one, nothing is swapped.
+ */
+function resealCsp(before, after) {
+  const bodies = (html) => Array.from(html.matchAll(INLINE_BODY), (m) => m[2]);
+  const old = bodies(before);
+  const now = bodies(after);
+  if (old.length !== now.length) return after;
+  let html = after;
+  for (let i = 0; i < old.length; i += 1) {
+    if (old[i] !== now[i])
+      html = html.split(cspHash(old[i])).join(cspHash(now[i]));
+  }
+  return html;
+}
+
 /**
  * Self-test: apply `pattern → replacement` to every page and stylesheet of a site copy. Throws when nothing matched.
  * Small stylesheets are inlined into the pages, larger ones (BaseLayout's, once dark mode grew it) are emitted as
- * _astro/*.css, so both are edited: either way the edit is what the browser runs.
+ * _astro/*.css, so both are edited: either way the edit is what the browser runs. Edited pages keep a CSP that
+ * allows their edited inline elements (resealCsp).
  */
 export function editPages(dir, pattern, replacement) {
   let edited = 0;
@@ -389,8 +412,9 @@ export function editPages(dir, pattern, replacement) {
     if (!rel.endsWith(".html") && !rel.endsWith(".css")) continue;
     const file = path.join(dir, rel);
     const before = fs.readFileSync(file, "utf8");
-    const after = before.replace(pattern, replacement);
+    let after = before.replace(pattern, replacement);
     if (after === before) continue;
+    if (rel.endsWith(".html")) after = resealCsp(before, after);
     fs.writeFileSync(file, after);
     edited += 1;
   }

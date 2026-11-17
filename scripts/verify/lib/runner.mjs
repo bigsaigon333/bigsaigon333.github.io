@@ -189,6 +189,8 @@ function loadAllowlist() {
  * @param {object[]} [options.allowlist]  entries added to allowlist.json (a self-test variant declares its own)
  * @param {boolean} [options.accept]       apply the accept files (scripts/verify/accepted, or $VERIFY_ACCEPTED_DIR)
  *                                         that were written for this baseline. The self-test's mutations run without.
+ * @param {string[]} [options.parityChecks] names of the checks that read the baseline: an accept entry naming any
+ *                                         other check makes loading the accept files throw
  * @param {boolean|string} [options.captureCache]  let the browser checks reuse their captures of the baseline
  *                                         (lib/browser.mjs openCaptureCache), kept in <main checkout>/.verify/capture-cache
  *                                         or in the directory given. Only ever for .verify/baseline itself, never with
@@ -202,6 +204,7 @@ export function createContext({
   baseline = baselineDir,
   args = {},
   accept = true,
+  parityChecks = null,
   allowlist: extraAllowlist = [],
   captureCache = true,
   captureSpotChecks = 2,
@@ -223,6 +226,7 @@ export function createContext({
       ? loadAccepts(
           cachedBaselineHash(baseline),
           process.env.VERIFY_ACCEPTED_DIR || acceptedDir,
+          { parity: parityChecks },
         )
       : { entries: [], notices: [] };
   const dirs = { baseline, candidate: candidateDir };
@@ -502,8 +506,10 @@ async function runCheck(ctx, check) {
     ...(result.extra?.cache ? { cache: result.extra.cache } : {}),
     durationMs: Math.round(performance.now() - started),
   };
-  // Failures an accept file declares as intended become accepted ones (ACCEPT, not PASS).
-  if (ctx.accepts) applyAccepts(ctx.accepts.entries, normalized);
+  // Failures an accept file declares as intended become accepted ones (ACCEPT, not PASS). Only for a check that
+  // compares with the baseline: a feature check's failure is never an intended difference.
+  if (ctx.accepts && readsBaseline(check))
+    applyAccepts(ctx.accepts.entries, normalized);
   ctx.report(check.name, { ...normalized, extra: result.extra ?? null });
   return normalized;
 }

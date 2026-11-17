@@ -1,4 +1,4 @@
-// budget — the migration must not ship more JavaScript than the site it replaces.
+// budget — a change must not ship more JavaScript than the production site it replaces.
 //
 // Per route, on both sides (bytes as stored, uncompressed):
 //   JS   internal script[src] and modulepreload files + inline scripts (not application/json, application/ld+json)
