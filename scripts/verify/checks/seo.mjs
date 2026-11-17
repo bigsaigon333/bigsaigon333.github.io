@@ -4,7 +4,9 @@
 // Where possible a rule compares two things on the same page instead of a constant, so the tags cannot drift apart.
 //
 // Every HTML route of the candidate (a new post included), narrowed by --route:
-//   - exactly one <title>, one canonical link, one meta description; no meta name/property twice (article:tag may repeat)
+//   - exactly one <title>, one canonical link, one meta description, and the description is not empty (an empty one
+//     leaves link previews without a description and is reported as missing by search engines, W9);
+//     no meta name/property twice (article:tag may repeat)
 //   - robots is ROBOTS_NOINDEX on /404 and ROBOTS_INDEX everywhere else
 //   - og:title, twitter:title = <title>; og:description, twitter:description = description; og:url = canonical
 //   - og:site_name = the <title> of "/"; og:locale looks like "ko_KR"
@@ -150,6 +152,8 @@ async function violations(ctx, route, $, siteName) {
   );
   const canonical = only("canonical", attrs('link[rel~="canonical"]', "href"));
   const description = meta("description");
+  if (description !== null && !description.trim())
+    problems.push("description: empty");
 
   const counts = new Map();
   for (const el of $("meta[name], meta[property]").toArray()) {
@@ -437,6 +441,17 @@ export default {
         apply(dir) {
           mutateFile(dir, postFiles(dir)[0], (html) =>
             html.replace(/(<script type="application\/ld\+json">)\{/, "$1{,"),
+          );
+        },
+      },
+      {
+        name: "글 하나의 description 을 비운다(meta, og, twitter 모두)",
+        apply(dir) {
+          mutateFile(dir, postFiles(dir)[0], (html) =>
+            html.replace(
+              /(<meta (?:name|property)="(?:description|og:description|twitter:description)" content)(="[^"]*")?/g,
+              '$1=""',
+            ),
           );
         },
       },

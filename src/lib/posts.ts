@@ -1,5 +1,6 @@
 import { getCollection, type CollectionEntry } from "astro:content";
 
+import { excerpt } from "./excerpt";
 import { SITE } from "./site";
 
 /** 페이지로 그리는 글. 발행된 글(posts)이거나 posts/draft/ 의 초안(drafts, dev 에서만)이다. */
@@ -63,6 +64,13 @@ export const displayTitle = (post: Post): string =>
 /** YYYY-MM-DD. UTC 기준이라 빌드 환경의 시간대와 무관하다. */
 export const formatDate = (date: Date): string =>
   date.toISOString().slice(0, 10);
+
+/**
+ * 글의 설명: front matter 의 description(없으면 summary), 둘 다 없으면 본문 앞부분(lib/excerpt.ts).
+ * 글 페이지의 meta·og·twitter·JSON-LD 와 RSS 의 <description> 이 같은 값을 쓴다(W9: 빈 설명을 내지 않는다).
+ */
+export const postDescription = (post: Post): string =>
+  post.data.description || excerpt(post.body ?? "");
 
 export const postPath = (id: string): string => `/posts/${id}`;
 

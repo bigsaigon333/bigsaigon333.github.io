@@ -3,7 +3,7 @@
 import rss from "@astrojs/rss";
 import type { APIRoute } from "astro";
 
-import { getPublishedPosts, postUrl } from "../lib/posts";
+import { getPublishedPosts, postDescription, postUrl } from "../lib/posts";
 import { SITE } from "../lib/site";
 
 export const GET = (async () => {
@@ -24,8 +24,8 @@ export const GET = (async () => {
       link: postUrl(post.id),
       // date 는 UTC 자정의 Date. RFC 822 문자열(toUTCString)로 나간다.
       pubDate: post.data.date,
-      // description 이 빈 글(summary 도 없는 글)은 <description> 을 내지 않는다.
-      description: post.data.description || undefined,
+      // 글 페이지의 meta description 과 같은 값(본문뿐인 글은 앞부분). 그래도 비면 <description> 을 내지 않는다.
+      description: postDescription(post) || undefined,
     })),
   });
 }) satisfies APIRoute;
