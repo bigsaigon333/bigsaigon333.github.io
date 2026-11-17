@@ -379,13 +379,14 @@ export function postRoutesWith(dir, pattern, limit = 1) {
 }
 
 /**
- * Self-test: apply `pattern → replacement` to every page of a site copy. Throws when nothing matched.
- * The site inlines its stylesheets and scripts, so an edit to a page is what the browser runs.
+ * Self-test: apply `pattern → replacement` to every page and stylesheet of a site copy. Throws when nothing matched.
+ * Small stylesheets are inlined into the pages, larger ones (BaseLayout's, once dark mode grew it) are emitted as
+ * _astro/*.css, so both are edited: either way the edit is what the browser runs.
  */
 export function editPages(dir, pattern, replacement) {
   let edited = 0;
   for (const rel of listFiles(dir)) {
-    if (!rel.endsWith(".html")) continue;
+    if (!rel.endsWith(".html") && !rel.endsWith(".css")) continue;
     const file = path.join(dir, rel);
     const before = fs.readFileSync(file, "utf8");
     const after = before.replace(pattern, replacement);

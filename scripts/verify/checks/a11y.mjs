@@ -182,10 +182,11 @@ export default {
         name: "이미지의 alt 삭제",
         routes: ["/"],
         apply(dir) {
-          // The profile picture on the home page: an image without alt is axe's `image-alt` violation.
+          // The profile picture on the home page (astro:assets names it /_astro/profile.<hash>.jpg): an image
+          // without alt is axe's `image-alt` violation.
           editPages(
             dir,
-            /(<img\b[^>]*\bsrc="\/profile\.jpg"[^>]*?) alt="[^"]*"/,
+            /(<img\b[^>]*\bsrc="\/_astro\/profile\.[^"]*"[^>]*?) alt="[^"]*"/,
             "$1",
           );
         },

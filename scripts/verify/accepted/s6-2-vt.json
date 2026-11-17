@@ -1,0 +1,16 @@
+{
+  "baseline": "df1b0e7a16db828d1b37f50cbf18fe3714a3094ac590902a8139424dfee4e7c6",
+  "reason": "S6.2: View Transitions(<ClientRouter />)와 hover prefetch. 기준선 origin/main(eba6d5f, #15)에는 S6.2 가 없다(S4.1~S6.3 의 다른 accept 파일이 허용하던 차이는 그 기준선에 이미 들어 있어 이 파일만 새 기준선으로 다시 썼다)",
+  "entries": [
+    {
+      "check": "budget",
+      "routes": ["/", "/404", "/posts/*", "/tags", "/tags/*"],
+      "reason": "모든 페이지 +14892바이트(홈·404 2329 → 17221, 글 3620 → 18512): 라우터 모듈 _astro/ClientRouter.*.js + prefetch 시작 모듈 _astro/page.*.js + 인라인(GA 의 astro:after-swap page_view, 테마의 astro:before-swap, 토글을 document 클릭 위임으로). 이 증가는 클라이언트 라우팅 자체의 값이다"
+    },
+    {
+      "check": "routes",
+      "routes": ["/_astro/BaseLayout.CzxnK-SX.css"],
+      "reason": "BaseLayout CSS 에 ClientRouter 의 .astro-route-announcer 규칙과 prefers-reduced-motion 의 ::view-transition-* 규칙이 붙어 파일 해시가 바뀐다(BaseLayout.*.css 이름만 다르다)"
+    }
+  ]
+}
