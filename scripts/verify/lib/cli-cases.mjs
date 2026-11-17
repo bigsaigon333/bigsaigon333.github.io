@@ -951,6 +951,53 @@ function unusedAcceptEntry() {
 }
 
 /**
+ * An accept file can only name a check that compares with the baseline. seo is a feature check: a post whose
+ * og:description no longer equals its meta description fails it, and an accept file naming seo must be refused,
+ * not turn that failure into ACCEPT (W9).
+ */
+function featureCheckNotAccepted() {
+  return withMutant(
+    (dir) =>
+      editFile(dir, `${aPost().slice(1)}.html`, (html) =>
+        html.replace(
+          /(<meta property="og:description" content=")/,
+          "$1self-test ",
+        ),
+      ),
+    (dir) =>
+      withAcceptDir((acceptDir) => {
+        const plain = verifyCandidate(dir, acceptDir, ["--only=seo"]);
+        if (
+          plain.status !== 1 ||
+          !/^FAIL\s/.test(lineOf(plain.lines, "seo") ?? "")
+        )
+          return `without an accept file: exit status ${plain.status}, expected 1 and FAIL seo: ${plain.lines.at(-1)}`;
+        writeJson(path.join(acceptDir, "feature.json"), {
+          baseline: baselineHash(baselineDir),
+          reason: "waives a feature check",
+          entries: [
+            { check: "seo", routes: ["**"], reason: "not a difference" },
+          ],
+        });
+        const { status, output, lines } = verifyCandidate(dir, acceptDir, [
+          "--only=seo",
+        ]);
+        if (status === 0)
+          return `exit status 0: the accept file waived seo: ${lineOf(lines, "seo")}`;
+        const accepted = lines.find((line) => /^ACCEPT\s/.test(line));
+        if (accepted) return `a feature check was accepted: ${accepted}`;
+        if (
+          !/feature\.json: entry 0: "seo" is not a check that compares with the baseline/.test(
+            output,
+          )
+        )
+          return `the refusal does not name the entry: ${firstLine(output)}`;
+        return null;
+      }),
+  );
+}
+
+/**
  * The same mask over the site header, once with a change inside the header (hidden: PASS, the entry used) and
  * once with a change in the post list below it (caught: FAIL).
  */
@@ -1237,6 +1284,10 @@ export const cliCases = [
   {
     name: "verify: 실패와 맞지 않는 accept 항목은 unused 경고만 낸다",
     run: unusedAcceptEntry,
+  },
+  {
+    name: "verify: 기준선과 비교하지 않는 검사(seo 등)를 적은 accept 파일은 거부한다",
+    run: featureCheckNotAccepted,
   },
   {
     name: "verify: visual 의 mask 는 가린 요소 안의 변화만 숨기고 밖의 변화는 잡는다",

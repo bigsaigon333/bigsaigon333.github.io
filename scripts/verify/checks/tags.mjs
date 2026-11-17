@@ -42,7 +42,7 @@ const DRAFT = /^[ \t]*(["']?)draft\1[ \t]*:([^\n#]*)/im;
 const KEYWORDS = /^[ \t]*(["']?)keywords\1[ \t]*:(.*)$/m;
 
 /** The tag slug of a keyword (src/lib/tags.ts). */
-export const slugOf = (keyword) =>
+const slugOf = (keyword) =>
   keyword
     .normalize("NFKC")
     .toLowerCase()
@@ -66,7 +66,7 @@ function scalar(raw) {
 }
 
 /** { published: [{ id, keywords }], drafts: [id] } from the top-level posts/*.md of this checkout. */
-export function readSources() {
+function readSources() {
   const published = [];
   const drafts = [];
   for (const rel of listFiles(postsDir)) {

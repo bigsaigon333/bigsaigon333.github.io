@@ -22,10 +22,10 @@
 // After each step, once astro:page-load has fired and the page has settled — one item each:
 //   reload    the window marker is still there (no document load happened)
 //   location  location.pathname is the step's route and document.title the <title> of its served HTML
-//   page_view the GA page views in dataLayer, in order, are one per step so far with that step's page_path (and
-//             page_title, for the ones sent after a swap). The first page's is gtag("config", id) (it sends a
-//             page_view unless { send_page_view: false }); later ones are gtag("event", "page_view", {…}).
-//             No duplicate, none missing, no second config.
+//   page_view the GA page views in dataLayer are exactly one: the first page's gtag("config", id) (it sends a
+//             page_view unless { send_page_view: false }). Later pages are counted by gtag.js itself (GA4 enhanced
+//             measurement, page changes on browser history events), so the page must not push its own
+//             gtag("event", "page_view", …) after a swap: that was counted twice (W9). No second config.
 //   theme     data-theme is "dark" when astro:after-swap fires (set before the swap; set later is a flash of the
 //             light page) and after settling, and the toggle's aria-pressed is "true"
 //   utterances on a post: one utteranc.es client <script> with issue-term="title", run once during this step (the
@@ -238,11 +238,8 @@ async function scenario(browser, base, pages) {
           `<title> ${quote(state.title, 40)}, expected ${quote(step.title, 40)}`,
         );
       // page_view
-      const expected = steps.map((s, i) =>
-        i === 0
-          ? `config ${s.route}`
-          : `event ${s.route} ${quote(s.title, 30)}`,
-      );
+      // Only the first page's config: gtag.js reports the later pages from history changes on its own.
+      const expected = [`config ${steps[0].route}`];
       const actual = state.pageViews.map((view, i) =>
         view.kind === "config"
           ? `config ${i === 0 ? steps[0].route : "?"}`
