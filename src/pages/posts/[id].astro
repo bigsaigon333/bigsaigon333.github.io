@@ -2,6 +2,7 @@
 import type { GetStaticPaths, InferGetStaticPropsType } from "astro";
 import { render } from "astro:content";
 
+import BackLink from "../../components/BackLink.astro";
 import Comments from "../../components/Comments.astro";
 import CopyCode from "../../components/CopyCode.astro";
 import PostCategory from "../../components/PostCategory.astro";
@@ -58,6 +59,7 @@ Astro.locals.postAssets = postAssets(post.rendered?.html);
     section: category,
   }}
 >
+  <BackLink />
   <PostCategory name={category} />
   <PostHeader title={displayTitle(post)} date={date} />
   <PostTags keywords={keywords} />
