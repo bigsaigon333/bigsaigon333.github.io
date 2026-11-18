@@ -4,6 +4,7 @@ import { render } from "astro:content";
 
 import Comments from "../../components/Comments.astro";
 import CopyCode from "../../components/CopyCode.astro";
+import PostCategory from "../../components/PostCategory.astro";
 import PostHeader from "../../components/PostHeader.astro";
 import PostTags from "../../components/PostTags.astro";
 import SeriesNav from "../../components/SeriesNav.astro";
@@ -36,7 +37,7 @@ export const getStaticPaths = (async () => {
 type Props = InferGetStaticPropsType<typeof getStaticPaths>;
 
 const { post } = Astro.props;
-const { title, date, keywords } = post.data;
+const { title, date, keywords, category } = post.data;
 const { Content, headings } = await render(post);
 ---
 
@@ -51,8 +52,10 @@ const { Content, headings } = await render(post);
     type: "article",
     keywords,
     publishedTime: date,
+    section: category,
   }}
 >
+  <PostCategory name={category} />
   <PostHeader title={displayTitle(post)} date={date} />
   <PostTags keywords={keywords} />
   <Toc headings={headings} />

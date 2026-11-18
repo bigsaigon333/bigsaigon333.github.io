@@ -138,12 +138,15 @@ function staleStore() {
 /**
  * `verify:live --serve=<dir> <flags>`: exit status and failing checks. After a deploy the baseline is the commit
  * just deployed, so the site served must answer like the baseline in every respect.
+ * The accept files of the checkout are not read (VERIFY_ACCEPTED_DIR names a directory that does not exist): a
+ * release whose accept file allows a <title> change on "/" would otherwise turn the mutant's failure into ACCEPT.
  */
 function rehearsal(dir, expected, flags = []) {
-  const { status, output, lines } = command("live.mjs", [
-    `--serve=${dir}`,
-    ...flags,
-  ]);
+  const { status, output, lines } = command(
+    "live.mjs",
+    [`--serve=${dir}`, ...flags],
+    { VERIFY_ACCEPTED_DIR: path.join(dir, ".no-accept-files") },
+  );
   const failing = lines
     .filter((line) => /^FAIL\s/.test(line)) // a check's line, not the "FAILED 4/5 checks" summary
     .map((line) => line.split(/\s+/)[1]);
@@ -288,7 +291,7 @@ const saidByBuild = (output) => {
 
 /** A post the schema takes. `extra` is more front matter, one "key: value" per line. */
 const post = (title, extra = "") =>
-  `---\ntitle: "${title}"\ndate: "2024-01-01"\ndescription: "a post the self-test adds to a copy of the project"\nkeywords: "verify, fixture"\n${extra}---\n\n${title} body\n`;
+  `---\ntitle: "${title}"\ndate: "2024-01-01"\ndescription: "a post the self-test adds to a copy of the project"\nkeywords: "verify, fixture"\ncategory: "개발"\n${extra}---\n\n${title} body\n`;
 
 /** A token for a fixture's file name and title that no real post contains. */
 const fixtureToken = () => `verify-fixture-${randomBytes(4).toString("hex")}`;

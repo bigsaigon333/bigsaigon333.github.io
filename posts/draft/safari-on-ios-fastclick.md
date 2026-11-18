@@ -1,6 +1,7 @@
 ---
 title: safari on iOS 에서 빠르게 두번 터치하는 경우 click event 좌표 보정 이슈
 date: "2022-06-30"
+category: 개발
 ---
 
 ## I. 문제점

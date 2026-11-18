@@ -1,6 +1,7 @@
 ---
 title: Conditinal Type and Distributive Conditional Types
 date: "2022-09-06"
+category: 개발
 ---
 
 ```ts

@@ -2,6 +2,8 @@ import { defineCollection, reference } from "astro:content";
 import { file, glob } from "astro/loaders";
 import { z } from "astro/zod";
 
+import { CATEGORY_NAMES } from "./lib/categories";
+
 // id = 파일 이름에서 .md 를 뗀 것. 기본 구현(github-slugger)은 대소문자와 기호를 바꾼다.
 const generateId = ({ entry }: { entry: string }): string =>
   entry.replace(/\.md$/, "");
@@ -30,6 +32,8 @@ const fields = {
           .filter(Boolean) ?? [],
     ),
   summary: z.string().optional(),
+  // 글마다 하나, 필수다. 받는 값은 src/lib/categories.ts 의 name("개발", "부동산", "일상")이다.
+  category: z.enum(CATEGORY_NAMES),
   // true 면 초안이다. 운영 빌드에 나가지 않는다(lib/posts.ts 의 isDraft).
   draft: z.boolean().optional(),
 };

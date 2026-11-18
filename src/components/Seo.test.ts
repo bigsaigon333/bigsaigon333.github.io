@@ -19,6 +19,7 @@ type Props = {
   type: "website" | "article";
   keywords: string[];
   publishedTime?: Date;
+  section?: string;
   noindex?: boolean;
 };
 
@@ -51,6 +52,7 @@ const post: Props = {
   type: "article",
   keywords: ["Proxy", "built-in object", "자바스크립트"],
   publishedTime: new Date("2022-05-08"),
+  section: "개발",
 };
 
 describe("Seo: 홈", () => {
@@ -118,8 +120,20 @@ describe("Seo: 글", () => {
       url: postUrl,
       mainEntityOfPage: { "@type": "WebPage", "@id": postUrl },
       keywords: post.keywords,
+      articleSection: "개발",
     });
     expect($('script[type="application/ld+json"]').html()).not.toContain("<");
+  });
+
+  test("카테고리는 article:section 하나", async () => {
+    const $ = await render(post);
+    expect(meta($, "article:section")).toEqual(["개발"]);
+  });
+
+  test("카테고리가 없으면 article:section 도 JSON-LD articleSection 도 없다", async () => {
+    const $ = await render({ ...post, section: undefined });
+    expect(meta($, "article:section")).toEqual([]);
+    expect(jsonLd($)[0]).not.toHaveProperty("articleSection");
   });
 
   test("빈 description 과 빈 keywords 는 JSON-LD 에서 키째로 빠진다", async () => {

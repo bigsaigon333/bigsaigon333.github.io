@@ -1,6 +1,7 @@
 ---
 title: 장바구니 리팩토링 철학
 date: "2022-06-22"
+category: 개발
 ---
 
 ## 1. client state와 server state, derived state from server 를 구별한다

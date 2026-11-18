@@ -1,6 +1,7 @@
 ---
 title: react-scripts 에서 Promise.any polyfill 추가하기
 date: "2022-06-01"
+category: 개발
 ---
 
 ## I. 문제점

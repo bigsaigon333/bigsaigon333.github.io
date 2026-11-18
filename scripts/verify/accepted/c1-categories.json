@@ -1,0 +1,67 @@
+{
+  "baseline": "9b635b96c0493829ee0b973b71932a83b7a37641bb7035c0921ccf34460e0cfa",
+  "reason": "C1 카테고리와 문구: 글마다 카테고리(개발·부동산·일상), /categories 페이지, 사이트 이름 '김동희의 블로그'와 개인 블로그 소개 문구",
+  "entries": [
+    {
+      "check": "content",
+      "routes": ["/", "/404", "/tags", "/tags/**"],
+      "reason": "모든 페이지의 사이트 헤더 문구: '프론트엔드 개발자 / 김동희입니다' → '김동희입니다 / 개발과 부동산, 일상을 기록합니다'"
+    },
+    {
+      "check": "content",
+      "routes": ["/posts/*"],
+      "reason": "사이트 헤더 문구(위와 같음)와 글 머리 위의 카테고리 링크 한 줄(p.post-category)"
+    },
+    {
+      "check": "head",
+      "routes": ["/", "/404"],
+      "reason": "사이트 이름 '김동희의 개발블로그' → '김동희의 블로그'(홈의 title·og·twitter), 사이트 description 과 keywords 를 개인 블로그용으로"
+    },
+    {
+      "check": "head",
+      "routes": ["/tags", "/tags/**"],
+      "reason": "태그 페이지의 title·og·twitter 에 들어간 사이트 이름이 '김동희의 블로그'로 바뀜"
+    },
+    {
+      "check": "hover",
+      "routes": ["/posts/*"],
+      "reason": "글 머리 위에 카테고리 링크가 새로 생김. 그 링크만 가리고 나머지 링크의 hover 는 같아야 한다",
+      "mask": [".post-category"]
+    },
+    {
+      "check": "routes",
+      "routes": [
+        "/categories",
+        "/categories/dev",
+        "/categories/life",
+        "/categories/real-estate"
+      ],
+      "reason": "새 카테고리 목록과 카테고리 페이지 3개(글이 없는 부동산·일상 포함)"
+    },
+    {
+      "check": "routes",
+      "routes": ["/_astro/_id_.*.css"],
+      "reason": "글 페이지의 CSS 묶음에 PostCategory 의 스타일이 더해져 파일 이름의 해시가 바뀜"
+    },
+    {
+      "check": "routes",
+      "routes": ["/rss.xml"],
+      "reason": "RSS 채널 title·description 이 새 사이트 문구로, 글마다 <category>개발</category>"
+    },
+    {
+      "check": "routes",
+      "routes": ["/sitemap.xml"],
+      "reason": "sitemap 에 /categories 와 카테고리 페이지 3개가 더해짐"
+    },
+    {
+      "check": "sitemap",
+      "routes": ["/sitemap.xml"],
+      "reason": "새 <loc>: /categories, /categories/dev, /categories/real-estate, /categories/life"
+    },
+    {
+      "check": "visual",
+      "routes": ["/", "/404", "/tags", "/tags/**", "/posts/*"],
+      "reason": "헤더 둘째 줄이 더 긴 소개 문구가 되어 헤더 높이와 그 아래 전체가 달라짐(헤더 스타일은 웨이브 B). 글 페이지는 카테고리 링크 한 줄만큼 본문이 내려감"
+    }
+  ]
+}

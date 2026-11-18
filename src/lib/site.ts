@@ -9,23 +9,21 @@ import {
 const url = "https://bigsaigon333.github.io";
 
 // `as const` 안에서도 string[] 로 남도록 따로 선언한다(Seo 의 keywords: string[] 에 그대로 넘긴다).
+// 개인 블로그 전체를 말하는 말만 둔다. 글마다의 주제는 글의 keywords 와 카테고리(lib/categories.ts)가 맡는다.
 const keywords: string[] = [
   "김동희",
-  "프론트엔드",
+  "블로그",
+  "개인 블로그",
   "개발",
-  "자바스크립트",
-  "타입스크립트",
-  "JS",
-  "javascript",
-  "typescript",
-  "TS",
-  "react",
+  "프론트엔드",
+  "부동산",
+  "일상",
 ];
 
 export const SITE = {
   url,
-  title: "김동희의 개발블로그",
-  description: "프론트엔드 개발과 관련된 이야기를 다룹니다.",
+  title: "김동희의 블로그",
+  description: "김동희가 개발과 부동산, 일상에 관해 쓴 글을 모아 둡니다.",
   author: "김동희",
   keywords,
   // 같은 "한국어"를 JSON-LD 의 inLanguage 는 BCP 47("ko", <html lang> 과 같은 값)로, og:locale 은 언어_지역("ko_KR")으로 적는다.

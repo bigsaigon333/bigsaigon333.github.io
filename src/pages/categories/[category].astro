@@ -1,0 +1,87 @@
+---
+// /categories/<slug> — 그 카테고리의 글, 날짜 내림차순. 항목은 홈 목록과 같은 PostHeader 다.
+// 카테고리는 src/lib/categories.ts 의 목록이 정한다. 글이 없는 카테고리도 페이지가 있다("아직 글이 없습니다").
+// 운영 빌드에서는 발행된 글만 싣는다(getVisiblePosts). 초안은 dev 에서만 섞인다.
+import type { GetStaticPaths, InferGetStaticPropsType } from "astro";
+
+import PostHeader from "../../components/PostHeader.astro";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import {
+  CATEGORIES_PATH,
+  categoryPath,
+  groupByCategory,
+} from "../../lib/categories";
+import { displayTitle, getVisiblePosts, postPath } from "../../lib/posts";
+import { SITE } from "../../lib/site";
+
+export const getStaticPaths = (async () => {
+  const groups = groupByCategory(await getVisiblePosts());
+
+  return groups.map((group) => ({
+    params: { category: group.category.slug },
+    props: group,
+  }));
+}) satisfies GetStaticPaths;
+
+type Props = InferGetStaticPropsType<typeof getStaticPaths>;
+
+const { category, posts } = Astro.props;
+---
+
+<BaseLayout
+  seo={{
+    title: `${category.name} | ${SITE.title}`,
+    description: `"${category.name}" 카테고리의 글 ${posts.length}편. ${category.description}`,
+    url: `${SITE.url}${categoryPath(category)}`,
+    type: "website",
+    keywords: [category.name],
+  }}
+>
+  <div class="category-heading">
+    <h2>{category.name}</h2>
+    <p>{category.description}</p>
+    <a href={CATEGORIES_PATH}>모든 카테고리</a>
+  </div>
+  <section>
+    {posts.length === 0 && <p>아직 글이 없습니다.</p>}
+    {posts.map((post) => (
+      <PostHeader
+        title={displayTitle(post)}
+        date={post.data.date}
+        href={postPath(post.id)}
+      />
+    ))}
+  </section>
+</BaseLayout>
+
+<style>
+  .category-heading {
+    width: 100%;
+  }
+
+  .category-heading h2 {
+    font-size: 1.5rem;
+    margin: 0 0 0.5rem;
+  }
+
+  .category-heading p {
+    margin: 0 0 0.5rem;
+  }
+
+  .category-heading a {
+    text-decoration: underline;
+  }
+
+  /* 홈(pages/index.astro)의 목록과 같은 값 */
+  section {
+    width: 100%;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    row-gap: 2rem;
+  }
+
+  section :global(a:hover) {
+    text-decoration: underline;
+  }
+</style>

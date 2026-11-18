@@ -1,6 +1,7 @@
 ---
 title: css-masters-2 2주차 정리
 date: "2022-05-15"
+category: 개발
 ---
 
 [css-masters-2](https://github.com/fe-backpackers/css-masters-2) 라는 이름으로 css 스터디를 하고 있습니다.
