@@ -10,8 +10,9 @@ import ThemeToggle from "./ThemeToggle.astro";
 // 사이트 머리: 프로필 사진과 "김동희입니다", 소개 한 줄(사이트 제목 링크), 그 아래 한 줄에 사이트 탐색(카테고리·태그)과
 // 홈에서만 보이는 메일·깃허브 아이콘, 다크 모드 토글.
 //
-// 프로필 사진: astro:assets 가 빌드 때 webp·jpg 를 너비 3개로 만든다. <Picture> 의 loading·sizes 등 속성은 성능 단계(PF)가
-// 맡는다. 렌더 크기는 아래 .profile 이 정한다(휴대폰 3.5rem, 40rem 부터 4.5rem).
+// 프로필 사진: astro:assets 가 빌드 때 webp·jpg 를 너비 3개로 만든다. <Picture> 의 sizes 는 렌더 너비를 따른다(PF4): 휴대폰 3.5rem=56px,
+// 40rem 부터 4.5rem=72px. fetchpriority="high" 는 재 보고 뺐다: 모바일 LCP 요소는 이 사진이 아니라 옆의 제목 글자라(Lighthouse
+// lcp-breakdown) 값이 그대로였고, 렌더를 막는 CSS 와 대역폭만 다툰다.
 // public/profile.jpg·profile.webp 는 예전 주소로 들어오는 요청을 위해 남긴다.
 //
 // 검증 장치가 기대는 모양: 제목 링크(href="/")가 헤더의 첫 링크이고, 헤더의 첫 <span> 이 글자를 담는다
@@ -47,8 +48,8 @@ const GITHUB_MARK =
         src={profile}
         alt="프로필"
         formats={["webp"]}
-        widths={[192, 384, profile.width]}
-        sizes="(max-width: 600px) 20vw, (max-width: 767px) 25vw, 192px"
+        widths={[96, 192, profile.width]}
+        sizes="(min-width: 40rem) 72px, 56px"
         loading="eager"
       />
       <span class="title-text">

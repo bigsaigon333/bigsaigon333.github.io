@@ -45,9 +45,9 @@
       "si": 1000,
       "tbt": 100,
       "cls": 0.02,
-      "bytes": 55296,
-      "js": 7680,
-      "css": 7168,
+      "bytes": 44544,
+      "js": 9728,
+      "css": 3072,
       "blocking": 3
     },
     "/posts/proxy-to-built-in-objects": {
@@ -57,9 +57,9 @@
       "si": 1000,
       "tbt": 100,
       "cls": 0.02,
-      "bytes": 114176,
-      "js": 9216,
-      "css": 8192,
+      "bytes": 63488,
+      "js": 11264,
+      "css": 4608,
       "blocking": 3
     },
     "/posts/how-to-check-two-types-are-equal-in-ts": {
@@ -68,10 +68,10 @@
       "fcp": 1000,
       "si": 1000,
       "tbt": 100,
-      "cls": 0.04,
-      "bytes": 161792,
-      "js": 9216,
-      "css": 8192,
+      "cls": 0.02,
+      "bytes": 116224,
+      "js": 11264,
+      "css": 4608,
       "blocking": 3
     },
     "/posts/css-masters-2-week2": {
@@ -81,9 +81,9 @@
       "si": 1000,
       "tbt": 100,
       "cls": 0.02,
-      "bytes": 150016,
-      "js": 9216,
-      "css": 8192,
+      "bytes": 99840,
+      "js": 11264,
+      "css": 4608,
       "blocking": 3
     }
   },
@@ -95,21 +95,21 @@
       "si": 902,
       "tbt": 0,
       "cls": 0,
-      "bytes": 52267,
-      "js": 7236,
-      "css": 6614,
+      "bytes": 42039,
+      "js": 9037,
+      "css": 2759,
       "blocking": 3
     },
     "/posts/proxy-to-built-in-objects": {
       "score": 100,
-      "lcp": 902,
-      "fcp": 902,
-      "si": 902,
+      "lcp": 903,
+      "fcp": 903,
+      "si": 903,
       "tbt": 0,
       "cls": 0,
-      "bytes": 108336,
-      "js": 8563,
-      "css": 7566,
+      "bytes": 60391,
+      "js": 10364,
+      "css": 3904,
       "blocking": 3
     },
     "/posts/how-to-check-two-types-are-equal-in-ts": {
@@ -118,22 +118,22 @@
       "fcp": 902,
       "si": 902,
       "tbt": 0,
-      "cls": 0.0184,
-      "bytes": 154034,
-      "js": 8563,
-      "css": 7566,
+      "cls": 0,
+      "bytes": 110371,
+      "js": 10364,
+      "css": 3904,
       "blocking": 3
     },
     "/posts/css-masters-2-week2": {
       "score": 100,
-      "lcp": 902,
-      "fcp": 902,
-      "si": 902,
+      "lcp": 904,
+      "fcp": 904,
+      "si": 904,
       "tbt": 0,
       "cls": 0,
-      "bytes": 142640,
-      "js": 8563,
-      "css": 7566,
+      "bytes": 94764,
+      "js": 10364,
+      "css": 3904,
       "blocking": 3
     }
   }

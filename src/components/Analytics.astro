@@ -1,24 +1,34 @@
 ---
 // Google Analytics(gtag.js). 레이아웃이 <head> 안에서 한 번 렌더한다.
 //
-// 두 스크립트 모두 is:inline 이다. Astro 가 번들하면 type="module" 이 붙어 실행이 문서 파싱 뒤로 밀리고,
-// 외부 URL 인 로더는 애초에 번들 대상이 아니다. 구글이 안내하는 스니펫처럼 쓴 자리에서 쓴 대로 나가야 한다.
-//
-// 측정 ID 는 아래 gtagScript 가 define:vars 와 같은 모양으로 넣는다:
-//   (function(){ const gaId = "G-…"; … })();
-// 안에서 선언한 함수는 전역이 되지 않으므로, 예전 사이트처럼 전역 gtag() 가 남도록 window 에 직접 단다.
+// 두 부분으로 나뉜다(PF1).
+// 1. is:inline 스크립트: dataLayer 와 전역 gtag() 를 만들고 gtag("js"), gtag("config", id) 를 줄에 넣는다. 구글이 안내하는
+//    스니펫의 앞부분 그대로다. 아주 작고, 이 줄이 먼저 있어야 나중에 실린 gtag.js 가 처음 방문의 page_view 를 보낸다.
+//    측정 ID 는 아래 gtagScript 가 define:vars 와 같은 모양으로 넣는다: (function(){ const gaId = "G-…"; … })();
+//    안에서 선언한 함수는 전역이 되지 않으므로, 예전 사이트처럼 전역 gtag() 가 남도록 window 에 직접 단다.
+// 2. 번들되는 <script>(아래): 로더 gtag.js(전송량 약 168KB)를 첫 화면이 그려진 뒤에 넣는다. load 이벤트 뒤
+//    requestIdleCallback(최대 IDLE_TIMEOUT_MS 기다림)이나 첫 상호작용(pointerdown, keydown, touchstart, scroll) 중
+//    먼저 오는 때다. 예전에는 <script async src=gtag.js> 가 <head> 에 있어 첫 화면과 대역폭·메인 스레드를 다퉜다.
+//    그 사이의 gtag() 호출은 dataLayer 에 쌓여 있다가 gtag.js 가 실리면 차례로 처리된다(구글 스니펫의 원래 동작).
+//    로더가 실리면 web-vitals(src/lib/web-vitals.ts)를 동적으로 불러 현장 지표를 GA 이벤트로 보낸다. 로더가 막힌
+//    방문(광고 차단기)에서는 web-vitals 도 받지 않는다.
+//    측정 ID 는 1 이 줄에 넣은 gtag("config", id) 에서 읽는다. 값을 두 군데 적지 않기 위해서다.
 //
 // CSP(S7.2): Astro 는 is:inline 스크립트의 해시를 모른다. inlineScript() 가 이 글자 그대로의 sha256 을 정책에 넣는다.
-// 로더는 외부 파일이라 해시가 아니라 출처(https://*.googletagmanager.com)로 허용한다(config/csp.mjs).
+// 로더는 외부 파일이라 해시가 아니라 출처(https://*.googletagmanager.com)로 허용한다(config/csp.mjs). 스크립트가 만들어
+// 넣는 <script src> 도 같은 출처 규칙을 받는다(strict-dynamic 을 쓰지 않으므로 정책을 바꿀 것이 없다).
 //
-// View Transitions(S6.2): <ClientRouter /> 로 옮겨 가면 문서가 다시 로드되지 않는다. <head> 의 이 두 스크립트는
-// 다음 페이지에도 글자 그대로 있으므로 라우터가 다시 실행하지 않는다(로더도, config 도 한 번). 첫 페이지의
+// View Transitions(S6.2): <ClientRouter /> 로 옮겨 가면 문서가 다시 로드되지 않는다. is:inline 스크립트는 다음 페이지에도
+// 글자 그대로 있으므로 라우터가 다시 실행하지 않고, 번들된 모듈은 원래 한 번만 돈다(로더도, config 도 한 번). 첫 페이지의
 // page_view 는 config 가 보내고, 그 뒤의 페이지는 gtag.js 가 센다: GA4 웹 스트림의 향상된 측정
 // "브라우저 기록 이벤트 기반 페이지 변경"이 켜져 있어, 라우터의 pushState·popstate 를 보고 바뀐 주소와 <title> 로
 // page_view 를 하나씩 보낸다(뒤로·앞으로 포함). 그래서 여기서는 page_view 를 직접 보내지 않는다(W9).
 // 예전에는 astro:after-swap 에서 하나를 더 보내 옮겨 갈 때마다 두 번 세어졌다(실제 gtag.js 로 /g/collect 확인).
-// 처음의 dataLayer 는 예전과 같다: js, config(embeds 검사가 기준선과 비교한다). navigation 검사는 옮겨 간 뒤에도
-// dataLayer 의 page_view 가 config 하나뿐인지 본다.
+// 처음의 dataLayer 는 예전과 같다: js, config(embeds 검사가 기준선과 비교한다. 그 검사는 gtag.js 를 막으므로
+// web-vitals 이벤트는 붙지 않는다). gtag.js 가 실린 뒤에는 그 뒤에 "LCP" 같은 이벤트가 붙는다.
+// navigation 검사는 옮겨 간 뒤에도 dataLayer 의 page_view 가 config 하나뿐인지 본다.
+// 알려진 한계: gtag.js 가 실리기 전에 다른 페이지로 옮겨 가면 처음 page_view 의 주소가 그 페이지가 된다(config 를
+// 처리하는 때의 location 을 쓴다). 첫 상호작용에서 로더를 넣으므로 클릭으로 옮겨 가기 전에 요청은 이미 나가 있다.
 // (is:inline 스크립트 안의 주석은 모든 페이지의 HTML 에 그대로 실리므로 설명은 여기에 적는다.)
 import { inlineScript } from "../../config/csp.mjs";
 import { SITE } from "../lib/site";
@@ -40,9 +50,45 @@ gtag("config", gaId);
 );
 ---
 
-<script
-  is:inline
-  async
-  src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`}
-></script>
 <script is:inline set:html={gtagScript} />
+<script>
+  import { reportWebVitals, type Gtag } from "../lib/web-vitals";
+
+  // load 뒤 이만큼 안에 메인 스레드가 한가해지지 않아도 이때는 넣는다.
+  const IDLE_TIMEOUT_MS = 3500;
+  const INTERACTIONS = ["pointerdown", "keydown", "touchstart", "scroll"];
+
+  type GaWindow = Window & { dataLayer?: IArguments[]; gtag?: Gtag };
+
+  let loaded = false;
+  function load() {
+    if (loaded) return;
+    loaded = true;
+    for (const type of INTERACTIONS) removeEventListener(type, load, true);
+    const ga = window as GaWindow;
+    const config = Array.from(ga.dataLayer ?? []).find(
+      (entry) => entry[0] === "config",
+    );
+    const gtag = ga.gtag;
+    if (!config || !gtag) return;
+    const script = document.createElement("script");
+    script.async = true;
+    script.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(String(config[1]))}`;
+    // gtag.js 가 실린 뒤에만 web-vitals 를 받는다. 광고 차단기 등으로 로더가 막히면 보낼 곳이 없으니 받지 않는다.
+    script.addEventListener(
+      "load",
+      () => void reportWebVitals(gtag).catch(() => {}),
+      { once: true },
+    );
+    document.head.append(script);
+  }
+
+  const whenIdle = () =>
+    "requestIdleCallback" in window
+      ? requestIdleCallback(load, { timeout: IDLE_TIMEOUT_MS })
+      : setTimeout(load, IDLE_TIMEOUT_MS);
+  for (const type of INTERACTIONS)
+    addEventListener(type, load, { capture: true, once: true, passive: true });
+  if (document.readyState === "complete") whenIdle();
+  else addEventListener("load", whenIdle, { once: true });
+</script>
