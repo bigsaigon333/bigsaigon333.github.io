@@ -4,6 +4,3 @@ dist
 package-lock.json
 public
 posts
-comments/.wrangler
-comments/wrangler.ci.json
-comments/worker-configuration.d.ts

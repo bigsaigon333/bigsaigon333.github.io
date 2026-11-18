@@ -4,8 +4,7 @@
   "private": true,
   "type": "module",
   "workspaces": [
-    "tools/astro-check",
-    "comments"
+    "tools/astro-check"
   ],
   "scripts": {
     "dev": "ASTRO_TELEMETRY_DISABLED=1 astro dev",
