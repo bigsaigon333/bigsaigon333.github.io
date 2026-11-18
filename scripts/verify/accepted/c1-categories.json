@@ -10,7 +10,7 @@
     {
       "check": "content",
       "routes": ["/posts/*"],
-      "reason": "사이트 헤더 문구(위와 같음)와 글 머리 위의 카테고리 링크 한 줄(p.post-category)"
+      "reason": "사이트 헤더 문구(위와 같음)와 글 머리 위의 카테고리 링크 한 줄(p.post-category). 더해 H1: 본문 h2–h4 를 감싼 섹션 링크가 글의 링크 목록에 더해진다"
     },
     {
       "check": "head",
@@ -41,7 +41,7 @@
     {
       "check": "routes",
       "routes": ["/_astro/_id_.*.css"],
-      "reason": "글 페이지의 CSS 묶음에 PostCategory 의 스타일이 더해져 파일 이름의 해시가 바뀜"
+      "reason": "글 페이지의 CSS 묶음에 PostCategory 의 스타일이 더해져 파일 이름의 해시가 바뀜. 더해 H1: prose.css 의 섹션 링크 규칙도 같은 파일 해시를 바꾼다"
     },
     {
       "check": "routes",
@@ -61,7 +61,7 @@
     {
       "check": "visual",
       "routes": ["/", "/404", "/tags", "/tags/**", "/posts/*"],
-      "reason": "헤더 둘째 줄이 더 긴 소개 문구가 되어 헤더 높이와 그 아래 전체가 달라짐(헤더 스타일은 웨이브 B). 글 페이지는 카테고리 링크 한 줄만큼 본문이 내려감"
+      "reason": "헤더 둘째 줄이 더 긴 소개 문구가 되어 헤더 높이와 그 아래 전체가 달라짐(헤더 스타일은 웨이브 B). 글 페이지는 카테고리 링크 한 줄만큼 본문이 내려감. 더해 H1: 숨은 # 표시(::after, opacity 0)가 자리를 차지해 좁은 화면에서 긴 제목의 줄바꿈이 바뀐다(css-masters-2-week1·3, how-to-check-two-types-are-equal-in-ts, react-scripts-react-app-polyfill-promise-any)"
     }
   ]
 }
