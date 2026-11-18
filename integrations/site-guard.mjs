@@ -1,10 +1,13 @@
-// site-guard — astro:build:done 에서 dist 를 훑어 두 가지를 지킨다. 어기면 빌드를 실패시킨다.
+// site-guard — astro:build:done 에서 dist 를 훑어 세 가지를 지킨다. 어기면 빌드를 실패시킨다.
 //
 //   1. 링크: 모든 HTML 페이지의 내부 href·src·srcset(그리고 사이트 주소로 시작하는 절대 URL)이 dist 의 파일로
 //      풀린다. 푸는 방식은 GitHub Pages 와 같다: `/p/` → p/index.html, `/p` → p(파일), p.html, p/index.html.
 //   2. JS 예산: 페이지마다 실리는 JS 바이트가 options.jsBudget 이하다. 센 것: 인라인 <script>(JSON 데이터 제외),
 //      내부 script[src]·modulepreload 파일, 그 파일들이 정적으로 import 하는 내부 파일(전이적으로, 파일당 한 번).
-//      다른 출처의 스크립트(gtag, utterances)는 바이트를 모르므로 세지 않는다. 압축 전 바이트다.
+//      다른 출처의 스크립트(gtag)는 바이트를 모르므로 세지 않는다. 압축 전 바이트다.
+//   3. 지연 JS 예산: 그 파일들이 동적 import(`import("./x.js")`)로 부를 수 있는 내부 파일과 그 정적 의존(전이적으로,
+//      동적 import 안의 동적 import 도)의 바이트가 options.lazyBudget 이하다. 이미 정적으로 실린 파일은 빼고 센다.
+//      (댓글 UI 처럼 필요할 때만 받는 조각. 정적 예산과 따로 두어 지연 조각이 커지는 것도 커밋으로 드러나게 한다.)
 //
 // HTML 은 파서 없이 읽는다: <script>·<style>·주석의 본문을 지운 뒤 태그(`<x …>`) 안의 속성만 본다. 본문의 글자는
 // `&lt;` 로 이스케이프되어 있으므로 코드 블록 속의 `<a href>` 는 태그로 잡히지 않는다.
@@ -20,7 +23,11 @@ const TAG =
 const ATTR = /([^\s"'<>/=]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'<>]+)))?/g;
 const RAW_BODY =
   /<(script|style)\b([^>]*)>([\s\S]*?)<\/\1\s*>|<!--[\s\S]*?-->/gi;
-const IMPORT = /(?:\bfrom|\bimport)\s*\(?\s*["'](\.{1,2}\/[^"']+?\.m?js)["']/g;
+// 압축된 출력은 따옴표 대신 백틱도 쓴다(import(`./ui.js`)).
+const STATIC_IMPORT =
+  /(?:\bfrom|\bimport)\s*["'`](\.{1,2}\/[^"'`]+?\.m?js)["'`]/g;
+const DYNAMIC_IMPORT =
+  /\bimport\s*\(\s*["'`](\.{1,2}\/[^"'`]+?\.m?js)["'`]\s*\)/g;
 
 const decode = (value) =>
   value
@@ -97,11 +104,13 @@ function scan(html) {
 }
 
 /**
- * @param {{ jsBudget?: number }} [options] jsBudget: 페이지당 JS 바이트 상한(압축 전). 없으면 예산 검사를 하지 않는다.
+ * @param {{ jsBudget?: number, lazyBudget?: number }} [options]
+ *   jsBudget: 페이지당 정적 JS 바이트 상한(압축 전). lazyBudget: 페이지당 동적 import 로만 닿는 JS 바이트 상한.
+ *   없으면 그 예산 검사를 하지 않는다.
  * @returns {import("astro").AstroIntegration}
  */
 export default function siteGuard(options = {}) {
-  const { jsBudget } = options;
+  const { jsBudget, lazyBudget } = options;
   let site;
   let base = "/";
 
@@ -142,18 +151,45 @@ export default function siteGuard(options = {}) {
           return `/${pathname.slice(base.length)}`;
         };
 
+        /** JS 파일 하나의 { bytes, imports(정적), dynamic(동적 import 대상) }. 파일당 한 번 읽는다. */
+        const jsInfo = (file) => {
+          if (!jsSize.has(file)) {
+            const text = fs.readFileSync(path.join(root, file), "utf8");
+            const near = ([, spec]) =>
+              path.posix.join(path.posix.dirname(file), spec);
+            jsSize.set(file, {
+              bytes: Buffer.byteLength(text),
+              imports: [...text.matchAll(STATIC_IMPORT)].map(near),
+              dynamic: [...text.matchAll(DYNAMIC_IMPORT)].map(near),
+            });
+          }
+          return jsSize.get(file);
+        };
+
         /** JS 파일 하나와 그것이 정적으로 import 하는 내부 파일들(전이적). */
         const jsClosure = (file, seen) => {
           if (seen.has(file) || !files.has(file)) return;
           seen.add(file);
-          const text = fs.readFileSync(path.join(root, file), "utf8");
-          jsSize.set(file, Buffer.byteLength(text));
-          for (const [, spec] of text.matchAll(IMPORT))
-            jsClosure(path.posix.join(path.posix.dirname(file), spec), seen);
+          for (const dep of jsInfo(file).imports) jsClosure(dep, seen);
+        };
+
+        /** 정적 집합에서 동적 import 로 닿는 파일들(그 정적 의존, 그 안의 동적 import 까지). 정적 집합은 뺀다. */
+        const lazyClosure = (staticSet) => {
+          const reached = new Set(staticSet);
+          const queue = [...staticSet];
+          while (queue.length > 0) {
+            for (const target of jsInfo(queue.shift()).dynamic) {
+              const before = new Set(reached);
+              jsClosure(target, reached);
+              for (const f of reached) if (!before.has(f)) queue.push(f);
+            }
+          }
+          return [...reached].filter((f) => !staticSet.has(f));
         };
 
         const broken = [];
         const heavy = [];
+        const heavyLazy = [];
         let refCount = 0;
         const pages = [...files].filter((f) => f.endsWith(".html")).sort();
         for (const file of pages) {
@@ -171,7 +207,7 @@ export default function siteGuard(options = {}) {
               );
           }
 
-          if (jsBudget === undefined) continue;
+          if (jsBudget === undefined && lazyBudget === undefined) continue;
           let bytes = 0;
           for (const text of scripts.inline) bytes += Buffer.byteLength(text);
           const seen = new Set();
@@ -180,19 +216,28 @@ export default function siteGuard(options = {}) {
             const resolved = target && resolveFile(files, target);
             if (resolved) jsClosure(resolved, seen);
           }
-          for (const f of seen) bytes += jsSize.get(f);
-          if (bytes > jsBudget)
+          for (const f of seen) bytes += jsInfo(f).bytes;
+          if (jsBudget !== undefined && bytes > jsBudget)
             heavy.push(
               `${from}: JS ${bytes}바이트 > 예산 ${jsBudget}바이트 (파일 ${seen.size}개 + 인라인 ${scripts.inline.length}개)`,
+            );
+          if (lazyBudget === undefined) continue;
+          const lazy = lazyClosure(seen);
+          let lazyBytes = 0;
+          for (const f of lazy) lazyBytes += jsInfo(f).bytes;
+          if (lazyBytes > lazyBudget)
+            heavyLazy.push(
+              `${from}: 지연 JS ${lazyBytes}바이트 > 예산 ${lazyBudget}바이트 (${lazy.join(", ")})`,
             );
         }
 
         const ms = Math.round(performance.now() - started);
         for (const line of broken) logger.error(`깨진 링크 ${line}`);
         for (const line of heavy) logger.error(`JS 예산 초과 ${line}`);
-        if (broken.length || heavy.length) {
+        for (const line of heavyLazy) logger.error(`지연 JS 예산 초과 ${line}`);
+        if (broken.length || heavy.length || heavyLazy.length) {
           throw new Error(
-            `site-guard: 깨진 링크 ${broken.length}개, JS 예산 초과 ${heavy.length}페이지. 위의 [site-guard] 줄을 보라.`,
+            `site-guard: 깨진 링크 ${broken.length}개, JS 예산 초과 ${heavy.length}페이지, 지연 JS 예산 초과 ${heavyLazy.length}페이지. 위의 [site-guard] 줄을 보라.`,
           );
         }
         logger.info(
@@ -200,6 +245,9 @@ export default function siteGuard(options = {}) {
             (jsBudget === undefined
               ? ""
               : `, 페이지당 JS ≤ ${jsBudget}바이트`) +
+            (lazyBudget === undefined
+              ? ""
+              : `, 지연 JS ≤ ${lazyBudget}바이트`) +
             ` (${ms}ms)`,
         );
       },

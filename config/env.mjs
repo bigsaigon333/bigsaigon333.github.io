@@ -30,11 +30,13 @@ export default {
       access: "public",
       length: 43,
     }),
-    // utterances 가 댓글 이슈를 여는 GitHub 저장소 "owner/repo".
-    UTTERANCES_REPO: envField.string({
+    // 댓글 API(comments/ 워커)의 출처. 컴포넌트와 CSP 는 config/comments.mjs 의 COMMENTS_API 로 읽는다
+    // (CSP 는 astro.config 를 읽을 때 정해져 astro:env 를 쓸 수 없다). 여기 두는 것은 빠지거나 URL 이 아닐 때
+    // 다른 값과 같은 방식으로 빌드를 멈추게 하려는 것이다. 출처 모양(https, 경로 없음)은 comments.mjs 가 본다.
+    PUBLIC_COMMENTS_API: envField.string({
       context: "server",
       access: "public",
-      includes: "/",
+      url: true,
     }),
   },
 };

@@ -5,7 +5,9 @@
 // is:inline 스크립트(테마, GA 설정)는 Astro 가 모르므로 그 컴포넌트가 inlineScript() 로 해시를 더한다.
 //
 // 이 통합이 더하는 것 세 가지:
-// 1. 정책: 허용하는 것은 이 사이트의 파일('self'), GA(googletagmanager, google-analytics), utterances(스크립트와 iframe).
+// 1. 정책: 허용하는 것은 이 사이트의 파일('self'), GA(googletagmanager, google-analytics), 댓글 API(connect-src 만,
+//    config/comments.mjs 의 COMMENTS_API). 댓글은 iframe·외부 스크립트·외부 스타일 없이 이 사이트의 스크립트가 fetch 로
+//    부르고, 로그인은 팝업(window.open) 또는 전체 이동이라 frame-src 도 없다(default-src 'self' 가 막는다).
 //    script-src 에 'unsafe-inline' 은 없다. 스타일은 요소(<style>)는 해시로 막고, 속성(style="…")만 'unsafe-inline' 이다.
 //    Shiki 가 코드 블록의 모든 <span> 에 style="--shiki-light:…" 를 쓰고, 속성은 해시로 허용할 수 없기 때문이다.
 // 2. vite.build.assetsInlineLimit = 0: 스크립트·CSS·글꼴을 HTML 이나 CSS 에 끼우지 않고 파일로 낸다.
@@ -26,6 +28,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { COMMENTS_API } from "./comments.mjs";
+
 const GA_SCRIPT = "https://*.googletagmanager.com";
 const GA_CONNECT = [
   "https://*.google-analytics.com",
@@ -36,13 +40,6 @@ const GA_IMG = [
   "https://*.google-analytics.com",
   "https://*.googletagmanager.com",
 ];
-const UTTERANCES = "https://utteranc.es";
-
-// utteranc.es/client.js 가 <head> 맨 앞에 넣는 <style> 의 내용(2026-11-13 의 client.js 에서 옮겼다).
-// utterances 가 이 글자를 바꾸면 그 스타일이 막혀 댓글 iframe 의 크기가 무너진다. csp 검사가 stub 으로 같은 글자를 넣어 본다.
-export const UTTERANCES_STYLE =
-  "\n    .utterances {\n      position: relative;\n      box-sizing: border-box;\n      width: 100%;\n      max-width: 760px;\n      margin-left: auto;\n      margin-right: auto;\n    }\n    .utterances-frame {\n      color-scheme: light;\n      position: absolute;\n      left: 0;\n      right: 0;\n      width: 1px;\n      min-width: 100%;\n      max-width: 100%;\n      height: 100%;\n      border: 0;\n    }\n  ";
-
 const sha256 = (text) =>
   `sha256-${createHash("sha256").update(text, "utf8").digest("base64")}`;
 
@@ -55,13 +52,11 @@ export const policy = {
     "object-src 'none'",
     "form-action 'none'",
     `img-src 'self' ${GA_IMG.join(" ")}`,
-    `connect-src 'self' ${GA_CONNECT.join(" ")}`,
-    `frame-src ${UTTERANCES}`,
+    `connect-src 'self' ${GA_CONNECT.join(" ")} ${COMMENTS_API}`,
   ],
-  scriptDirective: { resources: ["'self'", GA_SCRIPT, UTTERANCES] },
+  scriptDirective: { resources: ["'self'", GA_SCRIPT] },
   styleDirective: {
     resources: ["'self'", { resource: "'unsafe-inline'", kind: "attribute" }],
-    hashes: [sha256(UTTERANCES_STYLE)],
   },
 };
 

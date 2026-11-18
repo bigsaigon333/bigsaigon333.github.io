@@ -1,10 +1,7 @@
-// 배포 환경마다 바뀔 수 있는 세 값은 astro:env(config/env.mjs 의 스키마, 값은 config/.env.<mode>)에서 읽는다.
+// 배포 환경마다 바뀔 수 있는 값은 astro:env(config/env.mjs 의 스키마, 값은 config/.env.<mode>)에서 읽는다.
 // 이 모듈을 가져오는 순간 스키마 전체가 검사되므로 값이 빠지면 빌드가 그 변수 이름을 대며 멈춘다.
-import {
-  GA_MEASUREMENT_ID,
-  GOOGLE_SITE_VERIFICATION,
-  UTTERANCES_REPO,
-} from "astro:env/server";
+// 댓글 API 주소(PUBLIC_COMMENTS_API)는 CSP 와 함께 config/comments.mjs 가 읽는다.
+import { GA_MEASUREMENT_ID, GOOGLE_SITE_VERIFICATION } from "astro:env/server";
 
 const url = "https://bigsaigon333.github.io";
 
@@ -40,5 +37,4 @@ export const SITE = {
   github: "https://github.com/bigsaigon333",
   gaId: GA_MEASUREMENT_ID,
   googleSiteVerification: GOOGLE_SITE_VERIFICATION,
-  utterancesRepo: UTTERANCES_REPO,
 } as const;

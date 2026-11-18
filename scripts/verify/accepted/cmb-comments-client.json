@@ -1,0 +1,24 @@
+{
+  "baseline": "9b635b96c0493829ee0b973b71932a83b7a37641bb7035c0921ccf34460e0cfa",
+  "reason": "인라인 댓글(CM-B): 글 페이지에 댓글 로더(<post-comments>)가 정적으로 실린다. utterances 는 외부 스크립트라 0바이트였다",
+  "entries": [
+    {
+      "check": "budget",
+      "routes": [
+        "/posts/css-masters-2-week1",
+        "/posts/css-masters-2-week2",
+        "/posts/css-masters-2-week3",
+        "/posts/css-masters-2-week4",
+        "/posts/date-time-string-format-in-js",
+        "/posts/how-to-check-two-types-are-equal-in-ts",
+        "/posts/js-the-new-toys-study-01",
+        "/posts/proxy-to-built-in-objects",
+        "/posts/react-programming-ch09",
+        "/posts/react-scripts-react-app-polyfill-promise-any",
+        "/posts/regular-expression-1",
+        "/posts/ts-ambient-type-declaration"
+      ],
+      "reason": "인라인 댓글(CM-B): 글 페이지에 댓글 로더(<post-comments>)가 정적으로 실린다. utterances 는 외부 스크립트라 0바이트였다"
+    }
+  ]
+}

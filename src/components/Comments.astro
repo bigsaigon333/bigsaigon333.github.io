@@ -1,41 +1,250 @@
 ---
-// utterances 댓글 위젯. 글 페이지가 <main> 바로 뒤에 렌더한다.
+// 인라인 댓글(CM-B). 글 페이지가 시리즈 내비 뒤에 렌더한다. API 는 comments/ 워커(계약: comments/src/contract.ts).
 //
-// client.js 는 document.currentScript 의 속성(repo, issue-term, theme)을 읽고, 이 <script> 바로 뒤에
-// 댓글 iframe 을 끼워 넣는다. 그래서 이 태그가 놓인 자리가 곧 위젯이 나타나는 자리이고,
-// 속성이 하나도 빠지지 않고 그대로 나가야 한다 → is:inline (src 말고 다른 속성이 있으면 어차피 암묵 적용된다).
-// theme 은 라이트의 boxy-light 그대로 나간다. 다크 모드(S6.1)에서는 BaseLayout <head> 의 인라인 스크립트가
-// client.js 가 실행되기 전에 이 속성을 github-dark 로 바꾸고, 토글하면 댓글 iframe 에 postMessage
-// ({ type: "set-theme", theme })로 알린다. 그래서 이 태그의 속성·자리는 그대로다(embeds 검사가 기준선과 비교한다).
+// 빌드가 내는 것은 빈 커스텀 엘리먼트 <post-comments data-api data-post hidden> 하나와 작은 로더 스크립트뿐이다.
+// - 로더(scripts/comments/loader.ts)는 idle 때 이 글의 thread 목록을 받는다(4초 제한). 실패하면 hidden 그대로라
+//   화면에 아무것도 없다. 성공하면 hidden 을 풀고, 아래 중 하나가 생길 때 UI 조각(scripts/comments/ui.ts)을
+//   동적 import 한다: thread 가 있음, 본문에서 글을 선택함, 이 엘리먼트가 화면 가까이 옴, 로그인에서 돌아옴.
+// - UI 는 하이라이트를 CSS Custom Highlight API("comments")로 그린다. 본문 DOM 을 바꾸지 않는다.
+// - 클라이언트 라우팅(<ClientRouter />)으로 다른 글에 가면 이 엘리먼트가 빠지며(disconnectedCallback) 리스너와
+//   하이라이트를 지우고, 새 글의 엘리먼트가 처음부터 다시 받는다. astro:before-swap 에서도 미리 지운다.
 //
-// View Transitions(S6.2): 라우터는 이미 실행한 스크립트(외부 스크립트는 src 가 같으면)를 다음 페이지에서 다시 실행하지
-// 않는다. 그러면 글 A → 글 B 에서 client.js 가 돌지 않아 B 에 댓글이 없다. data-astro-rerun 이 붙은 스크립트는
-// 바꿔 넣을 때마다 다시 실행된다. 그때는 head 가 이미 새 페이지의 것이라 document.title 도 새 글의 제목이다.
-// 글이 아닌 페이지로 가면 <body> 가 통째로 바뀌므로 지난 글의 iframe 도 함께 사라진다.
-// (embeds 검사는 repo·issue-term·theme·crossorigin·async 와 자리를 비교한다. 이 속성은 그 밖이다.)
-// issue-term="title" 은 document.title 로 댓글 이슈를 찾는다. 글의 <title> 을 바꾸면 댓글이 끊긴다.
+// 스타일은 여기 전역으로 둔다. 요소는 스크립트가 만들어 scoped 속성이 없고, CSP 가 <style> 요소를 해시로만 허용해서
+// 스크립트가 <style> 을 넣을 수 없다. 글 페이지에만 실린다.
+import { COMMENTS_API } from "../../config/comments.mjs";
 
-import { SITE } from "../lib/site";
-
-// repo, theme 은 HTML 표준 속성이 아니라서 선언이 없으면 astro check 가 ts(2322) 로 막는다.
-// (issue-term 처럼 하이픈이 든 이름은 JSX 타입 검사가 건너뛴다.)
-declare global {
-  namespace astroHTML.JSX {
-    interface ScriptHTMLAttributes {
-      repo?: string;
-      theme?: string;
-    }
-  }
+interface Props {
+  postId: string;
 }
+
+const { postId } = Astro.props;
 ---
 
-<script
-  is:inline
-  src="https://utteranc.es/client.js"
-  repo={SITE.utterancesRepo}
-  issue-term="title"
-  theme="boxy-light"
-  crossorigin="anonymous"
-  async
-  data-astro-rerun
-></script>
+<post-comments
+  data-api={COMMENTS_API}
+  data-post={postId}
+  hidden
+></post-comments>
+
+<script>
+  import "../scripts/comments/loader";
+</script>
+
+<style is:global>
+  post-comments {
+    display: block;
+    width: 100%;
+    --c-accent: var(--color-accent, #0969da);
+    --c-mark-active: rgb(255 170 0 / 60%);
+    --c-surface: var(--color-bg, #fff);
+    --c-line: var(--color-border, #d0d7de);
+    --c-muted: var(--color-muted, #595959);
+  }
+
+  :root[data-theme="dark"] post-comments {
+    --c-accent: var(--color-accent, #4493f8);
+    --c-mark-active: rgb(255 170 0 / 45%);
+  }
+
+  post-comments[hidden] {
+    display: none;
+  }
+
+  ::highlight(comments) {
+    background-color: rgb(255 212 0 / 40%);
+  }
+
+  :root[data-theme="dark"] ::highlight(comments) {
+    background-color: rgb(255 212 0 / 25%);
+  }
+
+  ::highlight(comments-active) {
+    background-color: rgb(255 170 0 / 60%);
+  }
+
+  :root[data-theme="dark"] ::highlight(comments-active) {
+    background-color: rgb(255 170 0 / 45%);
+  }
+
+  post-comments h2 {
+    margin: 0 0 1rem;
+    font-size: 1.25rem;
+  }
+
+  post-comments h3 {
+    margin: 1.5rem 0 0.5rem;
+    font-size: 1rem;
+  }
+
+  post-comments button {
+    padding: 0.25rem 0.625rem;
+    border: 1px solid var(--c-line);
+    border-radius: 0.375rem;
+    background: var(--c-surface);
+    color: inherit;
+    font: inherit;
+    font-size: 0.875rem;
+    cursor: pointer;
+  }
+
+  post-comments button:hover {
+    border-color: var(--c-accent);
+  }
+
+  post-comments button:focus-visible,
+  post-comments textarea:focus-visible {
+    outline: 2px solid var(--c-accent);
+    outline-offset: 1px;
+  }
+
+  post-comments .cm-link {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--c-muted);
+    text-decoration: underline;
+  }
+
+  post-comments textarea {
+    display: block;
+    width: 100%;
+    min-height: 4.5rem;
+    margin: 0.5rem 0;
+    padding: 0.5rem;
+    border: 1px solid var(--c-line);
+    border-radius: 0.375rem;
+    background: var(--c-surface);
+    color: inherit;
+    font: inherit;
+    resize: vertical;
+  }
+
+  post-comments .cm-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  post-comments .cm-muted,
+  post-comments .cm-meta {
+    color: var(--c-muted);
+    font-size: 0.8125rem;
+  }
+
+  post-comments .cm-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  post-comments .cm-thread {
+    margin: 0 0 1rem;
+    padding: 0.75rem;
+    border: 1px solid var(--c-line);
+    border-radius: 0.5rem;
+  }
+
+  post-comments .cm-thread[data-active] {
+    border-color: var(--c-accent);
+  }
+
+  post-comments .cm-thread[data-resolved] {
+    opacity: 0.7;
+  }
+
+  post-comments .cm-quote {
+    margin: 0 0 0.5rem;
+    padding: 0.125rem 0.5rem;
+    border-left: 3px solid var(--c-mark-active);
+    color: var(--c-muted);
+    font-size: 0.875rem;
+    overflow-wrap: anywhere;
+  }
+
+  post-comments .cm-comment + .cm-comment {
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--c-line);
+  }
+
+  post-comments .cm-body {
+    margin: 0.25rem 0;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  post-comments .cm-status:empty {
+    display: none;
+  }
+
+  post-comments .cm-status {
+    margin: 0.5rem 0;
+    color: var(--c-muted);
+    font-size: 0.875rem;
+  }
+
+  /* 선택한 글 바로 아래에 뜨는 버튼. Tab 순서 때문에 <main> 바로 뒤에 들어가서 post-comments 밖이다.
+     좌표는 스크립트가 style.left·top 으로 준다(문서 기준, 위치가 정해진 조상이 없다). */
+  .cm-select {
+    position: absolute;
+    z-index: 20;
+    padding: 0.25rem 0.625rem;
+    border: 1px solid var(--color-accent, #0969da);
+    border-radius: 0.375rem;
+    background: var(--color-bg, #fff);
+    color: inherit;
+    font: inherit;
+    font-size: 0.875rem;
+    box-shadow: 0 2px 8px rgb(0 0 0 / 20%);
+    cursor: pointer;
+  }
+
+  .cm-select[hidden] {
+    display: none;
+  }
+
+  .cm-select:focus-visible {
+    outline: 2px solid var(--color-accent, #0969da);
+    outline-offset: 1px;
+  }
+
+  /* 패널: 데스크톱은 오른쪽 레일, 좁은 화면은 하단 시트. */
+  post-comments .cm-panel {
+    position: fixed;
+    z-index: 30;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(24rem, 100%);
+    padding: 1rem;
+    overflow-y: auto;
+    border-left: 1px solid var(--c-line);
+    background: var(--c-surface);
+    box-shadow: -4px 0 16px rgb(0 0 0 / 12%);
+  }
+
+  post-comments .cm-panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+  }
+
+  post-comments .cm-panel-head h2 {
+    margin: 0;
+  }
+
+  @media (max-width: 40rem) {
+    post-comments .cm-panel {
+      top: auto;
+      left: 0;
+      width: 100%;
+      max-height: 70vh;
+      border-top: 1px solid var(--c-line);
+      border-left: 0;
+      border-radius: 0.75rem 0.75rem 0 0;
+      box-shadow: 0 -4px 16px rgb(0 0 0 / 12%);
+    }
+  }
+</style>
