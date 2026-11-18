@@ -62,6 +62,8 @@ Next.js 블로그를 배포본과 바이트·픽셀 단위로 같게 옮긴 단�
 | 34   | [34. 섹션 링크: 사용자 hast 플러그인과 heading-ids 의 순서](34-heading-links.md)                           | `hastPlugins`, `config/hast-heading-links.mjs`, `github-slugger`                   | H1   | `npm run verify -- --only=anchors`                                                |
 | 35   | [35. 카테고리와 개인 블로그 문구](35-categories.md)                                                        | `z.enum`, `/categories`, `article:section`                                         | C1   | `npm run verify -- --only=categories`                                             |
 | 36   | [36. 댓글 워커: Cloudflare Workers + D1, 팝업 OAuth, bearer 토큰](36-comments-worker.md)                   | Workers, D1, OAuth PKCE, `npm -w comments test`                                    | CM-A | `comments/` 패키지                                                                |
+| 37   | [37. 디자인 토큰과 공용 목록 컴포넌트](37-design-tokens.md)                                                | CSS 변수 토큰, `PostList`·`PostListItem`, 브레이크포인트 40rem·64rem               | D1   | `npm run verify` (visual·hover·content, `accepted/d1-redesign.json`)              |
+| 38   | [38. 성능 개선 PF1–PF4: GA 늦게 싣기, 글마다 다른 head 자원, woff2, 파비콘](38-perf-improvements.md)       | `Astro.locals`, `Astro.csp.insertStyleHash`, woff2, `perf-budget.json`             | PF   | `npm run verify -- --only=perf`                                                   |
 
 ### 마무리
 

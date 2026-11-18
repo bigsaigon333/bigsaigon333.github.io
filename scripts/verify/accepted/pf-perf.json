@@ -54,6 +54,11 @@
         "/favicon.ico"
       ],
       "reason": "PF2·PF3: KaTeX 가 빠진 BaseLayout CSS 묶음의 이름이 바뀌고(KaTeX CSS 는 수식 글에 인라인), Source Code Pro woff 8개가 woff2 로 바뀜. PF4: favicon.ico 를 같은 픽셀의 16·32·48px PNG 로 다시 담음(25931 → 1659B)"
+    },
+    {
+      "check": "routes",
+      "routes": ["/_astro/profile.*"],
+      "reason": "프로필 사진 widths [192,384,원본] → [96,192,원본](Header <Picture> sizes 를 렌더 너비 56·72px 에 맞춤)이라 /_astro/profile.*.webp·jpg 이름이 바뀜"
     }
   ]
 }

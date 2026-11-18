@@ -45,10 +45,10 @@
       "si": 1000,
       "tbt": 100,
       "cls": 0.02,
-      "bytes": 44544,
+      "bytes": 28160,
       "js": 9728,
       "css": 3072,
-      "blocking": 3
+      "blocking": 2
     },
     "/posts/proxy-to-built-in-objects": {
       "score": 95,
@@ -60,7 +60,7 @@
       "bytes": 63488,
       "js": 11264,
       "css": 4608,
-      "blocking": 3
+      "blocking": 2
     },
     "/posts/how-to-check-two-types-are-equal-in-ts": {
       "score": 95,
@@ -72,7 +72,7 @@
       "bytes": 116224,
       "js": 11264,
       "css": 4608,
-      "blocking": 3
+      "blocking": 2
     },
     "/posts/css-masters-2-week2": {
       "score": 95,
@@ -84,45 +84,45 @@
       "bytes": 99840,
       "js": 11264,
       "css": 4608,
-      "blocking": 3
+      "blocking": 2
     }
   },
   "measured": {
     "/": {
       "score": 100,
-      "lcp": 902,
-      "fcp": 902,
-      "si": 902,
+      "lcp": 905,
+      "fcp": 905,
+      "si": 905,
       "tbt": 0,
       "cls": 0,
-      "bytes": 42039,
+      "bytes": 26496,
       "js": 9037,
-      "css": 2759,
-      "blocking": 3
+      "css": 2858,
+      "blocking": 2
     },
     "/posts/proxy-to-built-in-objects": {
       "score": 100,
-      "lcp": 903,
-      "fcp": 903,
-      "si": 903,
+      "lcp": 907,
+      "fcp": 907,
+      "si": 907,
       "tbt": 0,
       "cls": 0,
-      "bytes": 60391,
+      "bytes": 60507,
       "js": 10364,
-      "css": 3904,
-      "blocking": 3
+      "css": 3932,
+      "blocking": 2
     },
     "/posts/how-to-check-two-types-are-equal-in-ts": {
       "score": 100,
-      "lcp": 902,
-      "fcp": 902,
-      "si": 902,
+      "lcp": 907,
+      "fcp": 907,
+      "si": 907,
       "tbt": 0,
       "cls": 0,
-      "bytes": 110371,
+      "bytes": 110551,
       "js": 10364,
-      "css": 3904,
-      "blocking": 3
+      "css": 3932,
+      "blocking": 2
     },
     "/posts/css-masters-2-week2": {
       "score": 100,
@@ -131,10 +131,10 @@
       "si": 904,
       "tbt": 0,
       "cls": 0,
-      "bytes": 94764,
+      "bytes": 94883,
       "js": 10364,
-      "css": 3904,
-      "blocking": 3
+      "css": 3932,
+      "blocking": 2
     }
   }
 }
