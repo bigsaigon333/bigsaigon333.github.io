@@ -19,6 +19,7 @@
     "verify:setup": "node scripts/verify/setup.mjs",
     "verify:selftest": "node scripts/verify/selftest.mjs",
     "verify:live": "node scripts/verify/live.mjs",
+    "perf:live": "node scripts/perf-live.mjs",
     "progress": "node scripts/progress/server.mjs",
     "progress:watch": "node scripts/progress/watch.mjs",
     "prepare": "husky",
@@ -37,7 +38,9 @@
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",
     "cheerio": "^1.2.0",
+    "chrome-launcher": "^1.2.3",
     "husky": "^9.1.7",
+    "lighthouse": "^13.6.0",
     "lint-staged": "^17.6.0",
     "oxlint": "^1.93.0",
     "pixelmatch": "^8.0.0",
