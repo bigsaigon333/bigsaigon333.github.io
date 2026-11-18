@@ -1,0 +1,80 @@
+---
+// 글 맨 위의 "← 뒤로" 링크. 그냥 <a href="/"> 라서 스크립트 없이도, 키보드로도 홈으로 간다.
+//
+// 스크립트(번들됨)는 이전 기록이 이 사이트일 때만 링크를 history.back() 으로 바꾼다. 목록의 스크롤 위치가 남고
+// <ClientRouter /> 의 전환도 그대로 쓴다. 이전 기록이 이 사이트인지는 둘 중 하나로 안다.
+// - document.referrer 의 origin 이 같다(처음 로드한 문서에만 맞다. 클라이언트 라우팅으로는 갱신되지 않는다).
+// - history.state.index > 0 (ClientRouter 가 pushState 마다 올리는 번호. 이 문서 안에서 옮겨 온 기록이 앞에 있다).
+// 둘 다 아니면(주소를 직접 열었다) 링크의 href 대로 홈으로 간다.
+//
+// 처음부터 <back-link> 의 자식인 <a> 에 리스너를 한 번만 단다. 페이지를 바꿔 넣으면 새 엘리먼트가 붙어
+// connectedCallback 이 다시 돈다. 옛 엘리먼트는 버려지므로 리스너가 겹치지 않는다.
+---
+
+<back-link>
+  <a class="back-link" href="/" aria-label="뒤로 가기">
+    <span aria-hidden="true">←</span> 뒤로
+  </a>
+</back-link>
+
+<script>
+  const cameFromSite = () => {
+    try {
+      if (
+        document.referrer &&
+        new URL(document.referrer).origin === location.origin
+      )
+        return true;
+    } catch {
+      // 잘못된 referrer 는 이 사이트가 아닌 것으로 본다.
+    }
+    return Number(history.state?.index) > 0;
+  };
+
+  class BackLink extends HTMLElement {
+    connectedCallback() {
+      const link = this.querySelector("a");
+      if (!link || link.dataset.bound) return;
+      link.dataset.bound = "";
+      link.addEventListener("click", (event) => {
+        if (event.defaultPrevented || event.button !== 0) return;
+        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)
+          return;
+        if (!cameFromSite()) return;
+        event.preventDefault();
+        history.back();
+      });
+    }
+  }
+
+  if (!customElements.get("back-link"))
+    customElements.define("back-link", BackLink);
+</script>
+
+<style>
+  back-link {
+    display: block;
+    width: 100%;
+    /* 레이아웃의 row-gap 이 크므로 카테고리 줄과의 간격을 좁힌다. */
+    margin-bottom: calc(-1 * var(--space-4));
+  }
+
+  .back-link {
+    display: inline-block;
+    padding: var(--space-1) 0;
+    color: var(--color-muted);
+    font-size: var(--text-sm);
+    text-decoration: none;
+  }
+
+  .back-link:hover {
+    color: var(--color-text);
+    text-decoration: underline;
+  }
+
+  .back-link:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+</style>
