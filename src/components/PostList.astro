@@ -1,0 +1,36 @@
+---
+import type { Post } from "../lib/posts";
+import PostListItem from "./PostListItem.astro";
+
+// 글 목록(홈, /tags/<슬러그>, /categories/<slug>). 받은 순서(최신순)대로 PostListItem 을 늘어놓는다.
+// <section> 바로 아래에 <article> 이 이어지는 모양은 검증 장치의 자기 검사(drafts·tags·categories 의 변이)가 기대한다:
+// 첫 </section> 앞에 항목을 넣고, 이웃한 두 <article> 의 순서를 바꾼다.
+interface Props {
+  posts: Post[];
+  showCategory?: boolean;
+}
+
+const { posts, showCategory } = Astro.props;
+---
+
+<section class="post-list">
+  {posts.length === 0 && <p class="empty">아직 글이 없습니다.</p>}
+  {posts.map((post) => (
+    <PostListItem post={post} showCategory={showCategory} />
+  ))}
+</section>
+
+<style>
+  .post-list {
+    display: flex;
+    flex-direction: column;
+    row-gap: var(--space-6);
+    width: 100%;
+    flex-grow: 1;
+  }
+
+  .empty {
+    margin: 0;
+    color: var(--color-muted);
+  }
+</style>

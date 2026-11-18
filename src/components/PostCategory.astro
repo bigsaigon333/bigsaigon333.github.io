@@ -1,25 +1,19 @@
 ---
-import { categoryByName, categoryPath } from "../lib/categories";
+import CategoryLink from "./CategoryLink.astro";
 
-// 글 머리 위의 카테고리 링크 한 줄(/categories/<slug>). 모양은 웨이브 B 에서 다듬는다.
+// 글 머리 위의 카테고리 배지 한 줄(/categories/<slug> 로 가는 링크).
 interface Props {
   /** frontmatter 의 category("개발"). */
   name: string;
 }
-
-const category = categoryByName(Astro.props.name);
 ---
 
 <p class="post-category">
-  <a href={categoryPath(category)}>{category.name}</a>
+  <CategoryLink name={Astro.props.name} badge />
 </p>
 
 <style>
   .post-category {
-    margin: 0;
-  }
-
-  .post-category a {
-    text-decoration: underline;
+    margin: 0 0 calc(-1 * var(--space-4));
   }
 </style>

@@ -1,25 +1,71 @@
 /*
- * 글 본문. 예전 pages/posts/[id].style.ts 의 Main 을 옮긴 것이다. src/pages/posts/[id].astro 가 import 한다.
+ * 글 본문. src/pages/posts/[id].astro 가 import 한다.
  *
  * <Content /> 가 그린 Markdown 요소에는 data-astro-cid 속성이 없어서 scoped <style> 로는 닿지 않는다.
  * 그래서 import 하는 전역 스타일시트로 두고, <main class="prose"> 아래로만 걸리게 클래스 하나로 묶었다.
- * 선택자는 배포본에 실제로 나간 모양(.iEffIV a → .prose a)대로 펼쳐 써서 특이도가 예전과 같다.
- * 색은 global.css 의 토큰(var(--color-…))이다. 다크 모드에서 값이 바뀐다(S6.1).
+ * 값은 tokens.css 의 토큰이다. 다크 모드에서 색이 바뀐다.
+ *
+ * 한글 본문: 행간 1.75, 한 줄 최대 약 40자(--measure), 제목 위는 넓게·아래는 좁게 띄워 제목이 뒤 문단에 붙어 보이게 한다.
  */
 
-/* 레이아웃의 세로 flex(align-items: flex-start) 안에서 폭을 다 쓰고, 남는 높이를 채워 푸터를 바닥에 둔다. */
+/* 레이아웃의 세로 flex 안에서 폭을 다 쓰고, 남는 높이를 채워 푸터를 바닥에 둔다. */
 .prose {
   width: 100%;
+  max-width: var(--measure);
   flex-grow: 1;
-  line-height: 1.75;
+  font-size: var(--text-base);
+  line-height: var(--leading-body);
 }
 
+@media (min-width: 40rem) {
+  .prose {
+    font-size: var(--text-md);
+  }
+}
+
+.prose > :first-child {
+  margin-top: 0;
+}
+
+.prose p,
+.prose ul,
+.prose ol,
+.prose blockquote,
+.prose table,
+.prose pre,
+.prose details {
+  margin: 0 0 1.25em;
+}
+
+.prose h2,
+.prose h3,
+.prose h4 {
+  margin: 2.2em 0 0.6em;
+  font-weight: 700;
+}
+
+.prose h2 {
+  font-size: 1.5em;
+}
+
+.prose h3 {
+  font-size: 1.25em;
+}
+
+.prose h4 {
+  font-size: 1.1em;
+}
+
+/* 본문 링크: 강조색에 밑줄. 색만으로 구분하지 않는다(WCAG 1.4.1). */
 .prose a {
+  color: var(--color-accent);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
   word-break: break-word;
 }
 
 .prose a:hover {
-  box-shadow: 0 0.125rem 0 0 var(--color-text);
+  text-decoration-thickness: 2px;
 }
 
 /*
@@ -27,14 +73,16 @@
  * 제목은 링크처럼 보이지 않고, 뒤의 `#`(::after)가 링크라는 표시다. `#`는 CSS 로만 그려 제목 글자(textContent)와
  * 접근 이름이 바뀌지 않는다(`/ ""`). 포인터를 올리거나 키보드로 갔을 때 보이고, 포인터가 없는 기기(터치)에서는 늘 보인다.
  * 제목 안에 링크가 있는 경우의 빈 링크(.heading-link-solo)는 `#`만 그린다.
- * scroll-margin-top: 주소의 #id 로 스크롤했을 때 제목이 화면 맨 위에 붙지 않게 한다.
+ * scroll-margin-top: 주소의 #id 로 스크롤했을 때 제목이 화면 맨 위에 붙지 않게 한다. 값은 토큰이 아니라 1.5rem 그대로다:
+ * 검증 장치의 anchors 검사 자기 검사가 이 값을 글자 그대로 찾는다.
  */
 .prose :is(h2, h3, h4)[id] {
   scroll-margin-top: 1.5rem;
 }
 
-.prose .heading-link:hover {
-  box-shadow: none;
+.prose .heading-link {
+  color: inherit;
+  text-decoration: none;
 }
 
 .prose .heading-link::after {
@@ -53,12 +101,13 @@
 .prose .heading-link:hover::after,
 .prose .heading-link:focus-visible::after {
   opacity: 1;
+  color: var(--color-accent);
 }
 
 .prose .heading-link:focus-visible {
-  outline: 2px solid var(--color-text);
+  outline: 2px solid var(--color-accent);
   outline-offset: 2px;
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
 }
 
 @media (hover: none) {
@@ -67,17 +116,31 @@
   }
 }
 
-.prose ul {
-  margin: 0;
-  padding-inline-start: 20px;
+.prose ul,
+.prose ol {
+  padding-inline-start: 1.5em;
+}
+
+.prose li + li {
+  margin-top: 0.25em;
+}
+
+.prose li > ul,
+.prose li > ol {
+  margin: 0.25em 0 0;
+}
+
+.prose img {
+  border-radius: var(--radius-md);
 }
 
 /* 문장 안의 `code`. 코드 블록(pre > code)은 code.css 가 칠한다. */
 .prose :not(pre) > code {
-  border-radius: 0.3em;
+  border-radius: var(--radius-sm);
   background: var(--color-code-bg);
   color: var(--color-code-text);
-  padding: 0.15em 0.2em 0.05em;
+  padding: 0.15em 0.35em;
+  font-size: 0.875em;
   white-space: normal;
 }
 
@@ -86,26 +149,24 @@
 }
 
 .prose blockquote {
-  margin: 0 1.75rem 1.75rem 0.5rem;
-  padding: 0 0 0 1rem;
-  line-height: 1.75rem;
-  color: inherit;
-  font-style: italic;
-  border-left: 0.3281rem solid var(--color-quote-border);
-  border-left-color: inherit;
-  opacity: 0.8;
+  margin-inline: 0;
+  padding: 0 0 0 var(--space-4);
+  border-left: 0.25rem solid var(--color-quote-border);
+  color: var(--color-muted);
+}
+
+.prose hr {
+  margin: 2.5em 0;
 }
 
 .prose table {
   display: block;
-  width: 100%;
   width: max-content;
   max-width: 100%;
   overflow: auto;
-  margin-top: 0;
-  margin-bottom: 1rem;
   border-spacing: 0;
   border-collapse: collapse;
+  font-size: 0.9em;
 }
 
 .prose table tr {
@@ -122,6 +183,6 @@
 
 .prose table th,
 .prose table td {
-  padding: 6px 13px;
+  padding: var(--space-2) var(--space-3);
   border: 1px solid var(--color-border);
 }

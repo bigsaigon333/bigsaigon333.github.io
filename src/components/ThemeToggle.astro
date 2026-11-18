@@ -8,7 +8,7 @@
 // Astro 가 번들하는 모듈이라 문서를 다 읽은 뒤에 한 번 돈다. 그때 aria-pressed 를 지금 테마에 맞추고, 누르면 반대 테마로
 // set() 한다(클릭은 버튼이 아니라 document 에서 받는다. 아래 스크립트의 주석). 다른 곳(시스템 설정 변경)에서 테마가 바뀌면 "themechange" 이벤트로 듣는다.
 //
-// 자리: 오른쪽 위에 position: absolute 로 띄운다. 흐름에서 빠지므로 헤더와 그 아래의 배치는 예전과 같다.
+// 자리: 헤더 둘째 줄(사이트 탐색 줄)의 오른쪽 끝. Header.astro 가 놓는다.
 ---
 
 <button
@@ -76,29 +76,23 @@
 
 <style>
   .theme-toggle {
-    position: absolute;
-    top: 0.75rem;
-    right: 0.75rem;
     display: flex;
+    flex: none;
     align-items: center;
     justify-content: center;
-    width: 2.5rem;
-    height: 2.5rem;
+    width: 2.25rem;
+    height: 2.25rem;
     padding: 0;
     border: 1px solid var(--color-border);
-    border-radius: 50%;
+    border-radius: var(--radius-full);
     background: var(--color-bg);
     color: var(--color-text);
     cursor: pointer;
   }
 
   .theme-toggle:hover {
-    border-color: currentColor;
-  }
-
-  .theme-toggle:focus-visible {
-    outline: 2px solid var(--color-text);
-    outline-offset: 2px;
+    border-color: var(--color-accent);
+    color: var(--color-accent);
   }
 
   /* 누르면 갈 테마의 그림을 보인다: 라이트에서는 달, 다크에서는 해. svg 는 global.css 에서 display: block 이다. */

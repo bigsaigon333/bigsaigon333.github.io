@@ -1,12 +1,11 @@
 ---
-// /tags/<슬러그> — 그 태그가 붙은 글, 날짜 내림차순. 항목은 홈 목록과 같은 PostHeader 다.
+// /tags/<슬러그> — 그 태그가 붙은 글, 날짜 내림차순. 목록은 홈과 같은 PostList 다.
 // 슬러그 규칙과 충돌 검사는 lib/tags.ts. params 에는 인코딩하지 않은 슬러그를 준다: Astro 가 그대로 파일 이름으로 쓴다
 // (dist/tags/void-요소.html). 링크와 canonical 은 퍼센트 인코딩한 주소를 쓴다.
 import type { GetStaticPaths, InferGetStaticPropsType } from "astro";
 
-import PostHeader from "../../components/PostHeader.astro";
+import PostList from "../../components/PostList.astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import { displayTitle, postPath } from "../../lib/posts";
 import { SITE } from "../../lib/site";
 import { getTags, TAGS_PATH, tagUrl } from "../../lib/tags";
 
@@ -30,45 +29,12 @@ const { tag } = Astro.props;
     keywords: [tag.label],
   }}
 >
-  <div class="tag-heading">
+  <div class="page-heading">
     <h2>#{tag.label}</h2>
-    <a href={TAGS_PATH}>모든 태그</a>
+    <p>글 {tag.posts.length}편</p>
+    <a class="text-link" href={TAGS_PATH}>
+      모든 태그
+    </a>
   </div>
-  <section>
-    {tag.posts.map((post) => (
-      <PostHeader
-        title={displayTitle(post)}
-        date={post.data.date}
-        href={postPath(post.id)}
-      />
-    ))}
-  </section>
+  <PostList posts={tag.posts} />
 </BaseLayout>
-
-<style>
-  .tag-heading {
-    width: 100%;
-  }
-
-  .tag-heading h2 {
-    font-size: 1.5rem;
-    margin: 0 0 0.5rem;
-  }
-
-  .tag-heading a {
-    text-decoration: underline;
-  }
-
-  /* 홈(pages/index.astro)의 목록과 같은 값 */
-  section {
-    width: 100%;
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    row-gap: 2rem;
-  }
-
-  section :global(a:hover) {
-    text-decoration: underline;
-  }
-</style>

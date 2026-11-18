@@ -1,0 +1,26 @@
+{
+  "baseline": "9b635b96c0493829ee0b973b71932a83b7a37641bb7035c0921ccf34460e0cfa",
+  "reason": "D1 디자인 정리: 디자인 토큰, 헤더·목록·푸터·본문 모양, 홈의 카테고리 필터와 글 요약",
+  "entries": [
+    {
+      "check": "content",
+      "routes": ["/", "/404", "/tags", "/tags/**", "/posts/*"],
+      "reason": "사이트 헤더에 탐색 줄(카테고리·태그)과 SVG 아이콘, 푸터에 RSS·GitHub 링크. 홈은 <main> 안에 카테고리 필터와 글 요약이 붙은 목록, 태그 페이지는 같은 목록과 글 수, 404 는 제목 한 줄이 더해짐"
+    },
+    {
+      "check": "hover",
+      "routes": ["/", "/404", "/tags", "/tags/**", "/posts/*"],
+      "reason": "새 헤더 탐색 줄·푸터·목록 링크가 생기고 링크 hover 모양(밑줄, 강조색)이 바뀜"
+    },
+    {
+      "check": "visual",
+      "routes": ["/", "/404", "/tags", "/tags/**", "/posts/*"],
+      "reason": "새 디자인: 토큰 색, 헤더·목록·본문 타이포그래피, 브레이크포인트 40rem·64rem"
+    },
+    {
+      "check": "routes",
+      "routes": ["/_astro/*.css"],
+      "reason": "전역·목록 CSS 를 다시 묶어 기준선의 CSS 파일 이름이 바뀜(PostHeader 청크는 PostList 로, 페이지 CSS 일부는 global.css 로)"
+    }
+  ]
+}

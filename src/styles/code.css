@@ -3,7 +3,8 @@
  * 붙이고(defaultColor: false), 여기서 어느 쪽 변수를 쓸지 고른다. src/pages/posts/[id].astro 가 import 한다.
  *
  * 라이트(github-light-high-contrast)가 기본이고, <html data-theme="dark"> 아래에서는 같은 선택자에
- * --shiki-dark*(github-dark-high-contrast)를 쓴다(S6.1). 두 테마 모두 고대비라 다크 배경에서도 AA 를 넘긴다.
+ * --shiki-dark*(github-dark-high-contrast)를 쓴다. 두 테마 모두 고대비라 다크 배경에서도 AA 를 넘긴다.
+ * 색은 Shiki 테마가 정하므로 이 파일에는 색 값이 없다. 상자의 모양만 토큰으로 정한다.
  */
 
 .astro-code,
@@ -24,12 +25,16 @@
   text-decoration: var(--shiki-dark-text-decoration);
 }
 
-/*
- * 상자는 예전 highlight.js 테마의 `pre code.hljs { display: block; overflow-x: auto; padding: 1em }` 그대로다.
- * 여백을 <pre> 가 아니라 안쪽 <code> 에 두어야 코드 블록의 높이와 그 아래 내용의 자리가 예전과 같다.
- */
+/* 상자: 둥근 모서리와 옅은 테두리. 본문의 한 줄 길이보다 넓어지지 않고, 긴 줄은 줄바꿈된다(global.css 의 pre). */
+.astro-code {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  line-height: 1.6;
+}
+
+/* 여백은 <pre> 가 아니라 안쪽 <code> 에 둔다(복사 버튼은 <pre> 의 오른쪽 위에 absolute 로 놓인다). */
 .astro-code > code {
   display: block;
   overflow-x: auto;
-  padding: 1em;
+  padding: var(--space-4);
 }
