@@ -41,8 +41,6 @@ jobs:
       - run: npm test
       - run: npx prettier --check .
 
-  # 댓글 워커(comments/)의 검사는 여기에 없다: worker-checks.yml 이 따로 돈다(사이트 배포가 그것을 기다리지 않게).
-
   verify:
     name: verify
     runs-on: ubuntu-latest

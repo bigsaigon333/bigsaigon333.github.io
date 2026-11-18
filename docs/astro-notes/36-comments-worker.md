@@ -1,5 +1,7 @@
 # 36. 댓글 워커: Cloudflare Workers + D1, 팝업 OAuth, bearer 토큰
 
+> 이 워커는 main 에서 빼 브랜치 `comments-worker` 에 보존했다(별도 PR 로 다시 올릴 예정).
+
 ## 한 줄 요약
 
 utterances 를 대신할 댓글 API 를 `comments/`(npm 패키지)에 만들었다. 워커 하나가 `/v1` 경로로 thread 목록·생성·답글·resolve·수정·soft delete·관리자 차단을 맡고, D1 테이블 7개에 저장한다. 로그인은 GitHub OAuth 를 팝업으로 열고(state + PKCE S256), 워커가 발급한 bearer 토큰을 클라이언트가 localStorage 에 둔다. `npm --prefix comments test`의 61개 시험이 workerd 안에서 로컬 D1 로 모든 엔드포인트를 돈다. 요청·응답 타입은 `comments/src/contract.ts`가 정답이다.

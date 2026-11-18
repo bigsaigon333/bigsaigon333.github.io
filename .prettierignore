@@ -7,6 +7,3 @@ package-lock.json
 public
 posts
 docs/astro-notes/_refs
-comments/.wrangler
-comments/wrangler.ci.json
-comments/worker-configuration.d.ts

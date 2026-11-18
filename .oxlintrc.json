@@ -22,9 +22,7 @@
     "/public",
     "/posts",
     "/docs",
-    "/labs",
-    // 댓글 워커는 자기 tsconfig(Workers 타입)로 npm -w comments run typecheck 가 본다.
-    "/comments"
+    "/labs"
   ],
   "overrides": [
     {

@@ -16,7 +16,3 @@ jobs:
     with:
       # 기준선은 PR 이 들어갈 커밋의 빌드다.
       baseline-ref: ${{ github.event.pull_request.base.sha }}
-
-  # 댓글 워커의 타입 검사와 시험. 필수 검사가 아니고, 배포에서는 워커 배포만 이것을 기다린다(deploy.yml).
-  worker:
-    uses: ./.github/workflows/worker-checks.yml
