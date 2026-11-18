@@ -7,7 +7,9 @@
   "compatibility_date": "2026-11-01",
   "observability": { "enabled": true },
   "vars": {
-    "ALLOWED_ORIGINS": "https://bigsaigon333.github.io,http://localhost:4321",
+    // 운영에는 사이트 출처만 둔다. localhost 를 두면 운영 워커가 방문자의 localhost:4321 에서 오는 쓰기를 받고,
+    // /v1/auth/start?origin=http://localhost:4321 이 새 세션 토큰을 그 주소로 넘긴다(WB-review). 로컬은 env.test 를 쓴다.
+    "ALLOWED_ORIGINS": "https://bigsaigon333.github.io",
     "MODE": "readwrite",
     // 소유자의 GitHub 숫자 id 는 공개 정보라 var 로 둔다(CI 는 GH_OAUTH_* 두 secret 만 올린다).
     "OWNER_GITHUB_ID": "31029000",

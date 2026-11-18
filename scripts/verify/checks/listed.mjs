@@ -4,7 +4,8 @@
 // the deployed sitemap is a stale committed file without it. That comparison cannot tell whether the new
 // sitemap really lists the post — a candidate sitemap without it equals the baseline's. So, on the candidate alone:
 //
-//   - every HTML page has exactly one <loc> whose path is the page's route; the error page (/404) has none
+//   - every HTML page has exactly one <loc> whose path is the page's route; the error page (/404) and a page whose
+//     robots meta says noindex (a category without posts, WB-review) have none
 //   - every <loc> answers 200 under GitHub Pages path resolution
 //
 // With --route only the first rule is applied, to the selected pages.
@@ -73,7 +74,13 @@ export default {
     const pages = candidateRoutes(ctx);
     for (const route of pages) {
       const hits = listed.get(route) ?? [];
-      const wanted = route === ERROR_PAGE ? 0 : 1;
+      const page = await ctx.dom("candidate", route);
+      const noindex =
+        page !== null &&
+        page('meta[name="robots"]')
+          .toArray()
+          .some((el) => /\bnoindex\b/.test(page(el).attr("content") ?? ""));
+      const wanted = route === ERROR_PAGE || noindex ? 0 : 1;
       if (hits.length === wanted) {
         pass++;
         cells[route] = "pass";
@@ -84,9 +91,11 @@ export default {
         detail:
           route === ERROR_PAGE
             ? `the error page is in the candidate's sitemap.xml: ${hits.join(", ")}`
-            : hits.length === 0
-              ? "page is not in the candidate's sitemap.xml"
-              : `page is in the candidate's sitemap.xml ${hits.length} times: ${hits.join(", ")}`,
+            : noindex
+              ? `a noindex page is in the candidate's sitemap.xml: ${hits.join(", ")}`
+              : hits.length === 0
+                ? "page is not in the candidate's sitemap.xml"
+                : `page is in the candidate's sitemap.xml ${hits.length} times: ${hits.join(", ")}`,
       });
       cells[route] = "fail";
     }
@@ -182,6 +191,18 @@ export default {
             xml.replace(
               /<url><loc>(https?:\/\/[^/<]*)\/?<\/loc>/,
               "<url><loc>$1/404</loc></url>\n$&",
+            ),
+          );
+        },
+      },
+      {
+        // /categories/life has no posts: its page is noindex.
+        name: "sitemap 에 noindex 페이지(글이 없는 카테고리) 추가",
+        apply(dir) {
+          mutateFile(dir, "sitemap.xml", (xml) =>
+            xml.replace(
+              /<url><loc>(https?:\/\/[^/<]*)\/?<\/loc>/,
+              "<url><loc>$1/categories/life</loc></url>\n$&",
             ),
           );
         },

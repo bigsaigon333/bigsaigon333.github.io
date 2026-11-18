@@ -10,7 +10,7 @@
 //   pyftsubset full.woff --unicodes=<그 497자> --flavor=woff2 --layout-features='*' --name-IDs='*' --notdef-outline
 //   예전에 full 이 그리던 글자는 rest 가 같은 글리프로 그린다(7개 파일의 글자는 원래부터 그 파일들이 그렸다).
 //
-// rest 에 unicode-range 를 주지 않는 이유(측정, docs/astro-notes/38): 범위를 497자로 좁히면 코드 주석의 한글처럼 어느
+// rest 에 unicode-range 를 주지 않는 이유(측정): 범위를 497자로 좁히면 코드 주석의 한글처럼 어느
 // face 에도 없는 글자는 아무것도 받지 않아 글 하나에 20KB 를 더 아낀다. 그런데 수식 글의 perf(Lighthouse) FCP·LCP 가
 // 903 → 1054ms 로 늘었다(세 번 모두, 빌드를 바꿔 다섯 번 재현). 범위 없는 face 가 하나 있으면 Chrome 이 그 글꼴을 첫
 // 레이아웃 전에 받기 시작하고, 없으면 레이아웃 중에 latin 을 요청해 수식 글(KaTeX 로 레이아웃이 무겁다)의 첫 화면이

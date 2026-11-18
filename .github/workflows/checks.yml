@@ -41,19 +41,7 @@ jobs:
       - run: npm test
       - run: npx prettier --check .
 
-  # 댓글 워커(comments/, npm workspace)의 타입 검사와 시험. 시험은 vitest-pool-workers 와 로컬 D1 로 돈다.
-  worker:
-    name: worker
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version-file: mise.toml
-          package-manager-cache: false
-      - run: npm ci
-      - run: npm -w comments run typecheck
-      - run: npm -w comments test
+  # 댓글 워커(comments/)의 검사는 여기에 없다: worker-checks.yml 이 따로 돈다(사이트 배포가 그것을 기다리지 않게).
 
   verify:
     name: verify

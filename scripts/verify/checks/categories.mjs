@@ -11,13 +11,15 @@
 // On the candidate (addresses compared percent-decoded, in NFC, without ".html"):
 //   /categories/<slug>  one page per entry, empty categories included, and no other page below /categories/. The
 //                       /posts/<id> links it shows are exactly the published posts of that category, newest first:
-//                       no post missing, none from another category, no draft, no duplicate.
+//                       no post missing, none from another category, no draft, no duplicate. A page with no post
+//                       says <meta name="robots" content="noindex, follow"> (a thin page search engines should not
+//                       list, WB-review); a page with posts has no noindex.
 //   /categories         links to exactly the entry pages, each with "(<count>)" = the number of its posts, all 200.
 //   /posts/<id>         each published post links to exactly one category page, its own, whose text is the name
 //                       and which answers 200; <meta property="article:section"> is the name, once; the JSON-LD
 //                       BlogPosting has articleSection = the name.
-//   /sitemap.xml        has a <loc> for /categories and for every entry page (absolute, on the origin of the
-//                       canonical of "/").
+//   /sitemap.xml        has a <loc> for /categories and for every entry page with posts (absolute, on the origin
+//                       of the canonical of "/"), and none for an entry page without posts.
 // One failed item per wrong page. With --route only the selected pages are looked at (the sitemap and the
 // whole-site "page missing" assertions only run without --route).
 //
@@ -248,6 +250,16 @@ export default {
         problems.push(
           `posts ${show(listed)}, expected newest first ${show(ids)}`,
         );
+      const robots = $('meta[name="robots"]')
+        .toArray()
+        .map((el) => $(el).attr("content") ?? "");
+      const noindex = robots.some((content) => /\bnoindex\b/.test(content));
+      if (ids.length === 0 && !noindex)
+        problems.push(
+          `no posts but robots ${show(robots)}, expected "noindex, follow"`,
+        );
+      if (ids.length > 0 && noindex)
+        problems.push(`${ids.length} posts but robots ${show(robots)}`);
       result(route, problems);
     }
 
@@ -327,17 +339,27 @@ export default {
       );
       const home = await ctx.dom("candidate", "/");
       const site = home?.('link[rel="canonical"]').attr("href") ?? "";
-      const want = [INDEX, ...categories.map((c) => `${INDEX}/${c.slug}`)].map(
-        (p) => `${site.replace(/\/+$/, "")}${p}`,
-      );
+      const at = (p) => `${site.replace(/\/+$/, "")}${p}`;
+      const filled = (c) => (expected.get(c.slug) ?? []).length > 0;
+      const want = [
+        INDEX,
+        ...categories.filter(filled).map((c) => `${INDEX}/${c.slug}`),
+      ].map(at);
+      const unwanted = categories
+        .filter((c) => !filled(c))
+        .map((c) => at(`${INDEX}/${c.slug}`));
       const missing = want.filter((loc) => !locs.has(loc));
+      const extra = unwanted.filter((loc) => locs.has(loc));
       result(
         "/sitemap.xml",
         xml === undefined
           ? ["no sitemap.xml"]
-          : missing.length
-            ? [`missing <loc> ${show(missing)}`]
-            : [],
+          : [
+              ...(missing.length ? [`missing <loc> ${show(missing)}`] : []),
+              ...(extra.length
+                ? [`<loc> for a category without posts ${show(extra)}`]
+                : []),
+            ],
       );
     }
 
@@ -458,11 +480,34 @@ export default {
         apply(dir) {
           mutateFile(dir, "sitemap.xml", (xml) =>
             xml.replace(
-              /<url><loc>[^<]*\/categories\/life<\/loc>[^\n]*?<\/url>/,
+              /<url><loc>([^<]*)\/categories\/dev<\/loc>[^\n]*?<\/url>/,
               "",
             ),
           );
         },
+      },
+      {
+        name: "sitemap 에 글이 없는 카테고리 페이지 추가",
+        apply(dir) {
+          mutateFile(dir, "sitemap.xml", (xml) =>
+            xml.replace(
+              /<url><loc>([^<]*)\/categories<\/loc>/,
+              "<url><loc>$1/categories/life</loc></url>\n$&",
+            ),
+          );
+        },
+      },
+      {
+        name: "글이 없는 카테고리 페이지의 noindex 삭제",
+        apply(dir) {
+          mutateFile(dir, "categories/life.html", (html) =>
+            html.replace(
+              /<meta name="robots" content="noindex, follow"/,
+              '<meta name="robots" content="index, follow"',
+            ),
+          );
+        },
+        routes: ["/categories/life"],
       },
     ],
     accepted: [

@@ -49,17 +49,17 @@ export const GET = (async () => {
     .sort()
     .at(-1);
 
-  // 카테고리 페이지. 글이 없는 카테고리도 페이지가 있어 싣는다(lastmod 없음). lastmod 는 태그와 같은 규칙이다.
-  // slug 가 ASCII 라 인코딩할 것이 없다.
-  const categories = groupByCategory(await getPublishedPosts()).map(
-    (group) => ({
+  // 카테고리 페이지. 글이 없는 카테고리는 페이지가 있어도 싣지 않는다(그 페이지는 noindex, WB-review).
+  // lastmod 는 태그와 같은 규칙이다. slug 가 ASCII 라 인코딩할 것이 없다.
+  const categories = groupByCategory(await getPublishedPosts())
+    .filter((group) => group.posts.length > 0)
+    .map((group) => ({
       loc: `${SITE.url}${categoryPath(group.category)}`,
       lastmod: group.posts
         .map((post) => formatDate(post.data.date))
         .sort()
         .at(-1),
-    }),
-  );
+    }));
 
   const xml = [
     `<?xml version="1.0" encoding="UTF-8"?>`,

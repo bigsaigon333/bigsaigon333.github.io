@@ -1,6 +1,7 @@
 ---
 // /categories/<slug> — 그 카테고리의 글, 날짜 내림차순. 목록은 홈과 같은 PostList 다.
 // 카테고리는 src/lib/categories.ts 의 목록이 정한다. 글이 없는 카테고리도 페이지가 있다("아직 글이 없습니다").
+// 글이 없는 동안은 noindex 이고 sitemap.xml 에도 없다: 검색 엔진에는 빈 페이지(soft 404)로 보인다(WB-review).
 // 운영 빌드에서는 발행된 글만 싣는다(getVisiblePosts). 초안은 dev 에서만 섞인다.
 import type { GetStaticPaths, InferGetStaticPropsType } from "astro";
 
@@ -35,6 +36,7 @@ const { category, posts } = Astro.props;
     url: `${SITE.url}${categoryPath(category)}`,
     type: "website",
     keywords: [category.name],
+    noindex: posts.length === 0,
   }}
 >
   <div class="page-heading">

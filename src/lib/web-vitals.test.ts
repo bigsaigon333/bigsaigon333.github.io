@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { MetricWithAttribution } from "web-vitals/attribution";
 
-import { toGaEvent } from "./web-vitals";
+import { toGaEvent, type Landing } from "./web-vitals";
 
 const metric = (fields: Record<string, unknown>) =>
   ({
@@ -13,6 +13,12 @@ const metric = (fields: Record<string, unknown>) =>
     ...fields,
   }) as unknown as MetricWithAttribution;
 
+const landing: Landing = {
+  location: "https://example.test/posts/a",
+  title: "A",
+  navigated: () => false,
+};
+
 describe("toGaEvent", () => {
   it("LCP: 이름, 반올림한 delta, 내비게이션 종류, LCP 요소의 선택자", () => {
     expect(
@@ -23,6 +29,7 @@ describe("toGaEvent", () => {
           delta: 1234.6,
           attribution: { target: "main.prose>p:nth-child(2)" },
         }),
+        landing,
       ),
     ).toEqual({
       name: "LCP",
@@ -34,6 +41,9 @@ describe("toGaEvent", () => {
         metric_rating: "good",
         navigation_type: "navigate",
         non_interaction: true,
+        page_location: "https://example.test/posts/a",
+        page_title: "A",
+        after_navigation: false,
         debug_target: "main.prose>p:nth-child(2)",
       },
     });
@@ -48,6 +58,7 @@ describe("toGaEvent", () => {
         navigationType: "back-forward-cache",
         attribution: { largestShiftTarget: "span.katex" },
       }),
+      landing,
     );
     expect(params.value).toBe(18);
     expect(params.debug_target).toBe("span.katex");
@@ -63,6 +74,7 @@ describe("toGaEvent", () => {
           delta: 80,
           attribution: { interactionTarget: "button.theme-toggle" },
         }),
+        landing,
       ).params.debug_target,
     ).toBe("button.theme-toggle");
   });
@@ -71,6 +83,7 @@ describe("toGaEvent", () => {
     for (const name of ["FCP", "TTFB"]) {
       const { params } = toGaEvent(
         metric({ name, value: 900, delta: 900, attribution: {} }),
+        landing,
       );
       expect(params).not.toHaveProperty("debug_target");
     }
@@ -84,7 +97,20 @@ describe("toGaEvent", () => {
         delta: 1,
         attribution: { target: "x".repeat(150) },
       }),
+      landing,
     );
     expect(params.debug_target).toHaveLength(100);
+  });
+
+  it("ClientRouter 로 옮겨 간 뒤에 보내도 처음 페이지로 싣고, 옮겨 갔음을 적는다", () => {
+    let moved = false;
+    const page: Landing = { ...landing, navigated: () => moved };
+    const metric0 = metric({ name: "CLS", value: 0.1, delta: 0.1 });
+    expect(toGaEvent(metric0, page).params.after_navigation).toBe(false);
+    moved = true;
+    const { params } = toGaEvent(metric0, page);
+    expect(params.page_location).toBe("https://example.test/posts/a");
+    expect(params.page_title).toBe("A");
+    expect(params.after_navigation).toBe(true);
   });
 });

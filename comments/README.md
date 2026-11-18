@@ -69,7 +69,7 @@ npm --prefix comments run dev       # 로컬 D1 마이그레이션 → wrangler 
 
 ## wrangler 환경
 
-- **default**(이름 없음): 운영. `npx wrangler deploy --env=""`(환경이 둘이라 `--env=""`로 명시한다), `npx wrangler d1 migrations apply DB --remote --env=""`. GitHub OAuth callback 은 `https://comments.<subdomain>.workers.dev/v1/auth/callback`.
+- **default**(이름 없음): 운영. 출처는 `https://bigsaigon333.github.io` 하나뿐이다(localhost 는 test 에만). `npx wrangler deploy --env=""`(환경이 둘이라 `--env=""`로 명시한다), `npx wrangler d1 migrations apply DB --remote --env=""`. GitHub OAuth callback 은 `https://comments.<subdomain>.workers.dev/v1/auth/callback`.
 - **test**: 로컬 전용. `TEST_LOGIN=1`, `OWNER_GITHUB_ID=1`, 출처 `http://localhost:4321`·`http://127.0.0.1:4321`, `SITE_URL` 없음, D1 `comments-test`(로컬 상태는 `.wrangler/`). 다른 출처가 필요하면 `wrangler dev --env test --var ALLOWED_ORIGINS:<목록>`.
 
 ## 이후 단계를 위한 계약 (클라이언트·검사)

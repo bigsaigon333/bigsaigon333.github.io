@@ -22,10 +22,12 @@
 // After each step, once astro:page-load has fired and the page has settled — one item each:
 //   reload    the window marker is still there (no document load happened)
 //   location  location.pathname is the step's route and document.title the <title> of its served HTML
-//   page_view the GA page views in dataLayer are exactly one: the first page's gtag("config", id) (it sends a
-//             page_view unless { send_page_view: false }). Later pages are counted by gtag.js itself (GA4 enhanced
-//             measurement, page changes on browser history events), so the page must not push its own
-//             gtag("event", "page_view", …) after a swap: that was counted twice (W9). No second config.
+//   page_view the GA page views in dataLayer are the first page's gtag("config", id) (it sends a page_view unless
+//             { send_page_view: false }) and then exactly one gtag("event", "page_view", { page_location, page_title })
+//             per navigation, for the page it arrived at. gtag.js is blocked here, so it never ran: the page queues
+//             those itself until gtag.js has loaded, after which gtag.js counts history changes on its own (GA4
+//             enhanced measurement) and the page must not (that was counted twice, W9). Without them a reader who
+//             moves on before gtag.js runs loses a page view (WB-review). No second config.
 //   theme     data-theme is "dark" when astro:after-swap fires (set before the swap; set later is a flash of the
 //             light page) and after settling, and the toggle's aria-pressed is "true"
 //   utterances on a post: one utteranc.es client <script> with issue-term="title", run once during this step (the
@@ -90,7 +92,11 @@ function readState({ utterances }) {
     else if (args[0] === "event" && args[1] === "page_view")
       pageViews.push({
         kind: "event",
-        path: args[2]?.page_path ?? null,
+        path:
+          args[2]?.page_path ??
+          (args[2]?.page_location
+            ? new URL(args[2].page_location).pathname
+            : null),
         title: args[2]?.page_title ?? null,
       });
   }
@@ -238,8 +244,13 @@ async function scenario(browser, base, pages) {
           `<title> ${quote(state.title, 40)}, expected ${quote(step.title, 40)}`,
         );
       // page_view
-      // Only the first page's config: gtag.js reports the later pages from history changes on its own.
-      const expected = [`config ${steps[0].route}`];
+      // The first page's config, then one queued page_view per page arrived at (gtag.js never loads here).
+      const expected = [
+        `config ${steps[0].route}`,
+        ...steps
+          .slice(1)
+          .map((s) => `event ${s.route} ${quote(s.title ?? "", 30)}`),
+      ];
       const actual = state.pageViews.map((view, i) =>
         view.kind === "config"
           ? `config ${i === 0 ? steps[0].route : "?"}`
