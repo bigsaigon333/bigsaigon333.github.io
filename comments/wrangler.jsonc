@@ -1,0 +1,43 @@
+// 비밀 값(GH_OAUTH_CLIENT_ID/SECRET, OWNER_GITHUB_ID)은 여기에 두지 않는다. `wrangler secret put` 이나 CI 가 넣는다.
+// database_id 는 자리 표시자다. CI(deploy.yml 의 worker-deploy)가 배포 직전에 실제 값으로 바꾼다.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "comments",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-01",
+  "observability": { "enabled": true },
+  "vars": {
+    "ALLOWED_ORIGINS": "https://bigsaigon333.github.io,http://localhost:4321",
+    "MODE": "readwrite",
+    // OWNER_GITHUB_ID 는 여기 두지 않는다. CI 가 secret 으로 넣는다(없으면 관리자 없음).
+    "SITE_URL": "https://bigsaigon333.github.io",
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "comments",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations",
+    },
+  ],
+  "env": {
+    // 로컬 시험용: `npx wrangler dev --env test`. 운영에 배포하지 않는다.
+    "test": {
+      "vars": {
+        "ALLOWED_ORIGINS": "http://localhost:4321,http://127.0.0.1:4321",
+        "MODE": "readwrite",
+        "OWNER_GITHUB_ID": "1",
+        "SITE_URL": "",
+        "TEST_LOGIN": "1",
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "comments-test",
+          "database_id": "00000000-0000-0000-0000-000000000000",
+          "migrations_dir": "migrations",
+        },
+      ],
+    },
+  },
+}
