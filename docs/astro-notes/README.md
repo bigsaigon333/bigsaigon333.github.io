@@ -58,6 +58,10 @@ Next.js 블로그를 배포본과 바이트·픽셀 단위로 같게 옮긴 단�
 | 30   | [30. 서버 아일랜드와 클라이언트 아일랜드: `server:defer`, `client:*`, Preact](30-server-client-islands.md) | `server:defer`, `client:load`·`idle`·`media`·`visible`, `@astrojs/preact`          | S8.3 | `labs/playground`의 `/s83/`, `/_server-islands/Stamp`(블로그 `dist/`는 그대로)    |
 | 31   | [31. 미들웨어, 리다이렉트·리라이트, i18n 라우팅, `paginate()`](31-middleware-redirects-i18n.md)            | `defineMiddleware`, `sequence`, `redirects`, `Astro.rewrite`, `i18n`, `paginate()` | S8.4 | `labs/playground`의 `/s84/**`, `/ko/s84/**`(블로그 `dist/`는 그대로)              |
 | 32   | [32. Astro 7 새 기능: 라우트 캐시, 로거, 라이브 컬렉션, 개발 툴바 앱](32-astro7-features.md)               | `Astro.cache`, `routeRules`, `logger`, `defineLiveCollection`, `addDevToolbarApp`  | S8.5 | `labs/playground`의 `/s85/**`, `X-Astro-Cache` 헤더(블로그 `dist/`는 그대로)      |
+| 33   | [33. 성능 측정: Lighthouse(simulated) 예산과 perf:live](33-perf-measurement.md)                            | Lighthouse, simulated throttling, `perf-budget.json`, `perf:live`                  | PF0  | `npm run verify -- --only=perf`                                                   |
+| 34   | [34. 섹션 링크: 사용자 hast 플러그인과 heading-ids 의 순서](34-heading-links.md)                           | `hastPlugins`, `config/hast-heading-links.mjs`, `github-slugger`                   | H1   | `npm run verify -- --only=anchors`                                                |
+| 35   | [35. 카테고리와 개인 블로그 문구](35-categories.md)                                                        | `z.enum`, `/categories`, `article:section`                                         | C1   | `npm run verify -- --only=categories`                                             |
+| 36   | [36. 댓글 워커: Cloudflare Workers + D1, 팝업 OAuth, bearer 토큰](36-comments-worker.md)                   | Workers, D1, OAuth PKCE, `npm -w comments test`                                    | CM-A | `comments/` 패키지                                                                |
 
 ### 마무리
 
