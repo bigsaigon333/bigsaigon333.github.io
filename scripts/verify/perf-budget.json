@@ -40,101 +40,101 @@
   "pages": {
     "/": {
       "score": 95,
-      "lcp": 1000,
-      "fcp": 1000,
-      "si": 1000,
+      "lcp": 750,
+      "fcp": 750,
+      "si": 750,
       "tbt": 100,
       "cls": 0.02,
-      "bytes": 28160,
+      "bytes": 27648,
       "js": 9728,
-      "css": 3072,
-      "blocking": 2
+      "css": 0,
+      "blocking": 0
     },
     "/posts/proxy-to-built-in-objects": {
       "score": 95,
-      "lcp": 1000,
-      "fcp": 1000,
-      "si": 1000,
+      "lcp": 750,
+      "fcp": 750,
+      "si": 750,
       "tbt": 100,
       "cls": 0.02,
-      "bytes": 63488,
+      "bytes": 62976,
       "js": 11264,
-      "css": 4608,
-      "blocking": 2
+      "css": 0,
+      "blocking": 0
     },
     "/posts/how-to-check-two-types-are-equal-in-ts": {
       "score": 95,
-      "lcp": 1000,
-      "fcp": 1000,
-      "si": 1000,
+      "lcp": 950,
+      "fcp": 950,
+      "si": 950,
       "tbt": 100,
       "cls": 0.02,
-      "bytes": 116224,
+      "bytes": 115712,
       "js": 11264,
-      "css": 4608,
-      "blocking": 2
+      "css": 0,
+      "blocking": 0
     },
     "/posts/css-masters-2-week2": {
       "score": 95,
-      "lcp": 1000,
-      "fcp": 1000,
-      "si": 1000,
+      "lcp": 750,
+      "fcp": 750,
+      "si": 750,
       "tbt": 100,
       "cls": 0.02,
-      "bytes": 99840,
+      "bytes": 99328,
       "js": 11264,
-      "css": 4608,
-      "blocking": 2
+      "css": 0,
+      "blocking": 0
     }
   },
   "measured": {
     "/": {
       "score": 100,
-      "lcp": 905,
-      "fcp": 905,
-      "si": 905,
+      "lcp": 638,
+      "fcp": 638,
+      "si": 638,
       "tbt": 0,
       "cls": 0,
-      "bytes": 26496,
+      "bytes": 26073,
       "js": 9037,
-      "css": 2858,
-      "blocking": 2
+      "css": 0,
+      "blocking": 0
     },
     "/posts/proxy-to-built-in-objects": {
       "score": 100,
-      "lcp": 907,
-      "fcp": 907,
-      "si": 907,
+      "lcp": 648,
+      "fcp": 648,
+      "si": 648,
       "tbt": 0,
       "cls": 0,
-      "bytes": 60507,
+      "bytes": 59863,
       "js": 10364,
-      "css": 3932,
-      "blocking": 2
+      "css": 0,
+      "blocking": 0
     },
     "/posts/how-to-check-two-types-are-equal-in-ts": {
       "score": 100,
-      "lcp": 907,
-      "fcp": 907,
-      "si": 907,
+      "lcp": 840,
+      "fcp": 840,
+      "si": 840,
       "tbt": 0,
       "cls": 0,
-      "bytes": 110551,
+      "bytes": 109828,
       "js": 10364,
-      "css": 3932,
-      "blocking": 2
+      "css": 0,
+      "blocking": 0
     },
     "/posts/css-masters-2-week2": {
       "score": 100,
-      "lcp": 904,
-      "fcp": 904,
-      "si": 904,
+      "lcp": 661,
+      "fcp": 661,
+      "si": 661,
       "tbt": 0,
       "cls": 0,
-      "bytes": 94883,
+      "bytes": 94208,
       "js": 10364,
-      "css": 3932,
-      "blocking": 2
+      "css": 0,
+      "blocking": 0
     }
   }
 }
