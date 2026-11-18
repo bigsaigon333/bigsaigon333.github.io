@@ -200,15 +200,17 @@ const count = entries.reduce(
   }
 
   .reading-time {
-    margin: 0 0 0.75rem;
-    font-size: 0.875rem;
-    /* 흰 배경에서 대비 7.0:1, 다크 배경(#0d1117)에서 6.2:1. 토큰은 global.css */
+    margin: 0 0 var(--space-3);
+    font-size: var(--text-sm);
     color: var(--color-muted);
   }
 
   .toc {
-    border-left: 0.25rem solid var(--color-border);
-    padding-left: 1rem;
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-surface);
+    font-size: var(--text-sm);
   }
 
   .toc summary {
@@ -217,9 +219,9 @@ const count = entries.reduce(
   }
 
   .toc ol {
-    margin: 0.5rem 0 0;
-    padding-inline-start: 1.25rem;
-    line-height: 1.75;
+    margin: var(--space-2) 0 0;
+    padding-inline-start: var(--space-5);
+    line-height: var(--leading-body);
   }
 
   .toc ol ol {
@@ -231,11 +233,12 @@ const count = entries.reduce(
   }
 
   .toc a[aria-current="true"] {
+    color: var(--color-accent);
     font-weight: 600;
   }
 
-  .toc a:hover,
-  .toc a:focus-visible {
-    box-shadow: 0 0.125rem 0 0 var(--color-text);
+  .toc a:hover {
+    color: var(--color-accent);
+    text-decoration: underline;
   }
 </style>

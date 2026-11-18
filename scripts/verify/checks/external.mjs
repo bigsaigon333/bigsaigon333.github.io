@@ -20,8 +20,6 @@ import {
   candidateRoutes,
   editPages,
   internalPath,
-  listFiles,
-  mutateFile,
   readSiteFile,
   srcsetUrls,
 } from "../lib/html.mjs";
@@ -217,17 +215,13 @@ export default {
         },
       },
       {
-        name: "연결된 CSS 파일에 원격 @import",
+        name: "인라인 style 에 원격 @import",
         apply(dir) {
-          const css = listFiles(dir).filter((rel) => rel.endsWith(".css"));
-          if (css.length === 0) throw new Error("no stylesheet file in copy");
-          for (const rel of css)
-            mutateFile(
-              dir,
-              rel,
-              (text) =>
-                `@import "https://fonts.googleapis.com/css2?family=X";\n${text}`,
-            );
+          editPages(
+            dir,
+            "</head>",
+            '<style>@import "https://fonts.googleapis.com/css2?family=X";</style></head>',
+          );
         },
       },
       {

@@ -58,16 +58,16 @@
 
   .copy-code {
     position: absolute;
-    top: 0.5rem;
-    right: 0.5rem;
-    padding: 0.125rem 0.5rem;
-    border: 1px solid #d0d7de;
-    border-radius: 0.25rem;
-    background: #ffffff;
-    /* 흰 배경에서 대비 7.0:1 */
-    color: #595959;
+    top: var(--space-2);
+    right: var(--space-2);
+    padding: 0.125rem var(--space-2);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    /* 토큰이라 다크 모드를 따른다. 흐린 글자는 배경에서 라이트 6.1:1, 다크 6.2:1 */
+    background: var(--color-bg);
+    color: var(--color-muted);
     font: inherit;
-    font-size: 0.75rem;
+    font-size: var(--text-xs);
     line-height: 1.5;
     white-space: nowrap;
     cursor: pointer;
@@ -75,6 +75,7 @@
   }
 
   .copy-code:hover {
-    color: #000000;
+    border-color: var(--color-accent);
+    color: var(--color-text);
   }
 </style>

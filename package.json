@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "workspaces": [
-    "tools/astro-check"
+    "tools/astro-check",
+    "comments"
   ],
   "scripts": {
     "dev": "ASTRO_TELEMETRY_DISABLED=1 astro dev",
@@ -18,6 +19,7 @@
     "verify:setup": "node scripts/verify/setup.mjs",
     "verify:selftest": "node scripts/verify/selftest.mjs",
     "verify:live": "node scripts/verify/live.mjs",
+    "perf:live": "node scripts/perf-live.mjs",
     "prepare": "husky",
     "test": "ASTRO_TELEMETRY_DISABLED=1 vitest run"
   },
@@ -26,16 +28,19 @@
   },
   "dependencies": {
     "@astrojs/markdown-satteri": "^0.4.9",
-    "@astrojs/mdx": "^8.1.5",
     "@astrojs/rss": "^4.0.19",
     "astro": "^7.4.11",
+    "github-slugger": "^2.0.0",
     "katex": "^0.16.47",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "web-vitals": "^6.2.3"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",
     "cheerio": "^1.2.0",
+    "chrome-launcher": "^1.2.3",
     "husky": "^9.1.7",
+    "lighthouse": "^13.6.0",
     "lint-staged": "^17.6.0",
     "oxlint": "^1.93.0",
     "pixelmatch": "^8.0.0",

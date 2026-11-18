@@ -16,21 +16,18 @@ import { SITE } from "../lib/site";
     noindex: true,
   }}
 >
-  <main>
-    <p>요청하신 페이지를 찾을 수 없습니다.</p>
-    <a href="/">홈으로 돌아가기</a>
+  <main class="page-heading">
+    <h2>페이지를 찾을 수 없습니다</h2>
+    <p>주소가 바뀌었거나 없는 글입니다.</p>
+    <a class="text-link" href="/">
+      홈으로 돌아가기
+    </a>
   </main>
 </BaseLayout>
 
 <style>
-  /* 홈의 <section>, 글의 <main> 과 같은 값: 레이아웃의 세로 flex 안에서 남는 높이를 채워 푸터를 바닥에 둔다. */
+  /* 레이아웃의 세로 flex 안에서 남는 높이를 채워 푸터를 바닥에 둔다. */
   main {
-    width: 100%;
     flex-grow: 1;
-  }
-
-  /* 전역 스타일이 링크의 밑줄과 색을 없앤다. 이 페이지에서 할 수 있는 일은 이 링크 하나뿐이라 늘 보이게 둔다. */
-  a {
-    text-decoration: underline;
   }
 </style>

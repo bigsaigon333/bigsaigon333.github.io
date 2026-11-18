@@ -34,6 +34,7 @@ npm run lint        # oxlint 로 틀렸거나 쓸모없는 코드 찾기 (고칠
 ---
 title: 글 제목
 date: "2024-01-31"
+category: 개발
 description: 한 줄 설명
 keywords: 키워드1, 키워드2
 ---
@@ -45,6 +46,7 @@ keywords: 키워드1, 키워드2
 | ------------- | --------------------------------------------------------------------------------------------- |
 | `title`       | 필수. 글 제목                                                                                 |
 | `date`        | 필수. 따옴표로 감싼 `"YYYY-MM-DD"`. 따옴표가 없거나 없는 날짜(`"2022-02-30"`)면 빌드가 멈춘다 |
+| `category`    | 필수. `개발`, `부동산`, `일상` 중 하나. 없거나 다른 값이면 빌드가 멈춘다                      |
 | `description` | 선택. 한 줄 설명. `<meta name="description">`과 링크 미리 보기에 쓰인다                       |
 | `keywords`    | 선택. 쉼표로 구분한 키워드                                                                    |
 | `summary`     | 선택. 예전 글에 남은 설명. `description`이 없을 때 대신 쓴다                                  |
@@ -96,7 +98,19 @@ npm run verify -- --write-accept=<이름> --reason="<왜 바뀌었는지>"
 | `lint, typecheck, format` | `npm run lint`, `npm run typecheck`, `prettier --check`    |
 | `verify`                  | `npm run verify` (`check`, 빌드, 비교·기능·시각 검사 전부) |
 | `verify selftest`         | `npm run verify:selftest`                                  |
+| `worker`                  | `npm -w comments run typecheck`, `npm -w comments test`    |
 
 기준선은 직전 운영본이다. PR은 base 커밋의 빌드, 배포는 push 전 main 커밋의 빌드와 비교한다(수동 실행은 지금 커밋).
 
 `main`에 push하면 `deploy.yml`이 같은 검사를 다시 돌리고, `verify`가 검사한 `dist/`를 GitHub Pages에 배포한 뒤, 실제 주소에 `verify:live`를 돌린다. 이때 기준선은 방금 배포한 커밋이다. 검사가 하나라도 실패하면 배포하지 않는다.
+
+### 댓글 워커
+
+`main`에 push하면 `deploy.yml`의 `worker deploy` job이 같은 검사를 통과한 뒤 `comments/` 워커를 Cloudflare에 배포한다. Pages 배포는 이 job을 기다리지 않는다. 운영 사이트가 워커에 의존하지 않게 하기 위해서다.
+
+1. `wrangler.jsonc`의 D1(binding `DB`)을 이름으로 찾고, 없으면 만든다. 그 id는 러너의 사본(`wrangler.ci.json`)에만 넣는다.
+2. `wrangler d1 migrations apply --remote`로 마이그레이션을 적용한다.
+3. `wrangler secret bulk`로 OAuth secret을 넣는다.
+4. `wrangler deploy`로 배포하고 `/v1/health`가 성공하는지 본다.
+
+secret은 `main` 전용 `cloudflare` 환경에 둔다: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `GH_OAUTH_CLIENT_ID`, `GH_OAUTH_CLIENT_SECRET`. `CLOUDFLARE_API_TOKEN`이 없으면 건너뜀을 남기고 성공으로 끝난다. 토큰은 있는데 나머지가 빠졌으면 실패한다.

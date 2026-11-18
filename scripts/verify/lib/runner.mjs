@@ -443,14 +443,20 @@ function lastDuration(check) {
 
 /**
  * Run `checks` and return their results in the order given. Static checks run one after another, then the browser
- * checks, BROWSER_LANES at a time, the longest first. They share nothing but the servers of `ctx`.
+ * checks, BROWSER_LANES at a time, the longest first, then the checks marked `exclusive` one at a time with nothing
+ * beside them. They share nothing but the servers of `ctx`.
+ *
+ * `exclusive` is for a check whose numbers depend on the machine being otherwise idle: perf. Lighthouse's simulated
+ * throttling scales the main-thread time it observes, so another browser check beside it moves FCP and TBT. On a
+ * 4-vCPU CI runner, perf beside the other browser checks measured TBT 13–449 ms and FCP 800–1127 ms on one page
+ * (WB-review).
  */
 export async function runChecks(ctx, checks) {
   const results = new Map();
   for (const check of checks.filter((one) => one.kind !== "browser"))
     results.set(check, await runCheck(ctx, check));
   const queue = checks
-    .filter((one) => one.kind === "browser")
+    .filter((one) => one.kind === "browser" && !one.exclusive)
     .map((check) => ({ check, last: lastDuration(check) }))
     .sort((a, b) => b.last - a.last)
     .map(({ check }) => check);
@@ -462,6 +468,10 @@ export async function runChecks(ctx, checks) {
       }
     }),
   );
+  for (const check of checks.filter(
+    (one) => one.kind === "browser" && one.exclusive,
+  ))
+    results.set(check, await runCheck(ctx, check));
   return checks.map((check) => results.get(check));
 }
 

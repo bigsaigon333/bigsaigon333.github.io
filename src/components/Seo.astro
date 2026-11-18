@@ -10,6 +10,8 @@ export interface Props {
   keywords: string[];
   /** 글의 발행일. 글 페이지만 준다 → article:published_time, JSON-LD 의 datePublished. */
   publishedTime?: Date;
+  /** 글의 카테고리 이름("개발"). 글 페이지만 준다 → article:section, JSON-LD 의 articleSection. */
+  section?: string;
   /** 검색 결과에 나오면 안 되는 페이지(404)만 true. */
   noindex?: boolean;
 }
@@ -21,6 +23,7 @@ const {
   type,
   keywords,
   publishedTime,
+  section,
   noindex = false,
 } = Astro.props;
 
@@ -51,6 +54,7 @@ const structuredData = isArticle
       mainEntityOfPage: { "@type": "WebPage", "@id": url },
       inLanguage: SITE.lang,
       keywords: keywords.length > 0 ? keywords : undefined,
+      articleSection: section || undefined,
     }
   : url === SITE.url
     ? {
@@ -102,6 +106,7 @@ const jsonLd =
 {isArticle && published && (
   <meta property="article:published_time" content={published} />
 )}
+{isArticle && section && <meta property="article:section" content={section} />}
 {isArticle &&
   keywords.map((keyword) => <meta property="article:tag" content={keyword} />)}
 <meta name="twitter:card" content="summary_large_image" />

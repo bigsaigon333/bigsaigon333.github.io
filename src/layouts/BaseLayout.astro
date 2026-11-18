@@ -150,23 +150,27 @@ window.__theme = {
 </style>
 
 <style>
-  /* components/layout.style.ts 의 Body */
+  /* 한 칸짜리 세로 열. 폭은 --page-width, 양옆 여백은 휴대폰 16px, 40rem 부터 넓힌다. */
   .layout {
     min-height: 100vh;
-    padding: 3rem 2rem 0;
-    flex: 1;
     display: flex;
     flex-direction: column;
-    justify-content: center;
     align-items: flex-start;
-    row-gap: 2rem;
-    max-width: 768px;
-    margin: auto;
+    row-gap: var(--space-6);
+    max-width: var(--page-width);
+    margin: 0 auto;
+    padding: var(--space-5) var(--space-4) 0;
   }
 
-  @media (max-width: 600px) {
+  @media (min-width: 40rem) {
     .layout {
-      padding: 2rem 1rem 0;
+      padding: var(--space-7) var(--space-6) 0;
+    }
+  }
+
+  @media (min-width: 64rem) {
+    .layout {
+      padding-top: var(--space-8);
     }
   }
 </style>

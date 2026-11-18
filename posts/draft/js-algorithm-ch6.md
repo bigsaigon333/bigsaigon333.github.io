@@ -2,6 +2,7 @@
 title: Ch06. 큐
 date: "2020-03-13"
 summary: 큐
+category: 개발
 ---
 
 ## 6-1. 큐란?

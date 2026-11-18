@@ -2,9 +2,11 @@ import { defineCollection, reference } from "astro:content";
 import { file, glob } from "astro/loaders";
 import { z } from "astro/zod";
 
-// id = 파일 이름에서 .md(또는 .mdx) 를 뗀 것. 기본 구현(github-slugger)은 대소문자와 기호를 바꾼다.
+import { CATEGORY_NAMES } from "./lib/categories";
+
+// id = 파일 이름에서 .md 를 뗀 것. 기본 구현(github-slugger)은 대소문자와 기호를 바꾼다.
 const generateId = ({ entry }: { entry: string }): string =>
-  entry.replace(/\.mdx?$/, "");
+  entry.replace(/\.md$/, "");
 
 // "2022-05-08" → UTC 자정의 Date. 시간대 표기가 없는 날짜 문자열만 받아서 빌드 환경의 시간대를 타지 않는다.
 // 따옴표 없는 날짜는 받지 않는다. YAML 이 Date 로 바꾸면서 2022-02-30 같은 없는 날짜를 조용히 2022-03-02 로 넘기기 때문이다.
@@ -30,6 +32,8 @@ const fields = {
           .filter(Boolean) ?? [],
     ),
   summary: z.string().optional(),
+  // 글마다 하나, 필수다. 받는 값은 src/lib/categories.ts 의 name("개발", "부동산", "일상")이다.
+  category: z.enum(CATEGORY_NAMES),
   // true 면 초안이다. 운영 빌드에 나가지 않는다(lib/posts.ts 의 isDraft).
   draft: z.boolean().optional(),
 };
@@ -38,7 +42,7 @@ const posts = defineCollection({
   loader: glob({
     // 최상위 *.md 만 읽는다. posts/draft/ 는 아래 drafts 컬렉션이 읽는다.
     // 최상위에 놓인 초안(draft: true, 또는 이름이 "draft:" 로 시작)도 읽히고, lib/posts.ts 가 운영 빌드에서 걸러낸다.
-    pattern: "*.{md,mdx}",
+    pattern: "*.md",
     base: "./posts",
     generateId,
   }),
@@ -62,7 +66,7 @@ const posts = defineCollection({
 const drafts = defineCollection({
   // import.meta.env.DEV: astro dev 에서 true, astro build 에서 false.
   loader: import.meta.env.DEV
-    ? glob({ pattern: "*.{md,mdx}", base: "./posts/draft", generateId })
+    ? glob({ pattern: "*.md", base: "./posts/draft", generateId })
     : () => [],
   schema: z
     .strictObject({

@@ -1,0 +1,19 @@
+---
+import { tagPath } from "../lib/tags";
+
+// 태그 페이지(/tags/<슬러그>)로 가는 알약 모양 링크 하나: "#태그", count 를 주면 "#태그 (n)".
+// 모양은 global.css 의 .tag-pill 이다(CategoryLink.astro 와 같은 이유로 전역).
+interface Props {
+  /** frontmatter keywords 의 원래 글자. */
+  label: string;
+  /** 그 태그가 붙은 글 수(/tags 목록). */
+  count?: number;
+}
+
+const { label, count } = Astro.props;
+---
+
+<a class="tag-pill" href={tagPath(label)}>
+  #{label}
+  {count !== undefined && <span class="count"> ({count})</span>}
+</a>
