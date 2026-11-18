@@ -169,6 +169,7 @@ const BUILD_INPUTS = [
   "astro.config.mjs",
   "config",
   "integrations",
+  "comments",
   "src",
   "public",
   "tsconfig.json",
@@ -201,6 +202,8 @@ function fillCopy(dir, posts) {
   for (const name of BUILD_INPUTS)
     fs.cpSync(path.join(repoRoot, name), path.join(dir, name), {
       recursive: true,
+      // src/ imports the comments contract (comments/src/contract); the workspace's own packages and state stay out.
+      filter: (from) => !/[\\/](node_modules|\.wrangler)$/.test(from),
     });
 
   fs.mkdirSync(path.join(dir, "posts"));

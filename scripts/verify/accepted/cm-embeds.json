@@ -1,0 +1,24 @@
+{
+  "baseline": "9b635b96c0493829ee0b973b71932a83b7a37641bb7035c0921ccf34460e0cfa",
+  "reason": "인라인 댓글(CM): 글 페이지의 utterances 스크립트가 <post-comments> 로 바뀐다. embeds 의 utterances·comments 필드가 달라지는 것이 의도다",
+  "entries": [
+    {
+      "check": "embeds",
+      "routes": [
+        "/posts/css-masters-2-week1",
+        "/posts/css-masters-2-week2",
+        "/posts/css-masters-2-week3",
+        "/posts/css-masters-2-week4",
+        "/posts/date-time-string-format-in-js",
+        "/posts/how-to-check-two-types-are-equal-in-ts",
+        "/posts/js-the-new-toys-study-01",
+        "/posts/proxy-to-built-in-objects",
+        "/posts/react-programming-ch09",
+        "/posts/react-scripts-react-app-polyfill-promise-any",
+        "/posts/regular-expression-1",
+        "/posts/ts-ambient-type-declaration"
+      ],
+      "reason": "인라인 댓글(CM): 글 페이지의 utterances 스크립트가 <post-comments> 로 바뀐다. embeds 의 utterances·comments 필드가 달라지는 것이 의도다"
+    }
+  ]
+}

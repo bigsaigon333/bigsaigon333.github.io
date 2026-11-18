@@ -344,6 +344,9 @@ async function launch(origin, api) {
 }
 
 const attempted = (seen, prefix) => seen.some((url) => url.startsWith(prefix));
+/** Was the threads URL requested? The client adds a query (?limit=…); the path is the contract. */
+const asked = (seen, url) =>
+  seen.some((u) => u === url || u.startsWith(`${url}?`));
 
 /** Problems of the page as it is now: no violation, and what must have been requested. */
 function loadProblems(state, seen, consoleCsp, { threads }) {
@@ -355,7 +358,7 @@ function loadProblems(state, seen, consoleCsp, { threads }) {
     problems.push("GA loader not requested");
   if (!seen.some((url) => /^https:\/\/[^/]*google-analytics\.com\//.test(url)))
     problems.push("GA collect hit not requested");
-  if (threads && !seen.includes(threads))
+  if (threads && !asked(seen, threads))
     problems.push(`comments threads not requested (${threads})`);
   return problems;
 }
@@ -363,7 +366,7 @@ function loadProblems(state, seen, consoleCsp, { threads }) {
 /** Wait (at most TIMEOUT_MS) until `url` was requested, then for quiet: the comments loader runs when idle. */
 async function requested(page, seen, url, quiet) {
   const deadline = Date.now() + TIMEOUT_MS;
-  while (url && !seen.includes(url) && Date.now() < deadline)
+  while (url && !asked(seen, url) && Date.now() < deadline)
     await page.waitForTimeout(50);
   await quiet();
 }
@@ -424,7 +427,7 @@ async function checkNavigation(browser, base, pages, threadsOf) {
           `data-theme ${JSON.stringify(state.theme)} after the swap`,
         );
       const threads = threadsOf(route);
-      if (threads && !seen.includes(threads))
+      if (threads && !asked(seen, threads))
         problems.push(`comments threads not requested (${threads})`);
       await page.evaluate(() => {
         window.__verifyCsp.violations.length = 0;

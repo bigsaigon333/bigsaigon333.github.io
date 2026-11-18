@@ -43,7 +43,7 @@ const { Content, headings } = await render(post);
 
 <BaseLayout
   seo={{
-    // 제목 뒤에 아무것도 붙이지 않는다. utterances 가 문서 제목으로 댓글 이슈를 찾는다.
+    // 제목 뒤에 아무것도 붙이지 않는다. 글 제목은 기준선(배포본)과 바이트 단위로 같아야 한다.
     title,
     // front matter 에 description(summary)이 없으면 본문 앞부분(lib/posts.ts postDescription).
     description: postDescription(post),
@@ -59,7 +59,7 @@ const { Content, headings } = await render(post);
   <PostHeader title={displayTitle(post)} date={date} />
   <PostTags keywords={keywords} />
   <Toc headings={headings} />
-  {/* 코드 블록마다 복사 버튼(S6.3). 상자 없는 <copy-code hidden> 이다. <main> 뒤에 두면 utterances 의 자리(main 바로 뒤)가 바뀐다. */}
+  {/* 코드 블록마다 복사 버튼(S6.3). 상자 없는 <copy-code hidden> 이다. <main> 뒤에 두면 댓글 엘리먼트의 자리(main 바로 뒤)가 바뀐다. */}
   <CopyCode />
   <main class="prose">
     <Content />

@@ -15,7 +15,7 @@ export default defineConfig({
   // CSP(S7.2, config/csp.mjs)는 빌드 뒤 정책 meta 를 옮기므로 마지막에 둔다.
   integrations: [...localIntegrations, csp()],
   fonts,
-  // GA 측정 ID, 사이트 소유 확인 토큰, utterances 저장소(astro:env 스키마). 값은 config/.env.<mode> 에 있다.
+  // GA 측정 ID, 사이트 소유 확인 토큰, PUBLIC_COMMENTS_API(astro:env 스키마). 값은 config/.env.<mode> 에 있다.
   env,
   // View Transitions(S6.2)의 <ClientRouter /> 와 함께 쓰는 prefetch. 같은 사이트의 모든 링크를 포인터를 올리거나
   // 포커스할 때(hover) 미리 받는다. ClientRouter 가 있으면 prefetchAll 의 기본값이 true 지만 드러내 적는다.

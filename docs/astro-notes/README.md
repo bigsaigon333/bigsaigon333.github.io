@@ -62,6 +62,7 @@ Next.js 블로그를 배포본과 바이트·픽셀 단위로 같게 옮긴 단�
 | 34   | [34. 섹션 링크: 사용자 hast 플러그인과 heading-ids 의 순서](34-heading-links.md)                           | `hastPlugins`, `config/hast-heading-links.mjs`, `github-slugger`                   | H1   | `npm run verify -- --only=anchors`                                                |
 | 35   | [35. 카테고리와 개인 블로그 문구](35-categories.md)                                                        | `z.enum`, `/categories`, `article:section`                                         | C1   | `npm run verify -- --only=categories`                                             |
 | 36   | [36. 댓글 워커: Cloudflare Workers + D1, 팝업 OAuth, bearer 토큰](36-comments-worker.md)                   | Workers, D1, OAuth PKCE, `npm -w comments test`                                    | CM-A | `comments/` 패키지                                                                |
+| 39   | [39. 인라인 댓글 클라이언트: 로더 커스텀 엘리먼트, 지연 UI 조각, Custom Highlight](39-comments-client.md)  | `customElements`, 동적 `import()`, `CSS.highlights`, CSP `connect-src`             | CM-B | `npm run verify -- --only=comments`                                               |
 
 ### 마무리
 

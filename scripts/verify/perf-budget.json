@@ -58,8 +58,8 @@
       "tbt": 100,
       "cls": 0.02,
       "bytes": 114176,
-      "js": 9216,
-      "css": 8192,
+      "js": 11264,
+      "css": 9216,
       "blocking": 3
     },
     "/posts/how-to-check-two-types-are-equal-in-ts": {
@@ -70,8 +70,8 @@
       "tbt": 100,
       "cls": 0.04,
       "bytes": 161792,
-      "js": 9216,
-      "css": 8192,
+      "js": 11264,
+      "css": 9216,
       "blocking": 3
     },
     "/posts/css-masters-2-week2": {
@@ -82,8 +82,8 @@
       "tbt": 100,
       "cls": 0.02,
       "bytes": 150016,
-      "js": 9216,
-      "css": 8192,
+      "js": 11264,
+      "css": 9216,
       "blocking": 3
     }
   },

@@ -1,7 +1,7 @@
 // perf — lab performance of four representative pages must not get worse than scripts/verify/perf-budget.json.
 //
 //   npm run verify -- --no-check --only=perf                      # the four pages, third parties blocked (the gate)
-//   VERIFY_PERF_THIRD_PARTY=1 npm run verify -- --no-build --no-check --only=perf   # also with GA and utterances
+//   VERIFY_PERF_THIRD_PARTY=1 npm run verify -- --no-build --no-check --only=perf   # also with the GA loader
 //   VERIFY_PERF_WRITE_BUDGET=1 npm run verify -- --no-build --no-check --only=perf  # lower the budget to this run
 //
 // Lighthouse (mobile preset: Moto G Power screen, 150 ms RTT, 1.6 Mbps, 4× CPU) with SIMULATED throttling (Lantern):
@@ -18,9 +18,9 @@
 // route outside PAGES is held to the loosest limit of each metric over the four entries (so `--feature --route=<new
 // post>` measures the new post).
 //
-// Each page is measured with off-site requests blocked (BLOCKED): GA, utterances. These numbers are the gate: they
-// depend on this repository only. With VERIFY_PERF_THIRD_PARTY=1 every page is also measured with the GA loader and
-// utterances allowed (GA's collect endpoints stay blocked: a lab run must not count as a visit). Those numbers are
+// Each page is measured with off-site requests blocked (BLOCKED): GA, the comments API. These numbers are the gate: they
+// depend on this repository only. With VERIFY_PERF_THIRD_PARTY=1 every page is also measured with the GA loader
+// allowed (its collect endpoints and the comments API stay blocked: a lab run must not count as a visit or touch live comments). Those numbers are
 // reported (extra.thirdParty) but not gated: gtag.js is whatever Google serves that day.
 //
 // Items, one per page: every metric of perf-budget.json pages[route] is within its limit. A metric is a median over RUNS:
@@ -89,7 +89,7 @@ const BLOCKED = [
   "*google-analytics.com*",
   "*analytics.google.com*",
   "*doubleclick.net*",
-  "*utteranc.es*",
+  "*workers.dev*",
   "*github.com*",
   "*githubusercontent.com*",
 ];
@@ -98,6 +98,7 @@ const BLOCKED_THIRD_PARTY = [
   "*google-analytics.com/g/collect*",
   "*analytics.google.com/g/collect*",
   "*doubleclick.net*",
+  "*workers.dev*",
 ];
 
 /** metric → direction. "min": the value must be at least the budget, "max": at most. */
@@ -779,7 +780,7 @@ export function summaryMarkdown(report, budget) {
       true,
     );
   if (extra.thirdParty)
-    table("GA and utterances allowed (reported only)", extra.thirdParty, false);
+    table("GA allowed (reported only)", extra.thirdParty, false);
   for (const failure of report.failed ?? [])
     lines.push(`- FAIL ${failure.route}: ${failure.detail}`);
   return lines.join("\n");
