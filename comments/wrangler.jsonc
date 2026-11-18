@@ -1,4 +1,4 @@
-// 비밀 값(GH_OAUTH_CLIENT_ID/SECRET, OWNER_GITHUB_ID)은 여기에 두지 않는다. `wrangler secret put` 이나 CI 가 넣는다.
+// 비밀 값(GH_OAUTH_CLIENT_ID/SECRET)은 여기에 두지 않는다. `wrangler secret put` 이나 CI 가 넣는다.
 // database_id 는 자리 표시자다. CI(deploy.yml 의 worker-deploy)가 배포 직전에 실제 값으로 바꾼다.
 {
   "$schema": "node_modules/wrangler/config-schema.json",
@@ -9,7 +9,8 @@
   "vars": {
     "ALLOWED_ORIGINS": "https://bigsaigon333.github.io,http://localhost:4321",
     "MODE": "readwrite",
-    // OWNER_GITHUB_ID 는 여기 두지 않는다. CI 가 secret 으로 넣는다(없으면 관리자 없음).
+    // 소유자의 GitHub 숫자 id 는 공개 정보라 var 로 둔다(CI 는 GH_OAUTH_* 두 secret 만 올린다).
+    "OWNER_GITHUB_ID": "31029000",
     "SITE_URL": "https://bigsaigon333.github.io",
   },
   "d1_databases": [

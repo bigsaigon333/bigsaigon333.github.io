@@ -60,7 +60,7 @@ npm --prefix comments run dev       # 로컬 D1 마이그레이션 → wrangler 
 | `ALLOWED_ORIGINS`        | var    | 쉼표로 나눈 정확한 출처 목록                                                   |
 | `MODE`                   | var    | `readwrite`(기본) 또는 `readonly`                                              |
 | `SITE_URL`               | var    | 글 존재 확인용 사이트 주소. 비우면 형식만 본다                                 |
-| `OWNER_GITHUB_ID`        | secret | 관리자 GitHub 숫자 id. 없으면 관리자가 없다                                    |
+| `OWNER_GITHUB_ID`        | var    | 관리자 GitHub 숫자 id. 없으면 관리자가 없다                                    |
 | `GH_OAUTH_CLIENT_ID`     | secret | GitHub OAuth App. 없으면 `/v1/auth/start`가 503 `not_configured`               |
 | `GH_OAUTH_CLIENT_SECRET` | secret | 〃                                                                             |
 | `TEST_LOGIN`             | var    | `"1"`일 때만 `POST /v1/auth/test-login`이 열린다. **운영(default env)에 없다** |
