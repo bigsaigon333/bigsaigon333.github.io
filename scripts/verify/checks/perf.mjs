@@ -38,8 +38,13 @@
 // diagnostics with their estimated savings (median run), so the next step can be picked from the report.
 //
 // Allowlist: none. Lower the budget when a change makes a page faster (perf-budget.json "margins" says how).
+// The budget is the gate of CI, so it comes from CI's numbers: the medians of a GitHub-hosted runner (the job summary
+// and the perf-report artifact of checks.yml), which are well above a laptop's (WB-review: FCP of the math post 840 ms
+// on a laptop, 1107 ms on the runner). VERIFY_PERF_WRITE_BUDGET on a laptop would tighten it below what CI can meet;
+// run it on CI's numbers instead. "measured" in perf-budget.json holds the CI medians the limits were taken from.
 import fs from "node:fs";
 import http from "node:http";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -78,10 +83,12 @@ export const PAGES = {
 export const RUNS = 3;
 /**
  * Lighthouse runs at the same time, each in its own worker thread with its own Chromium (Lighthouse keeps global
- * performance marks, so two runs cannot share a thread). Lantern hardly notices the contention (on this machine FCP
- * of the math post moved 903 → 940 ms at 8× the CPU multiplier, 1003 ms at 16×), and two lanes halve the time.
+ * performance marks, so two runs cannot share a thread). Lantern hardly notices the contention on a machine with
+ * cores to spare (on a 10-core laptop FCP of the math post moved 903 → 940 ms at 8× the CPU multiplier, 1003 ms at
+ * 16×), and two lanes halve the time. A smaller machine (a 4-vCPU CI runner) gets one lane: there the second
+ * Chromium's main-thread time ends up in the first one's numbers (WB-review).
  */
-const LANES = 2;
+const LANES = os.availableParallelism() >= 8 ? 2 : 1;
 
 /** Off-site hosts never requested in the gated run. */
 const BLOCKED = [
@@ -643,6 +650,8 @@ export function overBudget(medians, entry) {
 export default {
   name: NAME,
   kind: "browser",
+  // Runs after the other browser checks, alone (lib/runner.mjs runChecks).
+  exclusive: true,
   scope: "feature",
 
   async run(ctx) {
