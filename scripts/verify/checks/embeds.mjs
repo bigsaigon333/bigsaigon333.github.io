@@ -1,4 +1,4 @@
-// embeds — Google Analytics and utterances must be wired exactly as on the baseline.
+// embeds — Google Analytics and the comments must be wired exactly as on the baseline.
 //
 // Read from the live DOM after scripts have run, with the embeds themselves blocked (lib/browser.mjs):
 //   ga.loader    ids of <script src="https://www.googletagmanager.com/gtag/js?id=…">
@@ -9,6 +9,11 @@
 //   utterances   repo, issue-term, theme, crossorigin and async of the utteranc.es client script, and where it
 //                stands: the tag names of its parent and of the elements before and after it. The widget is
 //                inserted right after the script, so a script that has moved is comments in another place. Or null.
+//                (The old comments: a baseline that still has them differs from a candidate that has <post-comments>.
+//                That release declares it in its accept file.)
+//   comments     data-api and data-post of <post-comments>, and where it stands (parent, previous, next tag
+//                names): the API a post talks to and the post it asks for. Or null. Whether it is hidden is left
+//                out: that depends on the API, which is blocked here (lib/browser.mjs).
 
 import {
   baselineValue,
@@ -92,6 +97,17 @@ function readEmbeds() {
     }),
   );
 
+  const comments = Array.from(
+    document.querySelectorAll("post-comments"),
+    (section) => ({
+      api: section.getAttribute("data-api"),
+      post: section.getAttribute("data-post"),
+      parent: tagOf(section.parentElement),
+      previous: tagOf(section.previousElementSibling),
+      next: tagOf(section.nextElementSibling),
+    }),
+  );
+
   return {
     ga: { loader: loader.sort(), config: config.sort(), calls },
     // One script is the normal case; more than one is a difference worth seeing.
@@ -101,6 +117,12 @@ function readEmbeds() {
         : utterances.length === 1
           ? utterances[0]
           : utterances,
+    comments:
+      comments.length === 0
+        ? null
+        : comments.length === 1
+          ? comments[0]
+          : comments,
   };
 }
 
@@ -130,6 +152,7 @@ const FIELDS = [
   ["ga.config", (embeds) => embeds.ga.config],
   ["ga.calls", (embeds) => embeds.ga.calls],
   ["utterances", (embeds) => embeds.utterances],
+  ["comments", (embeds) => embeds.comments ?? null],
 ];
 
 function differences(baseline, candidate) {
@@ -310,6 +333,25 @@ export default {
             dir,
             /(<script src="https:\/\/utteranc\.es[^>]*><\/script>)([\s\S]*)(<\/body>)/,
             "$2$1$3",
+          );
+        },
+      },
+      {
+        // The baseline has no <post-comments> yet: both sides get one, naming different APIs.
+        name: "post-comments 의 data-api 변경",
+        routes: aPost,
+        apply(dir) {
+          editPages(
+            dir,
+            "</main>",
+            '</main><post-comments data-api="https://comments.mutant.workers.dev" data-post="x" hidden></post-comments>',
+          );
+        },
+        baseline(dir) {
+          editPages(
+            dir,
+            "</main>",
+            '</main><post-comments data-api="https://comments.example.workers.dev" data-post="x" hidden></post-comments>',
           );
         },
       },

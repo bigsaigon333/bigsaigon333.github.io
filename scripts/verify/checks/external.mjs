@@ -9,13 +9,19 @@
 //   linked CSS   the same in every same-origin stylesheet a page links, followed through same-origin @import
 //   inline JS    every absolute http(s) URL written in an inline JavaScript <script> (the GA loader builds its URL
 //                there); data blocks such as JSON-LD are not run and are skipped
+//   comments     data-api of <post-comments>: the API its loader calls
 // Protocol-relative ("//host/…") counts as https. The site's own origin (from <link rel="canonical">) is local.
 //
-// One failed item per page and origin outside ALLOWED, naming where it was found. Fails as well when there are no
+// Allowed: the hosts in ALLOWED and their subdomains, and the comments API: exactly the https origin(s) the build's
+// <post-comments data-api> name (lib/browser.mjs commentsApiOrigins; the comments check requires one origin for
+// the whole site). Nothing of utteranc.es any more.
+//
+// One failed item per page and origin outside those, naming where it was found. Fails as well when there are no
 // pages, or when no page references any allowed origin (GA is on every page, so finding nothing means this does
 // not see what it should).
 import { load } from "cheerio";
 
+import { commentsApiOrigins } from "../lib/browser.mjs";
 import {
   candidateRoutes,
   editPages,
@@ -30,7 +36,6 @@ import {
 const ALLOWED = {
   "googletagmanager.com": "Google Analytics loader",
   "google-analytics.com": "Google Analytics collector",
-  "utteranc.es": "utterances comments",
 };
 
 const NOT_REQUESTS = new Set([
@@ -89,6 +94,11 @@ export default {
     const routes = candidateRoutes(ctx);
     const cssCache = new Map(); // site path → Promise<string[]> (references of that stylesheet and its imports)
     const seenAllowed = new Set();
+    const api = new Set(
+      [...commentsApiOrigins(ctx.candidateDir)].filter((origin) =>
+        origin.startsWith("https://"),
+      ),
+    );
     let pass = 0;
 
     const readCss = (pathname, trail = new Set()) => {
@@ -153,6 +163,8 @@ export default {
         }
         if (attr("style"))
           for (const ref of cssRefs(attr("style"))) note(ref, `<${tag} style>`);
+        if (tag === "post-comments" && attr("data-api"))
+          note(attr("data-api"), "<post-comments data-api>");
       }
       for (const style of $("style").toArray())
         for (const ref of cssRefs($(style).text())) note(ref, "<style>");
@@ -165,7 +177,7 @@ export default {
 
       const bad = [];
       for (const [origin, places] of found) {
-        if (allowedBy(origin)) seenAllowed.add(origin);
+        if (allowedBy(origin) || api.has(origin)) seenAllowed.add(origin);
         else bad.push(`${origin} (${[...places].join(", ")})`);
       }
       if (bad.length === 0) pass++;
@@ -190,7 +202,11 @@ export default {
       pass,
       fail: failed.length,
       failed,
-      extra: { allowed: ALLOWED, seen: [...seenAllowed].sort() },
+      extra: {
+        allowed: ALLOWED,
+        api: [...api].sort(),
+        seen: [...seenAllowed].sort(),
+      },
     };
   },
 
@@ -228,6 +244,27 @@ export default {
               (text) =>
                 `@import "https://fonts.googleapis.com/css2?family=X";\n${text}`,
             );
+        },
+      },
+      {
+        name: "utterances 스크립트를 다시 넣음",
+        apply(dir) {
+          editPages(
+            dir,
+            "</main>",
+            '</main><script src="https://utteranc.es/client.js" issue-term="title" async></script>',
+          );
+        },
+      },
+      {
+        // The loader would call this origin from an inline script: not the API every page names.
+        name: "인라인 스크립트가 data-api 가 아닌 workers.dev 출처를 부름",
+        apply(dir) {
+          editPages(
+            dir,
+            "</body>",
+            '<script>fetch("https://comments.someone-else.workers.dev/v1/health")</script></body>',
+          );
         },
       },
       {

@@ -4,10 +4,9 @@
 //   npm run verify -- --only=navigation
 //
 // Candidate-only (scope "feature"): the baseline does full page loads. One scenario in Chromium at 1280×900, system
-// light, clipboard permissions granted. GA and utterances are not contacted: gtag.js stays blocked (lib/browser.mjs)
-// so window.dataLayer holds exactly what the page pushed, and https://utteranc.es/client.js is answered by a stub that
-// does what the real client does with its <script> (reads it, inserts div.utterances > iframe.utterances-frame right
-// after it) and records document.title, the script's issue-term and theme on the iframe, and counts its runs.
+// light, clipboard permissions granted. GA and the comments API are not contacted: gtag.js stays blocked
+// (lib/browser.mjs) so window.dataLayer holds exactly what the page pushed, and GET {API}/v1/posts/<id>/threads, {API}
+// being the origin of the pages' <post-comments data-api>, is answered here with an empty list and counted per post.
 //
 // Pages: "/" and two posts linked from the home list. B is the first listed post with a code block and a toc,
 // A the first listed post that is not B (with --route, posts among the selected routes are preferred).
@@ -28,9 +27,9 @@
 //             gtag("event", "page_view", …) after a swap: that was counted twice (W9). No second config.
 //   theme     data-theme is "dark" when astro:after-swap fires (set before the swap; set later is a flash of the
 //             light page) and after settling, and the toggle's aria-pressed is "true"
-//   utterances on a post: one utteranc.es client <script> with issue-term="title", run once during this step (the
-//             stub's run count went up by exactly 1), and one iframe.utterances-frame whose recorded title is the
-//             post's <title> and whose theme is github-dark. Elsewhere: no script, no iframe, no run.
+//   comments  on a post: one <post-comments> whose data-post is the post's id, its threads requested exactly once
+//             during this step and no other post's. Elsewhere: no <post-comments>, no threads requested. Nowhere a
+//             utteranc.es script.
 //   B only    the first code block's "복사" button puts the block's text in the clipboard; when B has a toc, a
 //             heading scrolled to the top makes its toc link, and only it, aria-current="true".
 // Last item: on the final page, a click on the toggle switches to light (its listener survived the swaps).
@@ -38,33 +37,20 @@
 // Allowlist: none.
 import { load } from "cheerio";
 
-import { openBrowser } from "../lib/browser.mjs";
+import { commentsApiOrigins, openBrowser } from "../lib/browser.mjs";
 import { candidateRoutes, editPages, quote } from "../lib/html.mjs";
 
 const NAME = "navigation";
 const VIEWPORT = { width: 1280, height: 900 };
 const WAIT_MS = 5_000;
-const UTTERANCES = 'script[src^="https://utteranc.es/client.js"]';
+const COMMENTS = "post-comments";
+const UTTERANCES = 'script[src*="utteranc.es"]';
+const THREADS = /^\/v1\/posts\/([^/]+)\/threads$/;
 const TOC = 'nav[aria-label="목차"]';
 const COPY = "복사";
 
 const isPost = (route) => /^\/posts\/[^/]+$/.test(route);
 const oneLine = (error) => String(error?.message ?? error).split("\n")[0];
-
-/** What utteranc.es/client.js does to the page, minus the network: an iframe right after its own <script>. */
-const UTTERANCES_STUB = `(function () {
-  var script = document.currentScript;
-  var frame = document.createElement("iframe");
-  frame.className = "utterances-frame";
-  frame.setAttribute("data-title", document.title);
-  frame.setAttribute("data-issue-term", script.getAttribute("issue-term") || "");
-  frame.setAttribute("data-theme", script.getAttribute("theme") || "");
-  var box = document.createElement("div");
-  box.className = "utterances";
-  box.appendChild(frame);
-  script.insertAdjacentElement("afterend", box);
-  window.__verifyUtterancesRuns = (window.__verifyUtterancesRuns || 0) + 1;
-})();`;
 
 // ── in the page ─────────────────────────────────────────────────────────────────────────────────
 
@@ -81,7 +67,7 @@ function installProbe(marker) {
   });
 }
 
-function readState({ utterances }) {
+function readState({ utterances, comments }) {
   const pageViews = [];
   for (const entry of Array.from(window.dataLayer ?? [])) {
     const args = Array.from(entry ?? []);
@@ -105,18 +91,10 @@ function readState({ utterances }) {
       button.getAttribute("aria-pressed"),
     ),
     pageViews,
-    scripts: Array.from(document.querySelectorAll(utterances), (script) =>
-      script.getAttribute("issue-term"),
+    utterances: document.querySelectorAll(utterances).length,
+    sections: Array.from(document.querySelectorAll(comments), (section) =>
+      section.getAttribute("data-post"),
     ),
-    frames: Array.from(
-      document.querySelectorAll("iframe.utterances-frame"),
-      (frame) => ({
-        title: frame.getAttribute("data-title"),
-        issueTerm: frame.getAttribute("data-issue-term"),
-        theme: frame.getAttribute("data-theme"),
-      }),
-    ),
-    runs: window.__verifyUtterancesRuns ?? 0,
   };
 }
 
@@ -169,7 +147,7 @@ async function choosePages(ctx) {
   return { home, a, b };
 }
 
-async function scenario(browser, base, pages) {
+async function scenario(browser, base, pages, api) {
   const { home, a, b } = pages;
   return browser.withPage(VIEWPORT, async (tab) => {
     const { page } = tab;
@@ -177,14 +155,22 @@ async function scenario(browser, base, pages) {
     await page
       .context()
       .grantPermissions(["clipboard-read", "clipboard-write"], { origin });
-    // Registered after lib/browser.mjs's catch-all route, so it is asked first.
-    await page.route("https://utteranc.es/client.js**", (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: "text/javascript",
-        body: UTTERANCES_STUB,
-      }),
-    );
+    // Registered after lib/browser.mjs's catch-all route (which blocks the API), so it is asked first.
+    const threads = []; // the post id of every GET of a thread list, in order
+    if (api)
+      await page.route(`${api}/**`, (route) => {
+        const request = route.request();
+        const post = THREADS.exec(new URL(request.url()).pathname)?.[1];
+        if (request.method() !== "GET" || !post)
+          return route.abort("blockedbyclient");
+        threads.push(decodeURIComponent(post));
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          headers: { "access-control-allow-origin": origin },
+          body: JSON.stringify({ threads: [], nextCursor: null }),
+        });
+      });
 
     const items = [];
     const marker = `nav-${Date.now()}-${Math.random()}`;
@@ -201,7 +187,7 @@ async function scenario(browser, base, pages) {
     await page.evaluate(installProbe, marker);
 
     const steps = [];
-    let runs = 0;
+    let fetched = 0;
     let loads = 0;
 
     const after = async (step, navigate) => {
@@ -223,7 +209,15 @@ async function scenario(browser, base, pages) {
           problems.push(`did not settle: ${oneLine(error)}`);
         });
       }
-      const state = await page.evaluate(readState, { utterances: UTTERANCES });
+      // The loader asks for the threads when the page is idle: give it that long, when it has not yet.
+      const id = isPost(step.route) ? step.route.slice("/posts/".length) : null;
+      const until = Date.now() + WAIT_MS;
+      while (id && !threads.slice(fetched).includes(id) && Date.now() < until)
+        await page.waitForTimeout(50);
+      const state = await page.evaluate(readState, {
+        utterances: UTTERANCES,
+        comments: COMMENTS,
+      });
 
       // reload
       if (state.marker !== marker)
@@ -265,33 +259,25 @@ async function scenario(browser, base, pages) {
         problems.push(
           `toggle aria-pressed [${state.pressed.join(", ")}], expected [true]`,
         );
-      // utterances
-      const ran = state.runs - runs;
-      runs = state.runs;
-      if (isPost(step.route)) {
-        if (state.scripts.length !== 1 || state.scripts[0] !== "title")
+      // comments
+      const asked = threads.slice(fetched);
+      fetched = threads.length;
+      if (state.utterances)
+        problems.push(`${state.utterances} utteranc.es scripts`);
+      if (id) {
+        if (!api) problems.push(`no <${COMMENTS} data-api> in the build`);
+        if (state.sections.length !== 1 || state.sections[0] !== id)
           problems.push(
-            `utterances scripts with issue-term [${state.scripts.join(", ")}], expected [title]`,
+            `<${COMMENTS}> data-post [${state.sections.join(", ")}], expected [${id}]`,
           );
-        if (ran !== 1)
-          problems.push(`utterances client ran ${ran} times, expected 1`);
-        const frame = state.frames[0];
-        if (state.frames.length !== 1)
-          problems.push(`${state.frames.length} utterances iframes`);
-        else if (frame.title !== step.title || frame.issueTerm !== "title")
+        if (asked.length !== 1 || asked[0] !== id)
           problems.push(
-            `utterances loaded for ${quote(frame.title, 40)} (issue-term ${quote(frame.issueTerm)}), expected ${quote(step.title, 40)}`,
+            `threads requested for [${asked.join(", ")}] during this step, expected [${id}] once`,
           );
-        else if (frame.theme !== "github-dark")
-          problems.push(
-            `utterances theme ${quote(frame.theme)}, expected github-dark`,
-          );
-      } else {
-        if (state.scripts.length || state.frames.length || ran)
-          problems.push(
-            `utterances on a page without comments: ${state.scripts.length} scripts, ${state.frames.length} iframes, ${ran} runs`,
-          );
-      }
+      } else if (state.sections.length || asked.length)
+        problems.push(
+          `comments on a page that is not a post: ${state.sections.length} <${COMMENTS}>, threads requested for [${asked.join(", ")}]`,
+        );
       if (step.extra) await step.extra(problems);
       items.push({ route: step.route, step: step.name, problems });
     };
@@ -483,13 +469,14 @@ export default {
       };
 
     const base = await ctx.serve("candidate");
+    const api = [...commentsApiOrigins(ctx.candidateDir)].sort()[0] ?? null;
     // openBrowser serves both sides to know which origins are local; this check never reads the baseline.
     const browser = await openBrowser(
       Object.create(ctx, { serve: { value: () => ctx.serve("candidate") } }),
     );
     let items;
     try {
-      items = await scenario(browser, base, pages);
+      items = await scenario(browser, base, pages, api);
     } catch (error) {
       items = [{ route: "-", step: "scenario", problems: [oneLine(error)] }];
     } finally {
@@ -544,12 +531,17 @@ export default {
         },
       },
       {
-        name: "utterances 스크립트를 다시 실행하지 않는다(data-astro-rerun 삭제)",
+        // Every post's section names the first post: after a swap the loader asks for another post's comments.
+        name: "post-comments 의 data-post 가 자기 글이 아니다",
         apply(dir) {
+          let first = null;
           editPages(
             dir,
-            /(<script src="https:\/\/utteranc\.es\/client\.js"[^>]*?) data-astro-rerun/g,
-            "$1",
+            /(<post-comments\b[^>]*\bdata-post=")([^"]*)"/g,
+            (_, head, id) => {
+              first ??= id;
+              return `${head}${first}"`;
+            },
           );
         },
       },

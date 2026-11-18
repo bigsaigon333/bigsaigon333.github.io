@@ -1,6 +1,6 @@
-// head — per route, what crawlers, link previews and utterances read from <head>.
+// head — per route, what crawlers and link previews read from <head>.
 //
-// Compared exactly: html[lang], <title> (utterances finds the comment thread by it), meta description / author /
+// Compared exactly: html[lang], <title> (what search results and shared links show), meta description / author /
 // viewport / google-site-verification, canonical, og:*, twitter:*, icon, presence of a utf-8 charset meta.
 // meta keywords is compared as a list (split on ",", trimmed, empties dropped).
 //

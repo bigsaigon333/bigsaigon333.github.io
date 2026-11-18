@@ -1,5 +1,5 @@
 // csp — Content Security Policy (S7.2): every page carries one policy in a <meta http-equiv>, it allows what the
-// site needs (its own files, GA, utterances) and nothing else, and no page breaks it, on a full load or across
+// site needs (its own files, GA, the comments API) and nothing else, and no page breaks it, on a full load or across
 // client-side navigation (<ClientRouter />).
 //
 //   npm run verify -- --only=csp --route=/
@@ -11,11 +11,9 @@
 // "blocked by CSP" (a violation, never seen here) cannot be confused.
 //   https://www.googletagmanager.com/gtag/js   a stub that sends one hit to https://region1.google-analytics.com/g/collect
 //                                              (connect-src), as gtag.js does, then nothing
-//   https://utteranc.es/client.js              a stub doing what the real client does to the page (recorded from
-//                                              client.js on 2026-11-13): a <style> with UTTERANCES_STYLE at the top of
-//                                              <head>, then div.utterances > iframe.utterances-frame for
-//                                              https://utteranc.es/utterances.html right after its <script>. The
-//                                              iframe is not lazy here, so its request is made without scrolling.
+//   GET {API}/v1/posts/<id>/threads            an empty thread list ({"threads":[],"nextCursor":null}, CORS allowed for
+//                                              the site). {API} is the comments API the pages name in
+//                                              <post-comments data-api> (lib/browser.mjs commentsApiOrigins).
 //   anything else off-site                      aborted
 //
 // Items, each one line of the report:
@@ -24,23 +22,23 @@
 //               same text on every route (the router keeps the first page's policy, and a page that needed another
 //               one would break after a swap); script-src (and script-src-elem) without 'unsafe-inline',
 //               'unsafe-eval', 'unsafe-hashes', data:, blob:, *, http:, https:; object-src 'none'; base-uri set;
-//               every host source in any directive is one of ALLOWED_HOSTS; GA and utterances are allowed where
-//               they are used (REQUIRED).
+//               every host source in any directive is one of ALLOWED_HOSTS, or the comments API's host and then
+//               only in connect-src (nothing of utteranc.es is allowed any more); GA and the comments API are
+//               allowed where they are used (REQUIRED, plus the API's threads URL in connect-src).
 //   load        every selected route, a full load: no securitypolicyviolation event and no "Content Security
 //               Policy" console message; data-theme is "dark" when <body> is parsed (the head theme script ran
 //               under the policy, before the first paint); the GA loader and a collect hit were requested; on a
-//               page with the utterances script, client.js and the iframe were requested and div.utterances has
-//               the client's style (position: relative).
+//               post with <post-comments>, its threads were requested from the API (so connect-src let it pass).
 //   navigate    "/" → post A (click) → post B (click a link appended to A): after each swap, still no violation,
-//               one policy <meta> with the first page's text, data-theme "dark", and on a post client.js ran
-//               again and its iframe was requested.
+//               one policy <meta> with the first page's text, data-theme "dark", and on a post its threads were
+//               requested during the swap.
 //
 // Allowlist: none.
 import fs from "node:fs";
 
 import { load } from "cheerio";
 
-import { mapLimit, MAX_PAGES } from "../lib/browser.mjs";
+import { commentsApiOrigins, mapLimit, MAX_PAGES } from "../lib/browser.mjs";
 import {
   addPage,
   candidateRoutes,
@@ -56,25 +54,25 @@ const TIMEOUT_MS = 15_000;
 const QUIET_MS = 300;
 const META =
   /<meta\b[^>]*\bhttp-equiv=["']?content-security-policy["']?[^>]*>/gi;
-const UTTERANCES = 'script[src^="https://utteranc.es/client.js"]';
+const COMMENTS = "post-comments";
+const EMPTY_THREADS = JSON.stringify({ threads: [], nextCursor: null });
 
 /** host suffix → why. A host source must be one of these or a subdomain (a wildcard only below them). */
 const ALLOWED_HOSTS = {
   "googletagmanager.com": "GA loader",
   "google-analytics.com": "GA collector",
   "analytics.google.com": "GA collector",
-  "utteranc.es": "utterances",
 };
 
-/** directive → URLs it must allow (checked with the CSP source matching below). */
+/** directive → URLs it must allow (checked with the CSP source matching below). The comments API is added per run. */
 const REQUIRED = {
-  "script-src-elem": [
-    "https://www.googletagmanager.com/gtag/js",
-    "https://utteranc.es/client.js",
-  ],
+  "script-src-elem": ["https://www.googletagmanager.com/gtag/js"],
   "connect-src": ["https://region1.google-analytics.com/g/collect"],
-  "frame-src": ["https://utteranc.es/utterances.html"],
 };
+/** The one directive that may name the comments API. */
+const API_DIRECTIVE = "connect-src";
+/** A post's thread list on the comments API at `origin`: what its loader GETs. */
+const threadsUrl = (origin, post) => `${origin}/v1/posts/${post}/threads`;
 
 /** What the CSP spec falls back to when a directive is absent. */
 const FALLBACK = {
@@ -95,23 +93,13 @@ const FORBIDDEN_SCRIPT = new Set([
   "https:",
 ]);
 
-/** The style utteranc.es/client.js inserts at the top of <head> (2026-11-13). */
-const UTTERANCES_STYLE =
-  "\n    .utterances {\n      position: relative;\n      box-sizing: border-box;\n      width: 100%;\n      max-width: 760px;\n      margin-left: auto;\n      margin-right: auto;\n    }\n    .utterances-frame {\n      color-scheme: light;\n      position: absolute;\n      left: 0;\n      right: 0;\n      width: 1px;\n      min-width: 100%;\n      max-width: 100%;\n      height: 100%;\n      border: 0;\n    }\n  ";
-
-const UTTERANCES_STUB = `(function () {
-  var script = document.currentScript;
-  document.head.insertAdjacentHTML("afterbegin", "<style>" + ${JSON.stringify(UTTERANCES_STYLE)} + "</style>");
-  script.insertAdjacentHTML("afterend", '<div class="utterances"><iframe class="utterances-frame" title="Comments" scrolling="no" src="https://utteranc.es/utterances.html?issue-term=title"></iframe></div>');
-  window.__verifyUtterancesRuns = (window.__verifyUtterancesRuns || 0) + 1;
-})();`;
-
 const GA_STUB = `(function () {
   fetch("https://region1.google-analytics.com/g/collect?v=2&en=page_view", { method: "POST", mode: "no-cors", keepalive: true }).catch(function () {});
 })();`;
 
 const oneLine = (error) => String(error?.message ?? error).split("\n")[0];
 const isPost = (route) => /^\/posts\/[^/]+$/.test(route);
+const postIdOf = (route) => route.slice("/posts/".length);
 
 // ── the policy, from the HTML ───────────────────────────────────────────────────────────────────
 
@@ -161,8 +149,11 @@ const isHostSource = (token) =>
   token !== "*" &&
   /[.]/.test(token);
 
-/** Problems of one page's HTML; also returns the policy text (null when there is not exactly one). */
-function policyProblems(html) {
+/**
+ * Problems of one page's HTML; also returns the policy text (null when there is not exactly one). `api` is the
+ * comments API origin the site names (or null): allowed in connect-src only, and required there.
+ */
+function policyProblems(html, api) {
   const problems = [];
   const metas = [...html.matchAll(META)];
   if (metas.length !== 1)
@@ -197,16 +188,28 @@ function policyProblems(html) {
     );
   if (!policy.has("base-uri")) problems.push("no base-uri");
 
+  const apiHost = api ? new URL(api).hostname : null;
   for (const [name, tokens] of policy)
     for (const token of tokens) {
       if (!isHostSource(token)) continue;
       const host = hostOfSource(token);
+      if (apiHost !== null && host === apiHost) {
+        if (name !== API_DIRECTIVE)
+          problems.push(
+            `${name} allows ${token}: the comments API belongs in ${API_DIRECTIVE} only`,
+          );
+        continue;
+      }
       const known = Object.keys(ALLOWED_HOSTS).some(
         (suffix) => host === suffix || host.endsWith(`.${suffix}`),
       );
       if (!known) problems.push(`${name} allows ${token}, not an allowed host`);
     }
-  for (const [name, urls] of Object.entries(REQUIRED)) {
+  const required = Object.entries(REQUIRED).map(([name, urls]) => [
+    name,
+    name === API_DIRECTIVE && api ? [...urls, threadsUrl(api, "x")] : urls,
+  ]);
+  for (const [name, urls] of required) {
     const sources = effective(policy, name) ?? [];
     for (const url of urls)
       if (!sources.some((source) => sourceMatches(source, new URL(url))))
@@ -238,8 +241,7 @@ function recordPage() {
   }).observe(document, { childList: true, subtree: true });
 }
 
-function pageState(utterances) {
-  const box = document.querySelector("div.utterances");
+function pageState() {
   return {
     violations: window.__verifyCsp?.violations ?? [],
     bodyTheme: window.__verifyCsp?.bodyTheme ?? null,
@@ -255,15 +257,12 @@ function pageState(utterances) {
           "content-security-policy",
       )
       .map((meta) => meta.getAttribute("content")),
-    widget: document.querySelectorAll(utterances).length,
-    runs: window.__verifyUtterancesRuns ?? 0,
-    boxPosition: box ? getComputedStyle(box).position : null,
   };
 }
 
 // ── browser ─────────────────────────────────────────────────────────────────────────────────────
 
-async function launch(origin) {
+async function launch(origin, api) {
   const { chromium } = await import("playwright");
   const browser = await chromium.launch({ headless: true });
 
@@ -287,14 +286,22 @@ async function launch(origin) {
         const url = new URL(route.request().url());
         if (url.origin === origin) return route.continue();
         seen.push(url.href);
+        if (
+          url.origin === api &&
+          route.request().method() === "GET" &&
+          /^\/v1\/posts\/[^/]+\/threads$/.test(url.pathname)
+        )
+          return route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            headers: { "access-control-allow-origin": origin },
+            body: EMPTY_THREADS,
+          });
         const stub =
           url.origin === "https://www.googletagmanager.com" &&
           url.pathname === "/gtag/js"
             ? GA_STUB
-            : url.origin === "https://utteranc.es" &&
-                url.pathname === "/client.js"
-              ? UTTERANCES_STUB
-              : null;
+            : null;
         if (stub === null) return route.abort("blockedbyclient");
         return route.fulfill({
           status: 200,
@@ -339,7 +346,7 @@ async function launch(origin) {
 const attempted = (seen, prefix) => seen.some((url) => url.startsWith(prefix));
 
 /** Problems of the page as it is now: no violation, and what must have been requested. */
-function loadProblems(state, seen, consoleCsp, { post }) {
+function loadProblems(state, seen, consoleCsp, { threads }) {
   const problems = [];
   for (const violation of state.violations)
     problems.push(`blocked by CSP: ${violation}`);
@@ -348,27 +355,26 @@ function loadProblems(state, seen, consoleCsp, { post }) {
     problems.push("GA loader not requested");
   if (!seen.some((url) => /^https:\/\/[^/]*google-analytics\.com\//.test(url)))
     problems.push("GA collect hit not requested");
-  if (post) {
-    if (!attempted(seen, "https://utteranc.es/client.js"))
-      problems.push("utterances client.js not requested");
-    if (!attempted(seen, "https://utteranc.es/utterances.html"))
-      problems.push("utterances iframe not requested");
-    if (state.boxPosition !== "relative")
-      problems.push(
-        `div.utterances position ${state.boxPosition ?? "(none)"}: the client's <style> did not apply`,
-      );
-  }
+  if (threads && !seen.includes(threads))
+    problems.push(`comments threads not requested (${threads})`);
   return problems;
 }
 
-async function checkLoad(browser, base, route, hasWidget) {
+/** Wait (at most TIMEOUT_MS) until `url` was requested, then for quiet: the comments loader runs when idle. */
+async function requested(page, seen, url, quiet) {
+  const deadline = Date.now() + TIMEOUT_MS;
+  while (url && !seen.includes(url) && Date.now() < deadline)
+    await page.waitForTimeout(50);
+  await quiet();
+}
+
+async function checkLoad(browser, base, route, threads) {
   return browser.withPage(async ({ page, seen, consoleCsp, quiet }) => {
     await page.goto(base + route, { waitUntil: "load" });
     await quiet();
-    const state = await page.evaluate(pageState, UTTERANCES);
-    const problems = loadProblems(state, seen, consoleCsp, {
-      post: hasWidget,
-    });
+    await requested(page, seen, threads, quiet);
+    const state = await page.evaluate(pageState);
+    const problems = loadProblems(state, seen, consoleCsp, { threads });
     if (state.bodyTheme !== "dark")
       problems.push(
         `data-theme when <body> was parsed: ${JSON.stringify(state.bodyTheme)}, expected "dark" (theme script did not run first)`,
@@ -377,15 +383,14 @@ async function checkLoad(browser, base, route, hasWidget) {
   });
 }
 
-/** "/" → A → B with the router. → [{ route, step, problems }] */
-async function checkNavigation(browser, base, pages) {
+/** "/" → A → B with the router; threadsOf(route) is the URL its loader must request, or null. → [{ route, step, problems }] */
+async function checkNavigation(browser, base, pages, threadsOf) {
   return browser.withPage(async ({ page, seen, consoleCsp, quiet }) => {
     const items = [];
     await page.goto(`${base}/`, { waitUntil: "load" });
     await quiet();
-    const first = await page.evaluate(pageState, UTTERANCES);
+    const first = await page.evaluate(pageState);
     const policy = first.metas[0] ?? null;
-    let runs = 0;
     let loads = first.loads;
     const step = async (name, route, navigate) => {
       const problems = [];
@@ -398,11 +403,12 @@ async function checkNavigation(browser, base, pages) {
           loads,
         );
         await quiet();
+        await requested(page, seen, threadsOf(route), quiet);
       } catch (error) {
         problems.push(`navigation did not finish: ${oneLine(error)}`);
       }
       // A full load would run recordPage again and reset the count: the wait above then times out.
-      const state = await page.evaluate(pageState, UTTERANCES);
+      const state = await page.evaluate(pageState);
       if (new URL(page.url()).pathname !== route)
         problems.push(`at ${new URL(page.url()).pathname}, expected ${route}`);
       for (const violation of state.violations)
@@ -417,15 +423,9 @@ async function checkNavigation(browser, base, pages) {
         problems.push(
           `data-theme ${JSON.stringify(state.theme)} after the swap`,
         );
-      if (isPost(route)) {
-        if (state.runs - runs !== 1)
-          problems.push(
-            `utterances client ran ${state.runs - runs} times, expected 1`,
-          );
-        if (!attempted(seen, "https://utteranc.es/utterances.html"))
-          problems.push("utterances iframe not requested");
-      }
-      runs = state.runs;
+      const threads = threadsOf(route);
+      if (threads && !seen.includes(threads))
+        problems.push(`comments threads not requested (${threads})`);
       await page.evaluate(() => {
         window.__verifyCsp.violations.length = 0;
       });
@@ -433,7 +433,7 @@ async function checkNavigation(browser, base, pages) {
     };
 
     const firstProblems = loadProblems(first, seen, consoleCsp, {
-      post: false,
+      threads: null,
     });
     if (!policy) firstProblems.push("no policy <meta> on /");
     items.push({ route: "/", step: "navigate /", problems: firstProblems });
@@ -491,11 +491,17 @@ async function run(ctx) {
     const file = ctx.fileFor("candidate", route);
     return file && fs.existsSync(file) ? fs.readFileSync(file, "utf8") : "";
   };
+  // The comments API the pages name (the comments check fails a site that names more than one).
+  const api = [...commentsApiOrigins(ctx.candidateDir)].sort()[0] ?? null;
+  const threadsOf = (route) =>
+    api && isPost(route) && load(htmlOf(route))(COMMENTS).length > 0
+      ? threadsUrl(api, postIdOf(route))
+      : null;
 
   const outcomes = [];
   const texts = new Map();
   for (const route of routes) {
-    const { text, problems } = policyProblems(htmlOf(route));
+    const { text, problems } = policyProblems(htmlOf(route), api);
     if (text !== null) texts.set(route, text);
     outcomes.push({ item: "policy", route, problems });
   }
@@ -511,17 +517,12 @@ async function run(ctx) {
     }
 
   const base = await ctx.serve("candidate");
-  const browser = await launch(new URL(base).origin);
+  const browser = await launch(new URL(base).origin, api);
   try {
     const loaded = await mapLimit(routes, MAX_PAGES, async (route) => {
       let problems;
       try {
-        problems = await checkLoad(
-          browser,
-          base,
-          route,
-          load(htmlOf(route))(UTTERANCES).length > 0,
-        );
+        problems = await checkLoad(browser, base, route, threadsOf(route));
       } catch (error) {
         problems = [`crashed: ${oneLine(error)}`];
       }
@@ -540,7 +541,7 @@ async function run(ctx) {
       outcomes.push({ item: "navigate", route: "-", problems: [pages] });
     else {
       try {
-        const steps = await checkNavigation(browser, base, pages);
+        const steps = await checkNavigation(browser, base, pages, threadsOf);
         for (const { route, step, problems } of steps)
           outcomes.push({ item: step, route, problems });
       } catch (error) {
@@ -574,7 +575,7 @@ async function run(ctx) {
     fail: failed.length,
     failed,
     cells,
-    extra: { policy: referenceText ?? null, outcomes },
+    extra: { policy: referenceText ?? null, api, outcomes },
   };
 }
 
@@ -601,11 +602,44 @@ export default {
         },
       },
       {
-        name: "정책에서 https://utteranc.es 를 뺌",
-        routes: (dir) => postRoutesWith(dir, /utteranc\.es\/client\.js/),
+        name: "정책의 connect-src 에서 댓글 API 주소를 뺌",
+        routes: (dir) => postRoutesWith(dir, /<post-comments\b/),
+        apply(dir) {
+          const origins = [...commentsApiOrigins(dir)];
+          if (origins.length === 0)
+            throw new Error("no <post-comments data-api> in the copy");
+          editPages(dir, META, (meta) =>
+            origins.reduce(
+              (text, origin) => text.split(` ${origin}`).join(""),
+              meta,
+            ),
+          );
+        },
+      },
+      {
+        name: "댓글 API 를 connect-src 가 아닌 default-src 로 허용",
+        routes: (dir) => postRoutesWith(dir, /<post-comments\b/),
+        apply(dir) {
+          const [origin] = [...commentsApiOrigins(dir)];
+          if (!origin)
+            throw new Error("no <post-comments data-api> in the copy");
+          editPages(dir, META, (meta) =>
+            meta
+              .split(` ${origin}`)
+              .join("")
+              .replace("default-src 'self'", `default-src 'self' ${origin}`),
+          );
+        },
+      },
+      {
+        name: "정책의 script-src 에 https://utteranc.es 를 다시 넣음",
+        routes: ["/"],
         apply(dir) {
           editPages(dir, META, (meta) =>
-            meta.replace(/ https:\/\/utteranc\.es/g, ""),
+            meta.replace(
+              "script-src 'self'",
+              "script-src 'self' https://utteranc.es",
+            ),
           );
         },
       },

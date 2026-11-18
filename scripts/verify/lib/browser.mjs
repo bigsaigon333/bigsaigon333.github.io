@@ -19,15 +19,51 @@ import { fileURLToPath } from "node:url";
 
 import { repoRoot } from "./paths.mjs";
 
-/** Never requested: they would make runs depend on the network and count visits. */
+/**
+ * Never requested: they would make runs depend on the network and count visits. utteranc.es stays while a baseline
+ * can still carry the old comments widget. The comments API (workers.dev, and whatever origin a page's
+ * <post-comments data-api> names: see commentsApiOrigins) is blocked too: a page then shows what it shows when the API
+ * is down (the section stays hidden), the same on every run, and a check never writes to or reads the live comments.
+ */
 const BLOCKED_HOSTS = [
   "utteranc.es",
+  "workers.dev",
   "googletagmanager.com",
   "google-analytics.com",
   "doubleclick.net",
 ];
 
 export const MAX_PAGES = 4;
+
+const API_ATTRIBUTE = /<post-comments\b[^>]*\bdata-api=(["'])([^"']*)\1/gi;
+
+/**
+ * The origins the site's comments loader talks to: every `<post-comments data-api="…">` in the HTML pages under `dir`
+ * (a built site). An unreadable or missing dir gives none. A value that is not an absolute http(s) URL is skipped
+ * here (the comments check reports it).
+ */
+export function commentsApiOrigins(dir) {
+  const origins = new Set();
+  if (!dir || !fs.existsSync(dir)) return origins;
+  const walk = (folder) => {
+    for (const entry of fs.readdirSync(folder, { withFileTypes: true })) {
+      const file = path.join(folder, entry.name);
+      if (entry.isDirectory()) walk(file);
+      else if (entry.name.endsWith(".html"))
+        for (const match of fs
+          .readFileSync(file, "utf8")
+          .matchAll(API_ATTRIBUTE))
+          try {
+            const url = new URL(match[2].replaceAll("&amp;", "&"));
+            if (/^https?:$/.test(url.protocol)) origins.add(url.origin);
+          } catch {
+            // not a URL
+          }
+    }
+  };
+  walk(dir);
+  return origins;
+}
 /** A page settles in well under a second, even on a busy machine. This only bounds one that never does. */
 const SETTLE_TIMEOUT_MS = 15_000;
 const DOWNLOAD_TIMEOUT_MS = 20_000;
@@ -130,11 +166,17 @@ function recorded(cacheDir, url, headers) {
 
 // ── request routing ─────────────────────────────────────────────────────────────────────────────
 
-async function routeRequest(route, { cacheDir, localOrigins, failures }) {
+async function routeRequest(
+  route,
+  { cacheDir, localOrigins, blockedOrigins, failures },
+) {
   const request = route.request();
   const url = new URL(request.url());
 
-  if (BLOCKED_HOSTS.some((domain) => matchesHost(url.hostname, domain)))
+  if (
+    BLOCKED_HOSTS.some((domain) => matchesHost(url.hostname, domain)) ||
+    blockedOrigins.has(url.origin)
+  )
     return route.abort("blockedbyclient");
   if (localOrigins.has(url.origin) || !/^https?:$/.test(url.protocol))
     return route.continue();
@@ -269,6 +311,18 @@ export async function openBrowser(ctx, { maxPages = MAX_PAGES } = {}) {
   const localOrigins = new Set();
   for (const side of ["baseline", "candidate"])
     localOrigins.add(new URL(await ctx.serve(side)).origin);
+  // The comments API of either side (a check that never reads the baseline has no baseline dir: reading it throws).
+  const blockedOrigins = new Set();
+  for (const side of ["baselineDir", "candidateDir"]) {
+    let dir = null;
+    try {
+      dir = ctx[side];
+    } catch {
+      // no such side in this run
+    }
+    for (const origin of commentsApiOrigins(dir))
+      if (!localOrigins.has(origin)) blockedOrigins.add(origin);
+  }
 
   // Loaded here rather than at the top: every check module is imported even when only static checks run.
   const { chromium } = await import("playwright");
@@ -330,6 +384,7 @@ export async function openBrowser(ctx, { maxPages = MAX_PAGES } = {}) {
           routeRequest(route, {
             cacheDir: ctx.cacheDir,
             localOrigins,
+            blockedOrigins,
             failures,
           }).catch((error) => {
             // Answering a request of a page that has gone away fails, and does not matter.
