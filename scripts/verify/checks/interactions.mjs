@@ -13,6 +13,9 @@
 //               of the viewport (instant). A heading that got there (|top| < 2px) and whose next toc heading is at
 //               least half a viewport below it is "the heading in view": its toc link, and no other, must then carry
 //               aria-current="true". A toc where no heading qualifies is a failure (nothing was examined).
+//   back link   the post has exactly one link named "뒤로 가기" (href "/"). Opened directly, a click goes to "/".
+//               Opened from "/" by a click on a link to the post, a click goes back to "/" through history.back():
+//               history.length does not grow and the window marker survives (a followed link adds an entry).
 // One item per route, listing every problem. Routes without code blocks or toc pass on "buttons" alone.
 //
 // Allowlist item: "route:<route>".
@@ -38,6 +41,7 @@ const VIEWPORT = { width: 1280, height: 900 };
 const IDLE = "복사";
 const DONE = "복사됨";
 const TOC = 'nav[aria-label="목차"]';
+const BACK = "뒤로 가기";
 /** How long a click, a key press or a scroll may take to show. Only spent when it does not. */
 const WAIT_MS = 3_000;
 
@@ -207,6 +211,74 @@ async function examine(browser, base, route, html) {
         );
     }
 
+    // back link
+    const back = page.getByRole("link", { name: BACK, exact: true });
+    const links = await back.count();
+    if (links !== 1)
+      problems.push(`${links} links named "${BACK}", expected 1`);
+    else {
+      if ((await back.getAttribute("href")) !== "/")
+        problems.push(`"${BACK}" link href is not "/"`);
+      // from the home list: back in history
+      await page.goto(new URL("/", base).href);
+      await tab.settle().catch(() => {});
+      const marker = `back-${Date.now()}`;
+      await page.evaluate((m) => {
+        window.__verifyBack = m;
+      }, marker);
+      try {
+        await page.evaluate((route) => {
+          const a = document.createElement("a");
+          a.href = route;
+          a.id = "verify-back-go";
+          a.textContent = "go";
+          document.body.append(a);
+        }, route);
+        await page.locator("#verify-back-go").click();
+        await page.waitForURL((u) => u.pathname === route, {
+          timeout: WAIT_MS,
+        });
+        await page.locator(`a[aria-label="${BACK}"]`).waitFor({
+          timeout: WAIT_MS,
+        });
+        await tab.settle().catch(() => {});
+        const length = await page.evaluate(() => history.length);
+        await page.getByRole("link", { name: BACK, exact: true }).click();
+        await page.waitForURL((u) => u.pathname === "/", {
+          timeout: WAIT_MS,
+        });
+        const after = await page.evaluate(() => ({
+          length: history.length,
+          marker: window.__verifyBack ?? null,
+        }));
+        if (after.length !== length)
+          problems.push(
+            `"${BACK}" after coming from "/" added a history entry (${length} → ${after.length}) instead of going back`,
+          );
+        if (after.marker !== marker)
+          problems.push(
+            `"${BACK}" after coming from "/" loaded a new document instead of going back`,
+          );
+      } catch (error) {
+        problems.push(`"${BACK}" after coming from "/": ${oneLine(error)}`);
+      }
+      // opened directly: to "/"
+      const direct = await tab.open(url);
+      if (direct !== 200) problems.push(`HTTP ${direct} reopening ${route}`);
+      else {
+        try {
+          await page.getByRole("link", { name: BACK, exact: true }).click();
+          await page.waitForURL((u) => u.pathname === "/", {
+            timeout: WAIT_MS,
+          });
+        } catch {
+          problems.push(
+            `"${BACK}" on a directly opened post did not go to "/" (at ${new URL(page.url()).pathname})`,
+          );
+        }
+      }
+    }
+
     if (tab.failures.length)
       problems.push(`unserved requests: ${tab.failures.join(", ")}`);
     return problems;
@@ -300,6 +372,13 @@ export default {
           editScripts(dir, /`복사됨`/g, "`복사`");
         },
         routes: (dir) => postRoutesWith(dir, /class="astro-code/),
+      },
+      {
+        name: "글에서 뒤로 가기 링크를 없앤다",
+        apply(dir) {
+          editScripts(dir, /<back-link[^>]*>[\s\S]*?<\/back-link>/g, "");
+        },
+        routes: (dir) => postRoutesWith(dir, /class="post-header/),
       },
       {
         // A post the baseline does not have, as a pull request would add one: its buttons have to be checked too.
