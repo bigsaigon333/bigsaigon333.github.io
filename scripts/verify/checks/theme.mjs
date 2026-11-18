@@ -26,7 +26,6 @@
 //
 // Storage key and values: localStorage "theme" = "light" | "dark".
 import fs from "node:fs";
-import path from "node:path";
 
 import { mapLimit, MAX_PAGES } from "../lib/browser.mjs";
 import {
@@ -429,25 +428,6 @@ const HEAD_SCRIPT = /<script>\(function\(\)\{[^<]*?themeKey[\s\S]*?<\/script>/;
 const UP_TO_BODY_END = new RegExp(`(${HEAD_SCRIPT.source})([\\s\\S]*)</body>`);
 const deferThemeScript = (html) => html.replace(UP_TO_BODY_END, "$2$1</body>");
 
-/** Apply `pattern → replacement` to every stylesheet under dir/_astro. Throws when nothing matched. */
-function editStylesheets(dir, pattern, replacement) {
-  const assets = path.join(dir, "_astro");
-  let edited = 0;
-  for (const name of fs.readdirSync(assets)) {
-    if (!name.endsWith(".css")) continue;
-    const file = path.join(assets, name);
-    const before = fs.readFileSync(file, "utf8");
-    const after = before.replace(pattern, replacement);
-    if (after === before) continue;
-    fs.writeFileSync(file, after);
-    edited += 1;
-  }
-  if (edited === 0)
-    throw new Error(
-      `mutation did not apply: ${pattern} not found in ${assets}`,
-    );
-}
-
 export default {
   name: NAME,
   kind: "browser",
@@ -482,7 +462,7 @@ export default {
         name: "다크 본문 글자색을 배경과 비슷하게(대비 부족)",
         routes: ["/"],
         apply(dir) {
-          editStylesheets(
+          editPages(
             dir,
             /(\[data-theme=dark\]\{[^}]*--color-text:)#[0-9a-f]+/g,
             "$1#30363d",
