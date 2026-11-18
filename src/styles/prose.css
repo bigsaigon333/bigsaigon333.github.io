@@ -22,6 +22,51 @@
   box-shadow: 0 0.125rem 0 0 var(--color-text);
 }
 
+/*
+ * 섹션 링크(H1). config/hast-heading-links.mjs 가 h2–h4 의 내용을 a.heading-link 로 감싼다.
+ * 제목은 링크처럼 보이지 않고, 뒤의 `#`(::after)가 링크라는 표시다. `#`는 CSS 로만 그려 제목 글자(textContent)와
+ * 접근 이름이 바뀌지 않는다(`/ ""`). 포인터를 올리거나 키보드로 갔을 때 보이고, 포인터가 없는 기기(터치)에서는 늘 보인다.
+ * 제목 안에 링크가 있는 경우의 빈 링크(.heading-link-solo)는 `#`만 그린다.
+ * scroll-margin-top: 주소의 #id 로 스크롤했을 때 제목이 화면 맨 위에 붙지 않게 한다.
+ */
+.prose :is(h2, h3, h4)[id] {
+  scroll-margin-top: 1.5rem;
+}
+
+.prose .heading-link:hover {
+  box-shadow: none;
+}
+
+.prose .heading-link::after {
+  content: "#" / "";
+  margin-left: 0.3em;
+  color: var(--color-muted);
+  font-weight: 400;
+  opacity: 0;
+}
+
+.prose .heading-link-solo::after {
+  margin-left: 0;
+  margin-right: 0.3em;
+}
+
+.prose .heading-link:hover::after,
+.prose .heading-link:focus-visible::after {
+  opacity: 1;
+}
+
+.prose .heading-link:focus-visible {
+  outline: 2px solid var(--color-text);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+@media (hover: none) {
+  .prose .heading-link::after {
+    opacity: 1;
+  }
+}
+
 .prose ul {
   margin: 0;
   padding-inline-start: 20px;

@@ -32,6 +32,7 @@
     "@astrojs/markdown-satteri": "^0.4.9",
     "@astrojs/rss": "^4.0.19",
     "astro": "^7.4.11",
+    "github-slugger": "^2.0.0",
     "katex": "^0.16.47",
     "typescript": "^7.0.2"
   },

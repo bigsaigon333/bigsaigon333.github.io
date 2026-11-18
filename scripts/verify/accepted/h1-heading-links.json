@@ -1,0 +1,57 @@
+{
+  "baseline": "9b635b96c0493829ee0b973b71932a83b7a37641bb7035c0921ccf34460e0cfa",
+  "reason": "섹션 링크(H1)",
+  "entries": [
+    {
+      "check": "content",
+      "routes": [
+        "/posts/css-masters-2-week1",
+        "/posts/css-masters-2-week2",
+        "/posts/css-masters-2-week3",
+        "/posts/css-masters-2-week4",
+        "/posts/date-time-string-format-in-js",
+        "/posts/how-to-check-two-types-are-equal-in-ts",
+        "/posts/js-the-new-toys-study-01",
+        "/posts/proxy-to-built-in-objects",
+        "/posts/react-programming-ch09",
+        "/posts/react-scripts-react-app-polyfill-promise-any",
+        "/posts/regular-expression-1",
+        "/posts/ts-ambient-type-declaration"
+      ],
+      "reason": "본문 h2–h4 를 감싼 섹션 링크가 글의 링크 목록에 더해진다"
+    },
+    {
+      "check": "hover",
+      "routes": [
+        "/posts/css-masters-2-week1",
+        "/posts/css-masters-2-week2",
+        "/posts/css-masters-2-week3",
+        "/posts/css-masters-2-week4",
+        "/posts/date-time-string-format-in-js",
+        "/posts/how-to-check-two-types-are-equal-in-ts",
+        "/posts/js-the-new-toys-study-01",
+        "/posts/proxy-to-built-in-objects",
+        "/posts/react-programming-ch09",
+        "/posts/react-scripts-react-app-polyfill-promise-any",
+        "/posts/regular-expression-1",
+        "/posts/ts-ambient-type-declaration"
+      ],
+      "reason": "섹션 링크가 포인터를 올릴 링크로 더해진다"
+    },
+    {
+      "check": "routes",
+      "routes": ["/_astro/_id_.D2dHPn04.css"],
+      "reason": "prose.css 에 섹션 링크 규칙을 더해 글 CSS 파일 이름(해시)이 바뀐다"
+    },
+    {
+      "check": "visual",
+      "routes": [
+        "/posts/css-masters-2-week1",
+        "/posts/css-masters-2-week3",
+        "/posts/how-to-check-two-types-are-equal-in-ts",
+        "/posts/react-scripts-react-app-polyfill-promise-any"
+      ],
+      "reason": "숨은 # 표시(::after, opacity 0)가 자리를 차지해 좁은 화면에서 긴 제목의 줄바꿈이 바뀐다"
+    }
+  ]
+}

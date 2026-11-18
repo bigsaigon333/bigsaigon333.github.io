@@ -5,6 +5,6 @@ import { getViteConfig } from "astro/config";
 // 단위 시험만 돈다: 빌드 결과물 검사는 scripts/verify 가 맡는다.
 export default getViteConfig({
   test: {
-    include: ["src/**/*.test.ts"],
+    include: ["src/**/*.test.ts", "config/**/*.test.mjs"],
   },
 });
