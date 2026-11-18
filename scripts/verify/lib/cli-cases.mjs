@@ -138,12 +138,15 @@ function staleStore() {
 /**
  * `verify:live --serve=<dir> <flags>`: exit status and failing checks. After a deploy the baseline is the commit
  * just deployed, so the site served must answer like the baseline in every respect.
+ * The accept files of the checkout are not read (VERIFY_ACCEPTED_DIR names a directory that does not exist): a
+ * release whose accept file allows a <title> change on "/" would otherwise turn the mutant's failure into ACCEPT.
  */
 function rehearsal(dir, expected, flags = []) {
-  const { status, output, lines } = command("live.mjs", [
-    `--serve=${dir}`,
-    ...flags,
-  ]);
+  const { status, output, lines } = command(
+    "live.mjs",
+    [`--serve=${dir}`, ...flags],
+    { VERIFY_ACCEPTED_DIR: path.join(dir, ".no-accept-files") },
+  );
   const failing = lines
     .filter((line) => /^FAIL\s/.test(line)) // a check's line, not the "FAILED 4/5 checks" summary
     .map((line) => line.split(/\s+/)[1]);
@@ -288,7 +291,7 @@ const saidByBuild = (output) => {
 
 /** A post the schema takes. `extra` is more front matter, one "key: value" per line. */
 const post = (title, extra = "") =>
-  `---\ntitle: "${title}"\ndate: "2024-01-01"\ndescription: "a post the self-test adds to a copy of the project"\nkeywords: "verify, fixture"\n${extra}---\n\n${title} body\n`;
+  `---\ntitle: "${title}"\ndate: "2024-01-01"\ndescription: "a post the self-test adds to a copy of the project"\nkeywords: "verify, fixture"\ncategory: "개발"\n${extra}---\n\n${title} body\n`;
 
 /** A token for a fixture's file name and title that no real post contains. */
 const fixtureToken = () => `verify-fixture-${randomBytes(4).toString("hex")}`;
@@ -951,6 +954,57 @@ function unusedAcceptEntry() {
 }
 
 /**
+ * A budget entry with "maxBytes" accepts a route's JS growth only up to that many bytes (WB-review): an entry
+ * written for one small module must not wave through any later growth on the same pages. --write-accept writes the
+ * largest growth it saw as "maxBytes"; a further 1000 bytes on "/" then fails, and the same file with a higher
+ * "maxBytes" accepts it.
+ */
+function budgetAcceptHasMaxBytes() {
+  const grow = (bytes) => (dir) =>
+    editFile(dir, "index.html", (html) =>
+      html.replace(
+        "</body>",
+        `<script>window.__selftest="${"x".repeat(bytes)}"</script></body>`,
+      ),
+    );
+  return withMutant(grow(500), (dir) =>
+    withAcceptDir((acceptDir) => {
+      const flags = ["--only=budget", "--route=/"];
+      const written = verifyCandidate(dir, acceptDir, [
+        ...flags,
+        "--write-accept=grown",
+        "--reason=self-test",
+      ]);
+      const file = path.join(acceptDir, "grown.json");
+      if (!fs.existsSync(file))
+        return `--write-accept wrote nothing: ${written.lines.at(-1)}`;
+      const data = JSON.parse(fs.readFileSync(file, "utf8"));
+      const max = data.entries[0]?.maxBytes;
+      if (!Number.isInteger(max) || max < 500 || max > 600)
+        return `maxBytes ${max}, expected the growth of "/" (500 bytes and the tag)`;
+      const accepted = verifyCandidate(dir, acceptDir, flags);
+      if (accepted.status !== 0)
+        return `with the accept file: exit status ${accepted.status}: ${lineOf(accepted.lines, "budget")}`;
+
+      grow(1000)(dir);
+      const more = verifyCandidate(dir, acceptDir, flags);
+      if (
+        more.status !== 1 ||
+        !/^FAIL\s/.test(lineOf(more.lines, "budget") ?? "")
+      )
+        return `1000 more bytes than maxBytes were accepted: exit status ${more.status}: ${lineOf(more.lines, "budget")}`;
+
+      data.entries[0].maxBytes = max + 2000;
+      writeJson(file, data);
+      const raised = verifyCandidate(dir, acceptDir, flags);
+      if (raised.status !== 0)
+        return `with maxBytes ${max + 2000}: exit status ${raised.status}: ${lineOf(raised.lines, "budget")}`;
+      return null;
+    }),
+  );
+}
+
+/**
  * An accept file can only name a check that compares with the baseline. seo is a feature check: a post whose
  * og:description no longer equals its meta description fails it, and an accept file naming seo must be refused,
  * not turn that failure into ACCEPT (W9).
@@ -1284,6 +1338,10 @@ export const cliCases = [
   {
     name: "verify: 실패와 맞지 않는 accept 항목은 unused 경고만 낸다",
     run: unusedAcceptEntry,
+  },
+  {
+    name: "verify: budget 의 accept 항목은 maxBytes 까지만 늘어난 JS 를 허용하고, --write-accept 가 그 값을 적는다",
+    run: budgetAcceptHasMaxBytes,
   },
   {
     name: "verify: 기준선과 비교하지 않는 검사(seo 등)를 적은 accept 파일은 거부한다",

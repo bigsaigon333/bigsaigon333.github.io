@@ -26,6 +26,8 @@ export const GET = (async () => {
       pubDate: post.data.date,
       // 글 페이지의 meta description 과 같은 값(본문뿐인 글은 앞부분). 그래도 비면 <description> 을 내지 않는다.
       description: postDescription(post) || undefined,
+      // 글의 카테고리 이름 하나 → <category>개발</category>. 태그(keywords)는 싣지 않는다.
+      categories: [post.data.category],
     })),
   });
 }) satisfies APIRoute;

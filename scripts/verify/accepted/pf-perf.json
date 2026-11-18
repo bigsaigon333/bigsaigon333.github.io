@@ -1,0 +1,102 @@
+{
+  "baseline": "9b635b96c0493829ee0b973b71932a83b7a37641bb7035c0921ccf34460e0cfa",
+  "reason": "PF1–PF4 성능 개선: GA 로더를 늦게 넣는 번들 모듈, KaTeX CSS 를 수식 글에만 인라인, 코드 글꼴 woff → woff2, 파비콘 재인코딩. WB-review: 처음 페이지의 page_view 를 지키는 config 인자",
+  "entries": [
+    {
+      "check": "budget",
+      "routes": [
+        "/",
+        "/404",
+        "/posts/css-masters-2-week1",
+        "/posts/css-masters-2-week2",
+        "/posts/css-masters-2-week3",
+        "/posts/css-masters-2-week4",
+        "/posts/date-time-string-format-in-js",
+        "/posts/how-to-check-two-types-are-equal-in-ts",
+        "/posts/js-the-new-toys-study-01",
+        "/posts/proxy-to-built-in-objects",
+        "/posts/react-programming-ch09",
+        "/posts/react-scripts-react-app-polyfill-promise-any",
+        "/posts/regular-expression-1",
+        "/posts/ts-ambient-type-declaration",
+        "/tags",
+        "/tags/built-in-object",
+        "/tags/css",
+        "/tags/css3",
+        "/tags/html5",
+        "/tags/internal-slot",
+        "/tags/map",
+        "/tags/proxy",
+        "/tags/reflect",
+        "/tags/set-trap",
+        "/tags/void-요소",
+        "/tags/w3c",
+        "/tags/내부-슬롯",
+        "/tags/내장-객체",
+        "/tags/요소vs태그",
+        "/tags/웹표준",
+        "/tags/트랩-설정"
+      ],
+      "reason": "PF1: 모든 페이지에 Analytics 번들 모듈이 더해짐(WB-review 의 after-swap page_view·Web Vitals 페이지 고정과 인라인 config 의 page_location·page_title 포함, 페이지마다 +3608B). gtag.js 를 load 뒤 idle·첫 상호작용에 넣고, 실린 뒤 web-vitals(별도 청크, 정적 예산 밖)를 동적 import 한다. 예전의 <script async src=gtag.js>(외부, 168KB)는 첫 화면에서 빠짐",
+      "maxBytes": 3608
+    },
+    {
+      "check": "embeds",
+      "routes": [
+        "/",
+        "/404",
+        "/posts/css-masters-2-week1",
+        "/posts/css-masters-2-week2",
+        "/posts/css-masters-2-week3",
+        "/posts/css-masters-2-week4",
+        "/posts/date-time-string-format-in-js",
+        "/posts/how-to-check-two-types-are-equal-in-ts",
+        "/posts/js-the-new-toys-study-01",
+        "/posts/proxy-to-built-in-objects",
+        "/posts/react-programming-ch09",
+        "/posts/react-scripts-react-app-polyfill-promise-any",
+        "/posts/regular-expression-1",
+        "/posts/ts-ambient-type-declaration",
+        "/tags",
+        "/tags/built-in-object",
+        "/tags/css",
+        "/tags/css3",
+        "/tags/html5",
+        "/tags/internal-slot",
+        "/tags/map",
+        "/tags/proxy",
+        "/tags/reflect",
+        "/tags/set-trap",
+        "/tags/void-요소",
+        "/tags/w3c",
+        "/tags/내부-슬롯",
+        "/tags/내장-객체",
+        "/tags/요소vs태그",
+        "/tags/웹표준",
+        "/tags/트랩-설정"
+      ],
+      "reason": "WB-review: gtag(\"config\", id) 에 처음 페이지의 page_location·page_title 을 줄에 넣는 때의 값으로 적는다. gtag.js 가 실리기 전에 옮겨 가도 처음 페이지의 page_view 가 그 주소로 간다"
+    },
+    {
+      "check": "routes",
+      "routes": [
+        "/_astro/BaseLayout.8moLDaSs.css",
+        "/_astro/fonts/0936d5458687d311.woff",
+        "/_astro/fonts/4ecd059be447ac1f.woff",
+        "/_astro/fonts/560be7ddc33bd4a8.woff",
+        "/_astro/fonts/5c96ef193324261d.woff",
+        "/_astro/fonts/7c8993dc1aa4f890.woff",
+        "/_astro/fonts/88752052dbb2654c.woff",
+        "/_astro/fonts/e400f5e9702d99d8.woff",
+        "/_astro/fonts/e6143168f4ddb2f4.woff",
+        "/favicon.ico"
+      ],
+      "reason": "PF2·PF3: KaTeX 가 빠진 BaseLayout CSS 묶음의 이름이 바뀌고(KaTeX CSS 는 수식 글에 인라인), Source Code Pro woff 8개가 woff2 로 바뀜. PF4: favicon.ico 를 같은 픽셀의 16·32·48px PNG 로 다시 담음(25931 → 1659B)"
+    },
+    {
+      "check": "routes",
+      "routes": ["/_astro/profile.*"],
+      "reason": "프로필 사진 widths [192,384,원본] → [96,192,원본](Header <Picture> sizes 를 렌더 너비 56·72px 에 맞춤)이라 /_astro/profile.*.webp·jpg 이름이 바뀜"
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 ---
 title: Date Time String Format in JS
 date: "2022-08-30"
+category: 개발
 ---
 
 JS에서 Date 객체를 생성하기 위해 Date 생성자를 이용할 수 있습니다.

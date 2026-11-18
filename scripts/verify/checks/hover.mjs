@@ -4,7 +4,8 @@
 // without it noticing. Here a real pointer is put on every visible a[href] and <summary>, one after the other,
 // and the computed style of the element and of everything inside it is read:
 //
-//   color  background-color  text-decoration-line  text-decoration-color  box-shadow  opacity  cursor  outline-style
+//   color  background-color  text-decoration-line  text-decoration-color  text-decoration-thickness  box-shadow
+//   opacity  cursor  outline-style
 //
 // together with the transitions and animations the pointer set off. The same is read before the pointer has
 // moved at all: a value that already differs at rest is reported as that, and again as a hover difference only
@@ -34,6 +35,7 @@ const PROPERTIES = [
   "background-color",
   "text-decoration-line",
   "text-decoration-color",
+  "text-decoration-thickness",
   "box-shadow",
   "opacity",
   "cursor",
@@ -513,6 +515,10 @@ async function runOnce(ctx, cacheMode) {
 
 // The mutations edit the rules inlined in every page (editPages in lib/html.mjs). `routes` names a page the
 // mutated rule shows on, so that one is measured, not all.
+//
+// The mutations edit the baseline. Until the D1 release ships the baseline is the old site; patterns with two
+// alternatives match its rule or the D1 one (old first), and the old alternative can go once a D1 build is the
+// baseline.
 export default {
   name: NAME,
   kind: "browser",
@@ -524,7 +530,12 @@ export default {
         name: "홈 목록 링크의 hover 밑줄 제거",
         routes: ["/"],
         apply(dir) {
-          editPages(dir, /a:hover\{text-decoration:underline\}/, "a:hover{}");
+          // Old: `section a:hover` (unscoped a). D1: PostListItem's scoped `h2 a:hover`.
+          editPages(
+            dir,
+            /a(\[[^\]]*\])?:hover\{text-decoration:underline\}/,
+            "a$1:hover{}",
+          );
         },
       },
       {
@@ -539,23 +550,29 @@ export default {
         },
       },
       {
-        name: "글 본문 링크의 hover box-shadow 제거",
+        name: "글 본문 링크의 hover 효과 제거",
         routes: (dir) => postRoutesWith(dir, /<main[\s\S]*?<a href=/),
         apply(dir) {
+          // Old: a box-shadow underline. D1: a thicker text underline.
           editPages(
             dir,
-            /a:hover\{box-shadow:0 \.125rem 0 0 var\(--color-text\)\}/,
+            /a:hover\{(?:box-shadow:0 \.125rem 0 0 var\(--color-text\)|text-decoration-thickness:2px)\}/,
             "a:hover{}",
           );
         },
       },
       {
-        // On the baseline this rule matches nothing (the title holds no <p>). Matching the <span>s inside
-        // the link is a difference that only shows in a descendant of the hovered element.
-        name: "헤더 제목 링크 안쪽 요소의 hover box-shadow 추가",
+        // A difference that only shows in a descendant of the hovered element. Old: the rule matches nothing
+        // (the title holds no <p>); matching the <span>s inside the link adds a box-shadow. D1: the underline
+        // moves from the name to the intro line.
+        name: "헤더 제목 링크 안쪽 요소의 hover 대상 변경",
         routes: ["/"],
         apply(dir) {
-          editPages(dir, /:hover p(\[[^\]]*\]) span/, ":hover div$1 span");
+          editPages(
+            dir,
+            /:hover p(\[[^\]]*\]) span|(?<=:hover )\.name(?=\[)/,
+            (match, cid) => (cid ? `:hover div${cid} span` : ".intro"),
+          );
         },
       },
     ],

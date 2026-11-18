@@ -41,6 +41,8 @@ jobs:
       - run: npm test
       - run: npx prettier --check .
 
+  # 댓글 워커(comments/)의 검사는 여기에 없다: worker-checks.yml 이 따로 돈다(사이트 배포가 그것을 기다리지 않게).
+
   verify:
     name: verify
     runs-on: ubuntu-latest
@@ -77,7 +79,20 @@ jobs:
         env:
           BASELINE_REF: ${{ inputs.baseline-ref }}
       # check → build → 기준선 비교 검사(accepted/ 의 선언은 허용) → 기능 검사 → 시각 검사
+      # perf(Lighthouse) 도 이 안에서 돈다: 네 페이지 × 3회, 모바일, simulated throttling, perf-budget.json 과 비교.
       - run: npm run verify
+      # perf 의 중앙값을 job 요약에 표로 남기고, 측정 전체(Lighthouse 보고서 포함)를 통과해도 올린다.
+      # 예산을 낮출 때와 성능 작업의 전후 비교에 쓴다.
+      - if: ${{ !cancelled() && hashFiles('.verify/report/perf.json') != '' }}
+        run: node scripts/verify/checks/perf.mjs --summary >> "$GITHUB_STEP_SUMMARY"
+      - if: ${{ !cancelled() && hashFiles('.verify/report/perf.json') != '' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: perf-report
+          path: |
+            .verify/report/perf.json
+            .verify/report/perf/
+          if-no-files-found: ignore
       - if: failure()
         uses: actions/upload-artifact@v7
         with:

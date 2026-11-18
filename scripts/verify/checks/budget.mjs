@@ -6,7 +6,8 @@
 // External files (other origins) are counted but have no bytes. A route FAILS when candidate JS bytes exceed
 // baseline JS bytes. CSS is reported only. The per-route table is in the report under extra.table.
 //
-// Allowlist item: "route:<route>".
+// Allowlist item: "route:<route>". A failed item carries deltaBytes (the JS growth): an accept entry for budget may
+// carry "maxBytes" and then accepts a route only while its growth is at most that (lib/accept.mjs).
 import fs from "node:fs";
 import path from "node:path";
 
@@ -104,6 +105,7 @@ export default {
       const candidate = await measure(ctx, "candidate", route);
 
       let problem = null;
+      let deltaBytes;
       if (candidate === null) problem = "route missing in candidate";
       else {
         table.push({
@@ -120,6 +122,7 @@ export default {
           },
         });
         if (candidate.js.bytes > baseline.js.bytes) {
+          deltaBytes = candidate.js.bytes - baseline.js.bytes;
           problem = `JS ${baseline.js.bytes} → ${candidate.js.bytes} bytes (+${candidate.js.bytes - baseline.js.bytes})`;
         }
       }
@@ -129,7 +132,11 @@ export default {
         cells[route] = "pass";
       } else if (skip(`route:${route}`, problem)) cells[route] = "skip";
       else {
-        failed.push({ route, detail: problem });
+        failed.push(
+          deltaBytes === undefined
+            ? { route, detail: problem }
+            : { route, detail: problem, deltaBytes },
+        );
         cells[route] = "fail";
       }
     }

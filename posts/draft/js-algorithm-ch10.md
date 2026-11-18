@@ -2,6 +2,7 @@
 title: Ch10. 탐색
 date: "2020-03-20"
 summary: 탐색
+category: 개발
 ---
 
 ## 10-1. 탐색이란

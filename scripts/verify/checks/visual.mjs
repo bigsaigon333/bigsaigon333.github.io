@@ -52,18 +52,22 @@ const STRICTEST_COLOR_THRESHOLD = 0;
 const CROP_MAX_HEIGHT = 1200;
 const CROP_MARGIN = 16;
 
-// At least one width inside every band the site's media rules (max-width 375px, 600px, 767px) cut out:
-//   up to 375 │ 376 … 600 │ 601 … 767 │ 768 and up
-//      375    │ 414   600 │    700    │ 768   1280
-// With only 375, 768 and 1280 the two middle bands were never drawn, so a rule that applies there alone could
-// change freely. 414 is what most phones are. 600 is the last width a "max-width: 600px" rule applies at: a
-// rule moved to a narrower breakpoint (420px, say) shows there, while at 414 it still applies on both sides.
+// At least one width inside every band the site's media rules cut out, on both sides of each boundary.
+// The site (D1) is mobile first with two min-width breakpoints, 40rem (640px) and 64rem (1024px), documented in
+// src/styles/tokens.css. The release before it used max-width 375px, 600px and 767px; while that build is the
+// baseline the same widths cut its bands too:
+//   new:  below 640           │ 640 … 1023 │ 1024 and up
+//   old:  … 375 │ 376 … 600   │ 601 … 767  │ 768 and up
+//          375  │ 414   600   │    700     │ 1024  1280
+// 414 is what most phones are. 600 is the last width below 40rem (and the last a "max-width: 600px" rule applied
+// at). 700 is inside 40rem … 64rem: a 40rem rule moved to 48rem shows there. 1024 is the first width at 64rem: a
+// 64rem rule moved to 70rem shows there and nowhere else.
 const DEFAULT_VIEWPORTS = [
   { width: 375, height: 812 },
   { width: 414, height: 896 },
   { width: 600, height: 960 },
   { width: 700, height: 1024 },
-  { width: 768, height: 1024 },
+  { width: 1024, height: 900 },
   { width: 1280, height: 900 },
 ];
 
@@ -601,39 +605,49 @@ export default {
         },
       },
 
-      // Media rules between the phone and the tablet widths. The first shows at 414 and 600 only, the second
-      // at 600 only (a rule narrowed to 420px still applies at 414): neither at 375, 768 or 1280.
+      // Media rules. Each pattern matches the rule of the old site (max-width 600px/767px) or of the D1 one
+      // (min-width 40rem/64rem): the self-test mutates the baseline, and until the D1 release ships the baseline
+      // is the old site. The old alternatives can go once a D1 build is the baseline.
+      //   value:    old shows at 414 and 600 only; new at 700, 1024 and 1280 (the home list title from 40rem up).
+      //   first:    old 600px → 420px shows at 600 only (414 is inside both); new 40rem → 48rem at 700 only.
+      //   second:   old 767px → 620px shows at 700 only; new 64rem → 70rem at 1024 only.
+      // None of them shows at 375.
       {
-        name: "600px 미디어 규칙의 값 변경 (글 제목 2rem → 5rem)",
+        name: "미디어 규칙의 값 변경 (홈 목록 제목 → 5rem)",
         routes: ["/"],
         apply(dir) {
           editPages(
             dir,
-            /(@media \(max-width:600px\)\{article\[[^\]]*\] h2\[[^\]]*\]\{font-size:)2rem/,
-            "$15rem",
+            /(@media \(max-width:600px\)\{article\[[^\]]*\] h2\[[^\]]*\]\{font-size:)2rem|(@media \(min-width:40rem\)\{h2\[[^\]]*\]\{font-size:)var\(--text-xl\)/,
+            (_, old, next) => `${old ?? next}5rem`,
           );
         },
       },
       {
-        name: "600px 미디어 규칙의 경계 변경 (600px → 420px)",
+        name: "첫 미디어 경계 변경 (600px → 420px, 40rem → 48rem)",
         routes: ["/"],
         apply(dir) {
           editPages(
             dir,
-            /@media \(max-width:600px\)/g,
-            "@media (max-width:420px)",
+            /@media \((?:max-width:600px|min-width:40rem)\)/g,
+            (rule) =>
+              rule.includes("600px")
+                ? "@media (max-width:420px)"
+                : "@media (min-width:48rem)",
           );
         },
       },
       {
-        // Shows at 700 only: 768 and 1280 are outside the rule, 600 and below inside it either way.
-        name: "767px 미디어 규칙의 경계 변경 (767px → 620px)",
+        name: "둘째 미디어 경계 변경 (767px → 620px, 64rem → 70rem)",
         routes: ["/"],
         apply(dir) {
           editPages(
             dir,
-            /@media \(max-width:767px\)/g,
-            "@media (max-width:620px)",
+            /@media \((?:max-width:767px|min-width:64rem)\)/g,
+            (rule) =>
+              rule.includes("767px")
+                ? "@media (max-width:620px)"
+                : "@media (min-width:70rem)",
           );
         },
       },

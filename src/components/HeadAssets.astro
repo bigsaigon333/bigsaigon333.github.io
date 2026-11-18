@@ -1,15 +1,53 @@
 ---
-// 수식과 코드 글꼴의 자원. 레이아웃이 <head> 안에서 한 번 렌더하므로 모든 페이지에 실린다(배포본도 그랬다).
+// 수식과 코드 글꼴의 자원. 레이아웃이 <head> 안에서 한 번 렌더한다. 무엇을 실을지는 글 페이지가 정한
+// Astro.locals.postAssets(src/lib/post-assets.ts)를 따른다. 그 값이 없는 페이지(홈, 태그, 404)에는 아무것도 싣지 않는다.
 // 파비콘과 google-site-verification 은 BaseLayout 이, 코드 블록 스타일(code.css)과 본문 스타일은 글 페이지가 직접 싣는다.
 // 둘 다 이 사이트에서 내보낸다. 다른 출처로 가는 요청은 GA, utterances, 본문의 원격 이미지뿐이다(external 검사).
 //
-// 1. KaTeX 스타일시트: 수식의 글꼴과 배치. 예전에는 cdn.jsdelivr.net 의 katex@0.16.0 을 link 태그로 걸었다.
-//    이제 rehype-katex 가 수식을 그릴 때 쓰는 katex 패키지의 CSS 를 import 한다. Vite 가 CSS 를 묶음에 넣고, CSS 가
-//    url() 로 가리키는 글꼴 파일(woff2·woff·ttf)을 _astro/ 아래로 복사해 주소를 바꿔 쓴다. 마크업과 CSS 가 같은 버전이 된다.
-// 2. Source Code Pro: Fonts API 로 싣는다(config/fonts.mjs). <Font> 가 @font-face 와 --font-source-code-pro 변수를
-//    이 자리에 쓰고, global.css 가 그 변수를 쓴다. 파일은 배포본이 fonts.gstatic.com 에서 받던 v22 woff 그대로다.
+// 1. KaTeX 스타일(PF2): 수식이 있는 글에만 <style> 로 끼워 넣는다. 예전에는 모든 페이지의 BaseLayout CSS 묶음에
+//    들어 있어(약 23KB, 압축 약 4KB) 수식 글이 하나뿐인데도 모든 페이지가 렌더를 막는 CSS 로 받았다.
+//    - 별도 <link> 가 아니라 인라인인 이유: 렌더를 막는 요청이 하나 늘면 수식 글의 첫 화면이 한 왕복 늦어진다.
+//      인라인이면 HTML 과 함께 온다. 같은 글을 다시 열 때는 HTML 과 함께 다시 받지만 수식 글은 하나다.
+//    - `?inline` import 는 Vite 가 처리한 CSS 를 글자로 준다. url() 이 가리키는 글꼴 파일은 _astro/ 로 복사되고 주소가 바뀐다.
+//    - CSP: 이 <style> 의 sha256 을 모든 페이지의 정책에 넣는다(Astro.csp.insertStyleHash). 정책은 모든 페이지가 같아야
+//      한다(config/csp.mjs: <ClientRouter /> 는 첫 페이지의 정책을 그대로 둔다). 다른 글에서 수식 글로 옮겨 가도 막히지 않는다.
+//    - CLS: 수식에 가장 많이 쓰는 두 글꼴(KaTeX_Main-Regular, KaTeX_Math-Italic)을 preload 한다. preload 가 없으면 CSS 를
+//      해석한 뒤에야 요청해, 대체 글꼴로 먼저 그려진 수식이 글꼴이 오면서 줄을 민다(CLS 0.018, 빼고 재 보면 그대로 돌아온다).
+//      ?url 로 가져온 주소는 KaTeX CSS 의 url() 과 같은 파일이다(Vite 가 같은 원본을 한 번만 내보낸다).
+// 2. Source Code Pro(PF3): Fonts API 로 싣는다(config/fonts.mjs). 코드 블록이 있는 글에만 <Font> 가 @font-face 와
+//    --font-source-code-pro 변수를 이 자리에 쓰고, global.css 가 그 변수를 쓴다. 그 <style> 의 해시는 Fonts API 가
+//    모든 페이지의 정책에 넣는다(렌더 여부와 상관없다). 코드가 없는 글과 홈은 @font-face 블록(약 2KB)을 받지 않는다.
+import { createHash } from "node:crypto";
+
 import { Font } from "astro:assets";
-import "katex/dist/katex.min.css";
+import katexCss from "katex/dist/katex.min.css?inline";
+import katexMain from "katex/dist/fonts/KaTeX_Main-Regular.woff2?url";
+import katexMath from "katex/dist/fonts/KaTeX_Math-Italic.woff2?url";
+
+Astro.csp?.insertStyleHash(
+  `sha256-${createHash("sha256").update(katexCss, "utf8").digest("base64")}`,
+);
+
+const { math = false, code = false } = Astro.locals.postAssets ?? {};
 ---
 
-<Font cssVariable="--font-source-code-pro" />
+{math && (
+  <>
+    <link
+      rel="preload"
+      href={katexMain}
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      href={katexMath}
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <style set:html={katexCss} />
+  </>
+)}
+{code && <Font cssVariable="--font-source-code-pro" />}

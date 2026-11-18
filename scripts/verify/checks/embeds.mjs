@@ -3,7 +3,7 @@
 // Read from the live DOM after scripts have run, with the embeds themselves blocked (lib/browser.mjs):
 //   ga.loader    ids of <script src="https://www.googletagmanager.com/gtag/js?id=…">
 //   ga.config    ids passed to gtag("config", …), as recorded in window.dataLayer
-//   ga.calls     every entry of window.dataLayer, in order and in full: gtag("js", <Date>), gtag("config", "G-…").
+//   ga.calls     every entry of window.dataLayer, in order and in full: gtag("js", <Date>), gtag("config", "G-…", …).
 //                A dropped call or an extra argument ({ send_page_view: false }) changes what is measured without
 //                changing an id. An entry pushed as an array is not one pushed by gtag(): gtag.js ignores it.
 //   utterances   repo, issue-term, theme, crossorigin and async of the utteranc.es client script, and where it
@@ -55,13 +55,16 @@ function readEmbeds() {
     if (entry && entry[0] === "config") config.push(String(entry[1]));
   }
 
-  // A value as it can be compared: a Date is a different one on every load, the rest is kept as it is.
+  // A value as it can be compared: a Date is a different one on every load, and this page's origin (gtag("config")
+  // carries page_location: location.href) is a different server on each side. The rest is kept as it is.
   const isArguments = (value) =>
     Object.prototype.toString.call(value) === "[object Arguments]";
   const plain = (value, depth) => {
     if (value instanceof Date) return "<Date>";
     if (typeof value === "function") return "<function>";
     if (value === undefined) return "<undefined>";
+    if (typeof value === "string")
+      return value.split(location.origin).join("<origin>");
     if (value === null || typeof value !== "object") return value;
     if (depth > 5) return "<…>";
     if (Array.isArray(value) || isArguments(value))
@@ -324,10 +327,10 @@ export default {
         name: 'gtag("config") 에 { send_page_view: false } 추가',
         routes: HOME,
         apply(dir) {
-          editPages(
-            dir,
-            /gtag\("config", (\w+)\)/,
-            'gtag("config", $1, { send_page_view: false })',
+          editPages(dir, /gtag\("config", (\w+)(\)|, \{)/, (_, id, rest) =>
+            rest === ")"
+              ? `gtag("config", ${id}, { send_page_view: false })`
+              : `gtag("config", ${id}, { send_page_view: false,`,
           );
         },
       },

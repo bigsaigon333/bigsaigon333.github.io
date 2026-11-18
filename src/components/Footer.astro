@@ -1,13 +1,51 @@
-<footer>Copyright&copy; 2022 All right reserved</footer>
+---
+import { SITE } from "../lib/site";
+
+// 사이트 바닥: 구독(RSS)과 깃허브 링크, 저작권 한 줄.
+---
+
+<footer class="site-footer">
+  <ul>
+    <li>
+      <a href="/rss.xml">RSS</a>
+    </li>
+    <li>
+      <a href={SITE.github} referrerpolicy="no-referrer" target="_blank">
+        GitHub
+      </a>
+    </li>
+  </ul>
+  <p>&copy; {SITE.author}</p>
+</footer>
 
 <style>
-  /* components/layout.style.ts 의 Footer */
-  footer {
+  .site-footer {
     display: flex;
-    width: 100%;
-    padding: 2rem 0 1rem;
-    border-top: 1px solid var(--color-rule);
-    justify-content: center;
+    flex-wrap: wrap;
     align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2) var(--space-4);
+    width: 100%;
+    padding: var(--space-5) 0 var(--space-6);
+    border-top: 1px solid var(--color-rule);
+    color: var(--color-muted);
+    font-size: var(--text-sm);
+  }
+
+  ul {
+    display: flex;
+    column-gap: var(--space-4);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  a:hover {
+    color: var(--color-accent);
+    text-decoration: underline;
+  }
+
+  p {
+    margin: 0;
   }
 </style>

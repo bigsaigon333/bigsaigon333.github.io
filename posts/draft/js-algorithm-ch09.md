@@ -2,6 +2,7 @@
 title: Ch09. 정렬
 date: "2020-03-16"
 summary: 정렬
+category: 개발
 ---
 
 ## 9-1. 정렬이란

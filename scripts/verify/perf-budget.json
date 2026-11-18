@@ -1,0 +1,140 @@
+{
+  "margins": {
+    "score": {
+      "abs": 5
+    },
+    "lcp": {
+      "pct": 10,
+      "round": 50
+    },
+    "fcp": {
+      "pct": 10,
+      "round": 50
+    },
+    "si": {
+      "pct": 10,
+      "round": 50
+    },
+    "tbt": {
+      "abs": 100,
+      "round": 50
+    },
+    "cls": {
+      "abs": 0.02,
+      "round": 0.01
+    },
+    "bytes": {
+      "pct": 5,
+      "round": 512
+    },
+    "js": {
+      "pct": 5,
+      "round": 512
+    },
+    "css": {
+      "pct": 5,
+      "round": 512
+    },
+    "blocking": {}
+  },
+  "pages": {
+    "/": {
+      "score": 95,
+      "lcp": 750,
+      "fcp": 750,
+      "si": 750,
+      "tbt": 100,
+      "cls": 0.02,
+      "bytes": 27648,
+      "js": 9728,
+      "css": 0,
+      "blocking": 0
+    },
+    "/posts/proxy-to-built-in-objects": {
+      "score": 95,
+      "lcp": 750,
+      "fcp": 750,
+      "si": 750,
+      "tbt": 100,
+      "cls": 0.02,
+      "bytes": 62976,
+      "js": 11264,
+      "css": 0,
+      "blocking": 0
+    },
+    "/posts/how-to-check-two-types-are-equal-in-ts": {
+      "score": 95,
+      "lcp": 950,
+      "fcp": 950,
+      "si": 950,
+      "tbt": 100,
+      "cls": 0.02,
+      "bytes": 115712,
+      "js": 11264,
+      "css": 0,
+      "blocking": 0
+    },
+    "/posts/css-masters-2-week2": {
+      "score": 95,
+      "lcp": 750,
+      "fcp": 750,
+      "si": 750,
+      "tbt": 100,
+      "cls": 0.02,
+      "bytes": 99328,
+      "js": 11264,
+      "css": 0,
+      "blocking": 0
+    }
+  },
+  "measured": {
+    "/": {
+      "score": 100,
+      "lcp": 638,
+      "fcp": 638,
+      "si": 638,
+      "tbt": 0,
+      "cls": 0,
+      "bytes": 26073,
+      "js": 9037,
+      "css": 0,
+      "blocking": 0
+    },
+    "/posts/proxy-to-built-in-objects": {
+      "score": 100,
+      "lcp": 648,
+      "fcp": 648,
+      "si": 648,
+      "tbt": 0,
+      "cls": 0,
+      "bytes": 59863,
+      "js": 10364,
+      "css": 0,
+      "blocking": 0
+    },
+    "/posts/how-to-check-two-types-are-equal-in-ts": {
+      "score": 100,
+      "lcp": 840,
+      "fcp": 840,
+      "si": 840,
+      "tbt": 0,
+      "cls": 0,
+      "bytes": 109828,
+      "js": 10364,
+      "css": 0,
+      "blocking": 0
+    },
+    "/posts/css-masters-2-week2": {
+      "score": 100,
+      "lcp": 661,
+      "fcp": 661,
+      "si": 661,
+      "tbt": 0,
+      "cls": 0,
+      "bytes": 94208,
+      "js": 10364,
+      "css": 0,
+      "blocking": 0
+    }
+  }
+}

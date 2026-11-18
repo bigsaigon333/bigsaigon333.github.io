@@ -7,7 +7,9 @@
 //   - exactly one <title>, one canonical link, one meta description, and the description is not empty (an empty one
 //     leaves link previews without a description and is reported as missing by search engines, W9);
 //     no meta name/property twice (article:tag may repeat)
-//   - robots is ROBOTS_NOINDEX on /404 and ROBOTS_INDEX everywhere else
+//   - robots is ROBOTS_NOINDEX on /404 and on a page other than a post that /sitemap.xml does not list (a category
+//     without posts, WB-review), ROBOTS_INDEX on every post and every page it lists: what search engines are asked to index and what they are
+//     told exists agree. Without a sitemap.xml: ROBOTS_NOINDEX on /404 only.
 //   - og:title, twitter:title = <title>; og:description, twitter:description = description; og:url = canonical
 //   - og:site_name = the <title> of "/"; og:locale looks like "ko_KR"
 //   - og:image:width / :height / :type = what the header of the image file og:image points to says;
@@ -36,6 +38,7 @@ import {
   probe,
   quote,
   rawText,
+  readSiteFile,
   statusOf,
 } from "../lib/html.mjs";
 
@@ -115,8 +118,37 @@ const urlOf = (value) =>
 
 const hasType = (node, type) => [node?.["@type"]].flat().includes(type);
 
+/** A route or URL path as compared with the sitemap: percent-decoded, NFC, without ".html" or a trailing "/". */
+const pathKey = (pathname) => {
+  let key = pathname;
+  try {
+    key = decodeURIComponent(pathname);
+  } catch {
+    // keep it as it is
+  }
+  key = key.normalize("NFC").replace(/\.html$/, "");
+  return key.length > 1 ? key.replace(/\/+$/, "") : key;
+};
+
+/** pathKey() of every <loc> of the candidate's /sitemap.xml; null when it has none. */
+async function sitemapPaths(ctx) {
+  const xml = (await readSiteFile(ctx, "candidate", "sitemap.xml"))?.toString(
+    "utf8",
+  );
+  if (!xml) return null;
+  const paths = new Set();
+  for (const [, loc] of xml.matchAll(/<loc>([^<]*)<\/loc>/g)) {
+    try {
+      paths.add(pathKey(new URL(loc.replaceAll("&amp;", "&")).pathname));
+    } catch {
+      // not a URL: the sitemap check reports it
+    }
+  }
+  return paths;
+}
+
 /** Every violated rule of one page, each as a short phrase. */
-async function violations(ctx, route, $, siteName) {
+async function violations(ctx, route, $, siteName, listed) {
   const problems = [];
   const expect = (label, actual, expected) => {
     if (actual !== expected)
@@ -167,7 +199,14 @@ async function violations(ctx, route, $, siteName) {
 
   const robots = meta("robots");
   if (robots !== null)
-    expect("robots", robots, route === "/404" ? ROBOTS_NOINDEX : ROBOTS_INDEX);
+    expect(
+      "robots",
+      robots,
+      route === "/404" ||
+        (!isPost(route) && listed !== null && !listed.has(pathKey(route)))
+        ? ROBOTS_NOINDEX
+        : ROBOTS_INDEX,
+    );
 
   // ---- link previews ---------------------------------------------------------------------------
   for (const [key, expected] of [
@@ -380,6 +419,7 @@ export default {
 
     const home = await ctx.dom("candidate", "/");
     const siteName = home === null ? null : rawText(home("head title")[0]);
+    const listed = await sitemapPaths(ctx);
 
     // The candidate's routes, not the baseline's: a post a pull request adds is a page the baseline has never had.
     for (const route of candidateRoutes(ctx)) {
@@ -387,7 +427,7 @@ export default {
       const problems =
         $ === null
           ? ["route missing in candidate"]
-          : await violations(ctx, route, $, siteName);
+          : await violations(ctx, route, $, siteName, listed);
 
       if (problems.length === 0) {
         pass++;
@@ -482,6 +522,18 @@ export default {
           );
         },
         routes: [NEW_PAGE.route],
+      },
+      {
+        // A category page with posts that the sitemap no longer lists: it is still asked to be indexed.
+        name: "sitemap 에서 글이 있는 카테고리 페이지 삭제",
+        apply(dir) {
+          mutateFile(dir, "sitemap.xml", (xml) =>
+            xml.replace(
+              /<url><loc>[^<]*\/categories\/dev<\/loc>[^\n]*?<\/url>/,
+              "",
+            ),
+          );
+        },
       },
       {
         name: "404 의 noindex 삭제",

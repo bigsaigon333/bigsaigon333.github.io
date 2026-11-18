@@ -2,6 +2,7 @@
 title: Ch03. 배열
 date: "2020-03-12"
 summary: "배열"
+category: 개발
 ---
 
 ## 1. 배열이란?

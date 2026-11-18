@@ -2,13 +2,21 @@
 import { Picture } from "astro:assets";
 
 import profile from "../assets/profile.jpg";
+import { CATEGORIES_PATH } from "../lib/categories";
 import { SITE } from "../lib/site";
+import { TAGS_PATH } from "../lib/tags";
 import ThemeToggle from "./ThemeToggle.astro";
 
-// 프로필 사진: astro:assets 가 빌드 때 webp·jpg 를 너비 3개로 만든다.
-// avif 도 더하면 더 작지만(192w 3.6KB, webp 6.3KB) <source> 가 하나 늘어 예전 마크업(webp source + jpg img)과 모양이 달라진다.
-// 상자 크기는 .profile-wrapper 가 정하고 img 는 그 상자를 채우므로(아래 .profile) 렌더 크기는 그대로다.
+// 사이트 머리: 프로필 사진과 "김동희입니다", 소개 한 줄(사이트 제목 링크), 그 아래 한 줄에 사이트 탐색(카테고리·태그)과
+// 홈에서만 보이는 메일·깃허브 아이콘, 다크 모드 토글.
+//
+// 프로필 사진: astro:assets 가 빌드 때 webp·jpg 를 너비 3개로 만든다. <Picture> 의 sizes 는 렌더 너비를 따른다(PF4): 휴대폰 3.5rem=56px,
+// 40rem 부터 4.5rem=72px. fetchpriority="high" 는 재 보고 뺐다: 모바일 LCP 요소는 이 사진이 아니라 옆의 제목 글자라(Lighthouse
+// lcp-breakdown) 값이 그대로였고, 렌더를 막는 CSS 와 대역폭만 다툰다.
 // public/profile.jpg·profile.webp 는 예전 주소로 들어오는 요청을 위해 남긴다.
+//
+// 검증 장치가 기대는 모양: 제목 링크(href="/")가 헤더의 첫 링크이고, 헤더의 첫 <span> 이 글자를 담는다
+// (verify 의 mask 명령 시험이 그 span 의 글자색을 바꾼다). 아이콘 링크의 aria-label·target 은 content 검사가 본다.
 
 interface Props {
   /** 홈에서만 메일·깃허브 아이콘 링크를 보여 준다. */
@@ -16,174 +24,223 @@ interface Props {
 }
 
 const { home = false } = Astro.props;
+
+const NAV = [
+  { href: CATEGORIES_PATH, label: "카테고리" },
+  { href: TAGS_PATH, label: "태그" },
+];
+
+// build.format "file" 이라 Astro.url.pathname 이 "/categories.html", "/categories/dev.html" 처럼 나온다.
+const pathname = Astro.url.pathname.replace(/\.html$/, "");
+const current = (href: string) =>
+  pathname === href || pathname.startsWith(`${href}/`);
+
+// GitHub 마크(Octicons mark-github, 16×16).
+const GITHUB_MARK =
+  "M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z";
 ---
 
-<header>
-  <ThemeToggle />
+<header class="site-header">
   <h1 class="title">
     <a class="title-link" href="/">
-      <div class="profile-wrapper">
-        <Picture
-          class="profile"
-          src={profile}
-          alt="프로필"
-          formats={["webp"]}
-          widths={[192, 384, profile.width]}
-          sizes="(max-width: 600px) 20vw, (max-width: 767px) 25vw, 192px"
-          loading="eager"
-        />
-      </div>
-      <div>
-        <span>프론트엔드 개발자</span>
-        <br />
-        <span>김동희입니다</span>
-      </div>
+      <Picture
+        class="profile"
+        src={profile}
+        alt="프로필"
+        formats={["webp"]}
+        widths={[96, 192, profile.width]}
+        sizes="(min-width: 40rem) 72px, 56px"
+        loading="eager"
+      />
+      <span class="title-text">
+        <span class="name">김동희입니다</span>
+        <span class="intro">개발과 부동산, 일상을 기록합니다</span>
+      </span>
     </a>
   </h1>
 
-  {home && (
-    <ul class="link-list">
-      <li>
-        <a
-          class="email-link"
-          href={`mailto:${SITE.email}`}
-          aria-label="김동희에게 메일 보내기"
-          referrerpolicy="no-referrer"
-          target="_blank"
-        />
-      </li>
-      <li>
-        <a
-          class="github-link"
-          href={SITE.github}
-          aria-label="김동희 깃허브"
-          referrerpolicy="no-referrer"
-          target="_blank"
-        />
-      </li>
-    </ul>
-  )}
+  <div class="toolbar">
+    <nav class="site-nav" aria-label="사이트">
+      <ul>
+        {NAV.map((item) => (
+          <li>
+            <a
+              href={item.href}
+              aria-current={current(item.href) ? "page" : undefined}
+            >
+              {item.label}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+
+    <div class="actions">
+      {home && (
+        <ul class="link-list">
+          <li>
+            <a
+              class="email-link"
+              href={`mailto:${SITE.email}`}
+              aria-label="김동희에게 메일 보내기"
+              referrerpolicy="no-referrer"
+              target="_blank"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                width="22"
+                height="22"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  stroke-linejoin="round"
+                  d="M3 5.5h18v13H3zM3.5 6l8.5 7 8.5-7"
+                />
+              </svg>
+            </a>
+          </li>
+          <li>
+            <a
+              class="github-link"
+              href={SITE.github}
+              aria-label="김동희 깃허브"
+              referrerpolicy="no-referrer"
+              target="_blank"
+            >
+              <svg
+                viewBox="0 0 16 16"
+                width="20"
+                height="20"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path fill="currentColor" d={GITHUB_MARK} />
+              </svg>
+            </a>
+          </li>
+        </ul>
+      )}
+      <ThemeToggle />
+    </div>
+  </div>
 </header>
 
 <style>
-  /* components/header.style.ts 를 옮긴 것. 주석은 예전 styled-component 이름이다. */
-
-  /* Container */
-  header {
+  .site-header {
     display: flex;
     flex-direction: column;
-    align-items: center;
+    row-gap: var(--space-4);
     width: 100%;
+    padding-bottom: var(--space-4);
+    border-bottom: 1px solid var(--color-rule);
   }
 
-  /* Title */
   .title {
     margin: 0;
-    line-height: 1.25;
-    width: 100%;
-    font-weight: 800;
+    font-size: inherit;
   }
 
-  /* A */
   .title-link {
-    width: 100%;
-    font-size: 3.6rem;
-    text-align: center;
     display: flex;
-    column-gap: 2rem;
-    justify-content: center;
     align-items: center;
+    column-gap: var(--space-4);
   }
 
-  /* 배포본에서도 맞는 요소가 없는 규칙이다(제목은 p 가 아니라 div 안에 있다). 그대로 옮겼다. */
-  .title-link:hover p span {
-    box-shadow: 0 0.25rem 0 0 var(--color-text);
+  .title-link:hover .name {
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
   }
 
-  @media (max-width: 767px) {
-    .title-link {
-      font-size: 9vw;
-      column-gap: 1rem;
-    }
-  }
-
-  /* ProfileWrapper */
-  .profile-wrapper {
-    position: relative;
-    overflow: hidden;
-    border-radius: 35%;
-    width: 25%;
-    padding-bottom: 25%;
-  }
-
-  @media (max-width: 600px) {
-    .profile-wrapper {
-      width: 20%;
-      padding-bottom: 20%;
-    }
-  }
-
-  /* Profile */
+  /* 프로필 사진: 원. picture 는 global.css 에서 display: contents 라 img 가 바로 flex 항목이다. */
   .profile {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    flex: none;
+    width: 3.5rem;
+    height: 3.5rem;
+    border-radius: var(--radius-full);
     object-fit: cover;
   }
 
-  /* LinkList */
-  .link-list {
-    margin: 1rem 0;
-    list-style: none;
+  .title-text {
     display: flex;
-    column-gap: 1rem;
+    flex-direction: column;
+    row-gap: var(--space-1);
+    min-width: 0;
+  }
+
+  .name {
+    font-size: var(--text-xl);
+    font-weight: 800;
+    line-height: var(--leading-tight);
+  }
+
+  .intro {
+    color: var(--color-muted);
+    font-size: var(--text-sm);
+    font-weight: 400;
+    line-height: var(--leading-tight);
+  }
+
+  @media (min-width: 40rem) {
+    .title-link {
+      column-gap: var(--space-5);
+    }
+
+    .profile {
+      width: 4.5rem;
+      height: 4.5rem;
+    }
+
+    .name {
+      font-size: var(--text-2xl);
+    }
+
+    .intro {
+      font-size: var(--text-base);
+    }
+  }
+
+  .toolbar {
+    display: flex;
     align-items: center;
+    justify-content: space-between;
+    column-gap: var(--space-4);
+  }
+
+  .site-nav ul,
+  .link-list {
+    display: flex;
+    align-items: center;
+    column-gap: var(--space-4);
+    margin: 0;
     padding: 0;
+    list-style: none;
+  }
+
+  .site-nav a {
+    font-weight: 600;
+  }
+
+  .site-nav a:hover,
+  .site-nav a[aria-current="page"] {
+    color: var(--color-accent);
+  }
+
+  .actions {
+    display: flex;
+    align-items: center;
+    column-gap: var(--space-4);
   }
 
   .link-list li a {
     display: block;
+    color: var(--color-muted);
   }
 
   .link-list li a:hover {
     opacity: 0.4;
-  }
-
-  /* 아이콘 그림(email.png, github-sign.png)은 검정이다. 다크에서는 뒤집어 흰색으로 보인다(--icon-filter). */
-  .email-link,
-  .github-link {
-    filter: var(--icon-filter);
-  }
-
-  /* EmailLink */
-  .email-link {
-    background-image: url("/email.png");
-    background-size: cover;
-    width: 40px;
-    height: 40px;
-  }
-
-  @media (max-width: 375px) {
-    .email-link {
-      width: 25px;
-      height: 25px;
-    }
-  }
-
-  /* GithubLink */
-  .github-link {
-    background-image: url("/github-sign.png");
-    background-size: cover;
-    width: 35px;
-    height: 35px;
-  }
-
-  @media (max-width: 375px) {
-    .github-link {
-      width: 20px;
-      height: 20px;
-    }
   }
 </style>
