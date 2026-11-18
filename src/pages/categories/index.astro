@@ -1,0 +1,71 @@
+---
+// /categories — 모든 카테고리(src/lib/categories.ts 의 순서)와 카테고리마다 글 수. 글이 없는 카테고리도 싣는다.
+// build.format "file" 이라 dist/categories.html 이 된다(/categories/<slug> 는 dist/categories/ 아래).
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import {
+  CATEGORIES_PATH,
+  categoryPath,
+  groupByCategory,
+} from "../../lib/categories";
+import { getVisiblePosts } from "../../lib/posts";
+import { SITE } from "../../lib/site";
+
+const groups = groupByCategory(await getVisiblePosts());
+---
+
+<BaseLayout
+  seo={{
+    title: `카테고리 | ${SITE.title}`,
+    description: `${SITE.title}의 카테고리 ${groups.length}개: ${groups.map((group) => group.category.name).join(", ")}`,
+    url: `${SITE.url}${CATEGORIES_PATH}`,
+    type: "website",
+    keywords: groups.map((group) => group.category.name),
+  }}
+>
+  <main class="page">
+    <div class="page-heading">
+      <h2>카테고리</h2>
+    </div>
+    <ul class="category-list">
+      {groups.map(({ category, posts }) => (
+        <li>
+          <a href={categoryPath(category)}>
+            {category.name} <span class="count">({posts.length})</span>
+          </a>
+          <p>{category.description}</p>
+        </li>
+      ))}
+    </ul>
+  </main>
+</BaseLayout>
+
+<style>
+  .category-list {
+    display: flex;
+    flex-direction: column;
+    row-gap: var(--space-5);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  a {
+    font-size: var(--text-xl);
+    font-weight: 700;
+  }
+
+  a:hover {
+    color: var(--color-accent);
+    text-decoration: underline;
+  }
+
+  .count {
+    color: var(--color-muted);
+    font-weight: 400;
+  }
+
+  p {
+    margin: var(--space-1) 0 0;
+    color: var(--color-muted);
+  }
+</style>

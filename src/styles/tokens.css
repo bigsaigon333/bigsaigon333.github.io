@@ -1,0 +1,88 @@
+/*
+ * 디자인 토큰(D1). 사이트의 색·간격·글자 크기·둥근 모서리는 모두 여기 CSS 사용자 정의 속성으로 모은다.
+ * global.css 가 맨 먼저 @import 하고, 나머지 CSS(global.css, prose.css, code.css, 컴포넌트의 <style>)는
+ * 값을 직접 쓰지 않고 var(--…) 를 쓴다. 색 값(#hex, rgb())은 이 파일에만 있다.
+ *
+ * 다크는 <html data-theme="dark"> 일 때다. BaseLayout 의 <head> 인라인 스크립트가 첫 화면 전에 붙인다.
+ * 대비(WCAG AA, 본문 4.5:1): 라이트 본문 #1f2328 / #fff 15.8:1, 흐린 글자 #59636e 6.1:1, 강조 #0969da 5.2:1.
+ * 다크 본문 #e6edf3 / #0d1117 16:1, 흐린 글자 #9198a1 6.2:1, 강조 #4493f8 6.0:1.
+ *
+ * 브레이크포인트는 2개다. CSS 의 @custom-media 는 아직 브라우저가 모르므로 아래 이름은 문서이고,
+ * @media 에는 값을 그대로 적는다(모바일 먼저, min-width 만 쓴다).
+ *
+ *   @custom-media --bp-md (min-width: 40rem);   640px 이상: 태블릿·넓은 휴대폰 가로
+ *   @custom-media --bp-lg (min-width: 64rem);   1024px 이상: 데스크톱
+ *
+ * 검증 장치의 visual 화면 너비(scripts/verify/visual.config.json)가 이 두 경계의 양쪽을 찍는다.
+ */
+:root {
+  color-scheme: light;
+
+  /* 색 */
+  --color-bg: #fff;
+  --color-surface: #f6f8fa;
+  --color-text: #1f2328;
+  --color-muted: #59636e;
+  --color-accent: #0969da;
+  --color-rule: #e6e8eb;
+  --color-border: #d0d7de;
+  --color-table-rule: #d0d7de;
+  --color-table-stripe: #f6f8fa;
+  --color-code-bg: rgb(175 184 193 / 20%);
+  --color-code-text: #1f2328;
+  --color-quote-border: #d0d7de;
+
+  /* 글꼴. 웹 글꼴을 받지 않는다(시스템 글꼴). 코드 글꼴(--font-source-code-pro)은 config/fonts.mjs 가 정한다. */
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic",
+    "맑은 고딕", "Noto Sans KR", "Noto Sans CJK KR", system-ui, sans-serif;
+
+  /* 간격(4px 단위) */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4rem;
+
+  /* 글자 크기 */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-md: 1.125rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.5rem;
+  --text-2xl: 1.875rem;
+  --text-3xl: 2.25rem;
+
+  /* 행간 */
+  --leading-tight: 1.35;
+  --leading-body: 1.75;
+
+  /* 둥근 모서리 */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-full: 999px;
+
+  /* 본문 한 줄 길이(한글 약 40자)와 페이지 폭 */
+  --measure: 40em;
+  --page-width: 44rem;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-bg: #0d1117;
+  --color-text: #e6edf3;
+  --color-surface: #151b23;
+  --color-muted: #9198a1;
+  --color-accent: #4493f8;
+  --color-rule: #262c36;
+  --color-border: #3d444d;
+  --color-table-rule: #3d444d;
+  --color-table-stripe: #151b23;
+  --color-code-bg: rgb(101 108 118 / 20%);
+  --color-code-text: #e6edf3;
+  --color-quote-border: #3d444d;
+}

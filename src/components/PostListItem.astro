@@ -1,0 +1,83 @@
+---
+import {
+  displayTitle,
+  formatDate,
+  type Post,
+  postDescription,
+  postPath,
+} from "../lib/posts";
+import CategoryLink from "./CategoryLink.astro";
+
+// 글 목록(홈, 태그, 카테고리)의 항목 하나: 제목 링크, 날짜와 카테고리, 요약(postDescription).
+// 글로 가는 링크는 제목 하나뿐이다(categories·tags 검사가 목록의 /posts/ 링크를 중복 없이 센다).
+interface Props {
+  post: Post;
+  /** 카테고리 페이지에서는 모두 같은 카테고리라 숨긴다. */
+  showCategory?: boolean;
+}
+
+const { post, showCategory = true } = Astro.props;
+const { date, category } = post.data;
+---
+
+<article class="post-item">
+  <h2>
+    <a href={postPath(post.id)}>{displayTitle(post)}</a>
+  </h2>
+  <p class="meta">
+    <time datetime={date.toISOString()}>{formatDate(date)}</time>
+    {showCategory && (
+      <>
+        <span aria-hidden="true">·</span>
+        <CategoryLink name={category} />
+      </>
+    )}
+  </p>
+  <p class="excerpt">{postDescription(post)}</p>
+</article>
+
+<style>
+  .post-item {
+    display: flex;
+    flex-direction: column;
+    row-gap: var(--space-2);
+  }
+
+  h2 {
+    margin: 0;
+    font-size: var(--text-lg);
+    font-weight: 700;
+    text-wrap: pretty;
+  }
+
+  h2 a:hover {
+    text-decoration: underline;
+  }
+
+  @media (min-width: 40rem) {
+    h2 {
+      font-size: var(--text-xl);
+    }
+  }
+
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    column-gap: var(--space-2);
+    margin: 0;
+    color: var(--color-muted);
+    font-size: var(--text-sm);
+  }
+
+  .excerpt {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    overflow: hidden;
+    margin: 0;
+    color: var(--color-muted);
+    line-height: var(--leading-body);
+  }
+</style>

@@ -1,7 +1,8 @@
 ---
-import PostHeader from "../components/PostHeader.astro";
+import PostList from "../components/PostList.astro";
 import BaseLayout from "../layouts/BaseLayout.astro";
-import { displayTitle, getVisiblePosts, postPath } from "../lib/posts";
+import { CATEGORIES, categoryPath } from "../lib/categories";
+import { getVisiblePosts } from "../lib/posts";
 import { SITE } from "../lib/site";
 
 // 운영 빌드에서는 발행된 글만, astro dev 에서는 "[초안]" 이 붙은 초안도 함께.
@@ -18,29 +19,24 @@ const posts = await getVisiblePosts();
   }}
   home
 >
-  <section>
-    {posts.map((post) => (
-      <PostHeader
-        title={displayTitle(post)}
-        date={post.data.date}
-        href={postPath(post.id)}
-      />
-    ))}
-  </section>
+  <main class="page">
+    {/* 카테고리로 좁혀 보기: 카테고리 페이지로 가는 링크. "전체"는 지금 이 페이지다. */}
+    <nav class="filter" aria-label="카테고리로 보기">
+      <ul class="pill-list">
+        <li>
+          <a class="tag-pill" href="/" aria-current="page">
+            전체
+          </a>
+        </li>
+        {CATEGORIES.map((category) => (
+          <li>
+            <a class="tag-pill" href={categoryPath(category)}>
+              {category.name}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+    <PostList posts={posts} />
+  </main>
 </BaseLayout>
-
-<style>
-  /* pages/index.style.ts 의 Section */
-  section {
-    width: 100%;
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    row-gap: 2rem;
-  }
-
-  /* 링크는 PostHeader 가 그린다. 자식 컴포넌트 안의 요소에는 스코프가 닿지 않아 :global() 로 연다. */
-  section :global(a:hover) {
-    text-decoration: underline;
-  }
-</style>

@@ -1,0 +1,21 @@
+---
+import { categoryByName, categoryPath } from "../lib/categories";
+
+// 카테고리 페이지(/categories/<slug>)로 가는 링크 하나. 글자는 카테고리 이름 그대로다
+// (검증 장치의 categories 검사가 글 페이지의 이 링크 글자 = 이름인지 본다).
+// 모양은 global.css 의 .category-link 다. 여러 페이지 묶음이 쓰는 작은 조각이라 scoped <style> 로 두지 않는다
+// (쓰는 페이지 묶음마다 CSS 파일이 하나 더 생겨 렌더 차단 요청이 는다).
+interface Props {
+  /** frontmatter 의 category("개발"). */
+  name: string;
+  /** 글 머리 위의 배지 모양. */
+  badge?: boolean;
+}
+
+const { name, badge = false } = Astro.props;
+const category = categoryByName(name);
+---
+
+<a class:list={["category-link", { badge }]} href={categoryPath(category)}>
+  {category.name}
+</a>

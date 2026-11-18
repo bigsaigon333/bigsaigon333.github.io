@@ -2,6 +2,11 @@
 // 빌드할 때 GET 이 한 번 불리고, 돌려준 Response 의 본문이 그대로 파일 내용이 된다.
 import type { APIRoute } from "astro";
 
+import {
+  CATEGORIES_PATH,
+  categoryPath,
+  groupByCategory,
+} from "../lib/categories";
 import { formatDate, getPublishedPosts, postUrl } from "../lib/posts";
 import { SITE } from "../lib/site";
 import { getTags, TAGS_PATH, tagUrl } from "../lib/tags";
@@ -44,6 +49,18 @@ export const GET = (async () => {
     .sort()
     .at(-1);
 
+  // 카테고리 페이지. 글이 없는 카테고리는 페이지가 있어도 싣지 않는다(그 페이지는 noindex, WB-review).
+  // lastmod 는 태그와 같은 규칙이다. slug 가 ASCII 라 인코딩할 것이 없다.
+  const categories = groupByCategory(await getPublishedPosts())
+    .filter((group) => group.posts.length > 0)
+    .map((group) => ({
+      loc: `${SITE.url}${categoryPath(group.category)}`,
+      lastmod: group.posts
+        .map((post) => formatDate(post.data.date))
+        .sort()
+        .at(-1),
+    }));
+
   const xml = [
     `<?xml version="1.0" encoding="UTF-8"?>`,
     `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`,
@@ -55,6 +72,8 @@ export const GET = (async () => {
           ...tags.map((tag) => urlElement(tag.loc, tag.lastmod)),
         ]
       : []),
+    urlElement(`${SITE.url}${CATEGORIES_PATH}`, newest),
+    ...categories.map((category) => urlElement(category.loc, category.lastmod)),
     `</urlset>`,
     "",
   ].join("\n");

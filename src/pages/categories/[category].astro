@@ -1,0 +1,50 @@
+---
+// /categories/<slug> — 그 카테고리의 글, 날짜 내림차순. 목록은 홈과 같은 PostList 다.
+// 카테고리는 src/lib/categories.ts 의 목록이 정한다. 글이 없는 카테고리도 페이지가 있다("아직 글이 없습니다").
+// 글이 없는 동안은 noindex 이고 sitemap.xml 에도 없다: 검색 엔진에는 빈 페이지(soft 404)로 보인다(WB-review).
+// 운영 빌드에서는 발행된 글만 싣는다(getVisiblePosts). 초안은 dev 에서만 섞인다.
+import type { GetStaticPaths, InferGetStaticPropsType } from "astro";
+
+import PostList from "../../components/PostList.astro";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import {
+  CATEGORIES_PATH,
+  categoryPath,
+  groupByCategory,
+} from "../../lib/categories";
+import { getVisiblePosts } from "../../lib/posts";
+import { SITE } from "../../lib/site";
+
+export const getStaticPaths = (async () => {
+  const groups = groupByCategory(await getVisiblePosts());
+
+  return groups.map((group) => ({
+    params: { category: group.category.slug },
+    props: group,
+  }));
+}) satisfies GetStaticPaths;
+
+type Props = InferGetStaticPropsType<typeof getStaticPaths>;
+
+const { category, posts } = Astro.props;
+---
+
+<BaseLayout
+  seo={{
+    title: `${category.name} | ${SITE.title}`,
+    description: `"${category.name}" 카테고리의 글 ${posts.length}편. ${category.description}`,
+    url: `${SITE.url}${categoryPath(category)}`,
+    type: "website",
+    keywords: [category.name],
+    noindex: posts.length === 0,
+  }}
+>
+  <div class="page-heading">
+    <h2>{category.name}</h2>
+    <p>{category.description}</p>
+    <a class="text-link" href={CATEGORIES_PATH}>
+      모든 카테고리
+    </a>
+  </div>
+  <PostList posts={posts} showCategory={false} />
+</BaseLayout>

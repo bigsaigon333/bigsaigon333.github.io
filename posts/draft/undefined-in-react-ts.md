@@ -1,6 +1,7 @@
 ---
 title: 타입스크립트에서 undefined의 쓰임새
 date: "2022-08-22"
+category: 개발
 ---
 
 ### 1. undefined vs null

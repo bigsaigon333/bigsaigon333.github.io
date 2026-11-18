@@ -2,6 +2,7 @@
 title: Ch05. 스택
 date: "2020-03-13"
 summary: "스택"
+category: 개발
 ---
 
 ## 5-1. 스택이란?

@@ -365,6 +365,14 @@ async function checkLoad(browser, base, route, hasWidget) {
   return browser.withPage(async ({ page, seen, consoleCsp, quiet }) => {
     await page.goto(base + route, { waitUntil: "load" });
     await quiet();
+    // The page adds the GA loader after load, when the main thread is idle (at most 3.5 s later, Analytics.astro).
+    // On a busy machine the network is quiet before that: wait for the loader's request, then for quiet again. A
+    // page that never adds it fails below ("GA loader not requested") after TIMEOUT_MS.
+    const loader = "https://www.googletagmanager.com/gtag/js";
+    const deadline = Date.now() + TIMEOUT_MS;
+    while (!attempted(seen, loader) && Date.now() < deadline)
+      await page.waitForTimeout(50);
+    await quiet();
     const state = await page.evaluate(pageState, UTTERANCES);
     const problems = loadProblems(state, seen, consoleCsp, {
       post: hasWidget,

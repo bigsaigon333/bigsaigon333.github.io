@@ -18,7 +18,8 @@
     "/.verify",
     "node_modules",
     "/public",
-    "/posts"
+    "/posts",
+    "/comments"
   ],
   "overrides": [
     {

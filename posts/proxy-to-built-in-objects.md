@@ -3,6 +3,7 @@ title: JS 내장 객체에 Proxy 객체를 적용하는 방법
 date: "2023-06-25"
 description: Proxy 객체를 이용해서 JS 내장 객체의 행동을 가로채는 방법
 keywords: Proxy, Map, built-in object, 내장 객체, internal slot, Reflect, 트랩 설정, 내부 슬롯, set trap
+category: 개발
 ---
 
 ## I. 문제상황

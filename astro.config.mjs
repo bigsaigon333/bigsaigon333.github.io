@@ -1,7 +1,4 @@
-import mdx from "@astrojs/mdx";
 import { defineConfig } from "astro/config";
-
-import { satteri } from "@astrojs/markdown-satteri";
 
 import csp from "./config/csp.mjs";
 import env, { envDir } from "./config/env.mjs";
@@ -9,50 +6,17 @@ import fonts from "./config/fonts.mjs";
 import localIntegrations from "./config/integrations.mjs";
 import markdown from "./config/markdown.mjs";
 
-// .mdx 용 Sätteri 처리기. .md 와 같은 기능·플러그인을 쓰되, mdast 플러그인이 넣는 `html` 노드만 바꿔 넣는다.
-// MDX 는 결과가 JSX 라 불투명한 raw HTML 노드를 컴파일하지 못한다(mdxjs-rs:raw-html). 그래서
-// ctx.replaceNode(node, { type: "html", value }) 를 { raw: value, mdxExpressions: false } 로 바꿔
-// HTML 을 JSX 로 파싱하게 한다(KaTeX 출력의 `{` 는 식으로 읽지 않는다). .md 의 처리기는 그대로 둔다.
-const toMdxPlugin = (plugin) =>
-  Object.fromEntries(
-    Object.entries(plugin).map(([key, visit]) => [
-      key,
-      typeof visit !== "function"
-        ? visit
-        : function (node, ctx) {
-            const mdxCtx = new Proxy(ctx, {
-              get(target, prop) {
-                if (prop === "replaceNode")
-                  return (old, next) =>
-                    target.replaceNode(
-                      old,
-                      next?.type === "html"
-                        ? { raw: next.value, mdxExpressions: false }
-                        : next,
-                    );
-                const value = Reflect.get(target, prop, target);
-                return typeof value === "function" ? value.bind(target) : value;
-              },
-            });
-            return visit.call(this, node, mdxCtx);
-          },
-    ]),
-  );
-
-const mdxProcessor = satteri({
-  ...markdown.processor.options,
-  mdastPlugins: markdown.processor.options.mdastPlugins.map(toMdxPlugin),
-});
-
 export default defineConfig({
   site: "https://bigsaigon333.github.io",
   trailingSlash: "never",
-  build: { format: "file" },
+  // PF5: 페이지의 CSS 를 모두 <style> 로 넣어 렌더를 막는 CSS 요청을 없앤다(쪽마다 2 → 0, Lighthouse 모바일 FCP 약
+  // 900ms → 640ms). 하나로 합친 외부 파일(vite cssCodeSplit: false)은 1개·약 750ms 에 홈이 안 쓰는 규칙까지 받아 버렸다.
+  // <style> 의 해시는 config/csp.mjs 가 모든 페이지의 정책에 합쳐 싣는다.
+  build: { format: "file", inlineStylesheets: "always" },
   markdown,
-  // .mdx 는 markdown 설정(Shiki 등)을 물려받는다(extendMarkdownConfig 기본값 true). 처리기만 위의 mdxProcessor 로 바꾼다.
   // 로컬 통합(site-guard: 빌드 뒤 링크·JS 예산 검사)은 config/integrations.mjs 에 있다.
   // CSP(S7.2, config/csp.mjs)는 빌드 뒤 정책 meta 를 옮기므로 마지막에 둔다.
-  integrations: [mdx({ processor: mdxProcessor }), ...localIntegrations, csp()],
+  integrations: [...localIntegrations, csp()],
   fonts,
   // GA 측정 ID, 사이트 소유 확인 토큰, utterances 저장소(astro:env 스키마). 값은 config/.env.<mode> 에 있다.
   env,

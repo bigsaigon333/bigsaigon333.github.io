@@ -2,13 +2,17 @@
 //
 // scripts/verify/accepted/<name>.json
 //   { "baseline": "<hash>", "reason": "…",
-//     "entries": [{ "check": "<name>", "routes": ["<route or glob>"], "reason": "…", "mask": ["<css selector>"]? }] }
+//     "entries": [{ "check": "<name>", "routes": ["<route or glob>"], "reason": "…", "mask": ["<css selector>"]?,
+//                   "maxBytes": <n>? }] }
 //
 // A file applies only while its "baseline" equals the hash of the current baseline (baselineHash()); any other file
 // is ignored with a one-line notice, so an accept file can never outlive the baseline it was written against.
 // An entry without "mask" turns the check's failures on those routes into accepted ones (ACCEPT, not PASS).
 // An entry with "mask" (visual and hover only) accepts nothing: it paints the matched elements an opaque fixed colour
 // on both sides before the comparison, and the rest of the page must still match.
+// An entry with "maxBytes" (budget only) accepts a route's failure only while the JS it adds (the failed item's
+// deltaBytes) is at most that many bytes: an entry written for one small module must not accept any later growth on
+// the same pages (WB-review). --write-accept writes the largest growth of the run as "maxBytes".
 // Only a parity check (one that compares with the baseline) can be named: a feature check (drafts, csp, seo, …) has
 // no baseline to differ from, so its failures are never intended differences. loadAccepts() refuses such an entry
 // when it is told the parity checks, and runCheck() never applies an entry to a check that does not read the
@@ -21,6 +25,9 @@ import { acceptedDir } from "./paths.mjs";
 
 /** Checks whose entries may carry a mask: the ones that compare pictures. */
 const MASKABLE = new Set(["visual", "hover"]);
+
+/** Checks whose entries may carry maxBytes: the ones whose failed items carry deltaBytes. */
+const SIZED = new Set(["budget"]);
 
 /** The fixed colour a mask paints. */
 const MASK_COLOR = "#ff00ff";
@@ -103,6 +110,12 @@ function malformed(data, parity) {
       )
         return `entry ${index}: "mask" must be a list of CSS selectors`;
     }
+    if (entry.maxBytes !== undefined) {
+      if (!SIZED.has(entry.check))
+        return `entry ${index}: "maxBytes" is for ${[...SIZED].join(" and ")} only`;
+      if (!Number.isInteger(entry.maxBytes) || entry.maxBytes < 0)
+        return `entry ${index}: "maxBytes" must be a whole number of bytes`;
+    }
   }
   return null;
 }
@@ -162,8 +175,12 @@ export function applyAccepts(entries, result) {
   const accepted = [];
   const failed = [];
   for (const item of result.failed) {
-    const entry = accepting.find((entry) =>
-      routeMatches(entry.routes, item.route),
+    const entry = accepting.find(
+      (entry) =>
+        routeMatches(entry.routes, item.route) &&
+        (entry.maxBytes === undefined ||
+          (typeof item.deltaBytes === "number" &&
+            item.deltaBytes <= entry.maxBytes)),
     );
     if (entry) {
       entry.used = true;
@@ -184,7 +201,7 @@ export const unusedNotices = (entries) =>
     .filter((entry) => !entry.used)
     .map(
       (entry) =>
-        `unused accept entry: ${entry.file} ${entry.check} ${entry.routes.join(",")}${entry.mask ? ` mask ${entry.mask.join(",")}` : ""}`,
+        `unused accept entry: ${entry.file} ${entry.check} ${entry.routes.join(",")}${entry.mask ? ` mask ${entry.mask.join(",")}` : ""}${entry.maxBytes !== undefined ? ` maxBytes ${entry.maxBytes}` : ""}`,
     );
 
 /**
@@ -194,11 +211,19 @@ export const unusedNotices = (entries) =>
 export function acceptFileFor(results, { hash, reason }) {
   const entries = results
     .filter((result) => !result.ok && !result.vacuous && result.failed.length)
-    .map((result) => ({
-      check: result.check,
-      routes: [...new Set(result.failed.map((item) => item.route))].sort(),
-      reason,
-    }));
+    .map((result) => {
+      const entry = {
+        check: result.check,
+        routes: [...new Set(result.failed.map((item) => item.route))].sort(),
+        reason,
+      };
+      if (SIZED.has(result.check)) {
+        const sizes = result.failed.map((item) => item.deltaBytes);
+        if (sizes.every((size) => typeof size === "number"))
+          entry.maxBytes = Math.max(...sizes);
+      }
+      return entry;
+    });
   if (!entries.length) throw new Error("no parity failure to accept");
   return { baseline: hash, reason, entries };
 }

@@ -10,6 +10,7 @@
 import { satteri } from "@astrojs/markdown-satteri";
 import katex from "katex";
 
+import { headingLinksPlugin } from "./hast-heading-links.mjs";
 import { htmlImagesPlugin } from "./html-images.mjs";
 
 // rehype-katex 7 이 하던 것과 같은 호출이다. throwOnError 로 먼저 시도하고, 실패하면 오류 표시로 그린다.
@@ -72,5 +73,6 @@ export default {
       smartPunctuation: false,
     },
     mdastPlugins: [katexPlugin, htmlImagesPlugin],
+    hastPlugins: [headingLinksPlugin],
   }),
 };
