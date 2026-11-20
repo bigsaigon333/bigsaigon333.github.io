@@ -11,6 +11,8 @@ npm run verify -- --only=head,content     # 검사 고르기
 npm run verify -- --route=/posts/foo      # 라우트 고르기(쉼표로 여러 개)
 npm run verify -- --static                # 브라우저가 필요 없는 검사만
 npm run verify -- --no-build              # 이미 있는 dist/ 를 그대로 검사
+npm run verify:build                      # astro build --force 로 dist/ 를 만들고 .verify/build.json 에 기록(CI 의 build job)
+npm run verify -- --prebuilt              # verify:build 가 기록한 그 dist/ 만 검사(없거나 바뀌었으면 build 단계가 FAIL)
 npm run verify -- --no-check              # astro check 를 건너뛴다
 npm run verify -- --no-cache              # 기준선 캡처 캐시를 읽지도 쓰지도 않는다(아래 "속도")
 npm run verify -- --candidate=<dir>       # dist/ 대신 다른 디렉터리를 검사(빌드하지 않는다)
@@ -40,6 +42,14 @@ npm run verify:live -- --serve=<dir>      # 위 검사를 로컬에서 예행연
 - `<ref>`가 가리키는 커밋이 `baseline.json`의 `sha`와 같으면 다시 빌드하지 않는다.
 
 CI는 기준선 커밋을 직접 넘긴다. PR은 base 커밋, 배포는 push 전의 main 커밋, 배포 뒤 `verify:live`는 방금 배포한 Pages 아티팩트(다시 빌드하지 않는다)다.
+
+## 한 번 빌드해서 검사하고 그대로 배포하기 (`verify:build`, `--prebuilt`)
+
+배포되는 `dist/`는 모든 검사를 통과한 바로 그 `dist/`여야 한다. CI(`checks.yml`)의 `build` job 이 `npm run verify:build`로 한 번 빌드해 `dist/`, 기준선, `.verify/build.json`을 아티팩트로 올리고, 검사 묶음 job 들이 그것을 받아 `npm run verify -- --prebuilt`로 검사한다. 묶음이 모두 통과하면 `verify` job 이 같은 아티팩트를 받아 기록을 다시 확인한 뒤 Pages 아티팩트로 올린다.
+
+- `.verify/build.json`은 `{ commit, changes, dist }`다. `commit`은 빌드한 HEAD, `changes`는 그때 git 이 본 변경(staged, unstaged, untracked 파일의 내용. `.gitignore`가 거르는 `dist/`·`.verify/`·`node_modules/`는 소스가 아니다)의 sha256, `dist`는 기준선 hash 와 같은 방식으로 잰 `dist/`의 hash 다. `verify:build`는 빌드 전에 기록을 지우므로 실패한 빌드는 기록을 남기지 않는다.
+- `npm run verify:build -- --check`는 빌드하지 않고 기록만 확인한다(아래와 같은 이유로 1). CI 는 Pages 아티팩트를 올리기 직전에 돌린다. `node_modules` 가 없어도 된다.
+- `--prebuilt`는 빌드하지 않고 `build` 단계 대신 기록을 확인한다. 기록이나 `dist/index.html`이 없거나, HEAD·변경·`dist/`의 hash 가 하나라도 다르면 `FAIL  build`(이유 한 줄)이고 검사는 돌지 않으며 accept 되지 않는다. `astro check`는 그대로 돈다(`--no-check`로 끈다). `--no-build`, `--candidate`, `--candidate-url`과는 함께 쓸 수 없다(2).
 
 ## 의도한 차이 허용하기 (`accepted/`)
 
@@ -265,6 +275,7 @@ export default {
      - 최상위의 `draft:<이름>.md`와 `draft: true`인 글은 빌드되지만, `dist/`의 어느 파일 이름에도 내용에도 없다. 로더가 둘을 읽었다는 것(사본의 내용 저장소에 있다)과 함께 더한 올바른 글은 실린다는 것을 먼저 확인한다.
      - 거절을 종료 코드만으로 판정하지 않는다. 사본을 만들지 못하거나 `node_modules` 링크가 빠지면 대조군은 "빌드되지 않았다"로, 거절 사례는 "스키마가 아닌 이유로 실패했다"로 실패한다. 스키마를 `z.object`(모르는 키를 버린다)로 느슨하게 하면 `desciption` 사례가 실패한다.
    - **실패한 빌드의 결과 줄**(위 "실패한 단계의 한 줄"). `run.mjs`는 작업 디렉터리의 프로젝트를 검사한다(`lib/paths.mjs`가 git에 최상위를 묻는다). 그래서 `desciption` 글을 더한 사본을 git 작업 트리로 만들고 `scripts/verify`와 기준선을 링크한 뒤, 그 안에서 `node scripts/verify/run.mjs --no-check --only=routes`를 그대로 돌린다. 사본의 `build.log`가 그 글을 말하고(사본을 빌드했다), 종료 코드가 1이고, 검사는 돌지 않았고, `FAIL  build` 줄에 색 코드 없이 `posts → <id>`와 `Unrecognized key: "desciption"`이 있어야 한다.
+   - **`--prebuilt`**: 커밋 하나를 만든 프로젝트 사본에서 `--feature --prebuilt --no-check --only=listed`를 돌린다. `verify:build` 전에는 `FAIL  build`(기록 없음)이고 검사가 돌지 않는다. `verify:build` 뒤에는 통과한다. 홈 페이지를 고치면, 글을 더하면, 커밋을 하나 더 하면 저마다 `FAIL  build`로 실패한다. `--no-build`나 `--candidate`와 함께면 빌드 전에 2로 거부한다.
    - 이 다섯 사례는 사본을 만들고 빌드하는 데 저마다 1초 안팎이 든다. 기준선 없는 `--feature` 사례는 `npm run check`까지 돌아 몇 초가 든다.
 
 `--only=cli`로 3만, `--only=<검사>`로 그 검사의 1·2만 돌린다. `--static`은 브라우저 검사의 1·2를 빼고, 3은 모두 돌린다. 3에서 브라우저를 띄우는 것은 mask 사례(`visual`)뿐이다.
@@ -279,7 +290,7 @@ npm run verify:selftest -- --shard=2/3          # 사례를 셋으로 나눈 것
 - 고른 사례(`--only`, `--static`을 적용한 뒤) 전부를 id 순서(코드 단위 비교)로 늘어놓고, k번째(0부터) 사례를 `(k mod n) + 1`번째 조각에 둔다. 모든 사례가 정확히 한 조각에 들고, 새 사례도 저절로 들어간다. id가 겹치면 2로 끝난다.
 - `--shard`는 `<i>/<n>`(1 ≤ i ≤ n)만 받는다. 나머지는 2로 거부한다.
 - 명령 사례 `verify:selftest: --shard 의 조각들을 합치면 …`가 `--list`로 n = 1, 3, 5의 조각을 모아 나누지 않은 목록과 같고 겹치지 않음을 확인한다.
-- CI(`checks.yml`)는 자기 검사를 세 조각의 matrix(`verify selftest (1/3)` …)로 돌리고, 조각이 모두 성공해야 통과하는 job `verify selftest`가 필수 상태 검사 이름을 잇는다. 배포는 push된 커밋으로 merge된 PR의 head가 같은 트리이고 거기서 `verify selftest`가 성공했으면 자기 검사를 건너뛴다(`deploy.yml`의 `selftest-plan`이 이유를 로그에 남긴다).
+- CI(`checks.yml`)는 자기 검사를 열두 조각의 matrix(`verify selftest (1/12)` …)로 돌리고, 조각이 모두 성공해야 통과하는 job `verify selftest`가 필수 상태 검사 이름을 잇는다. 배포는 push된 커밋으로 merge된 PR의 head가 같은 트리이고 거기서 `verify selftest`가 성공했으면 자기 검사를 건너뛴다(`deploy.yml`의 `selftest-plan`이 이유를 로그에 남긴다).
 
 ## ctx
 

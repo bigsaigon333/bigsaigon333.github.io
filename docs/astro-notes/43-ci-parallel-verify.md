@@ -9,6 +9,7 @@ PR 한 번에 6분 30초 걸리던 CI 를 job 의 시간을 재서 가장 긴 �
 - **임계 경로**: 병렬 job 의 전체 시간은 가장 늦게 끝나는 job 이 정한다. 변경 전에는 selftest 조각 하나(5분 40초)가 정했고 나머지 둘은 2~3분 만에 끝났다. 사례를 id 순서로 번갈아 나누면 무거운 사례(`interactions`, `perf`, `visual`)가 한 조각에 몰릴 수 있다.
 - **쪼개도 필수 검사 이름은 그대로**: 보호 규칙은 `checks / verify` 같은 이름을 본다. `verify` 를 matrix(`verify (rest|browser|perf)`)로 나누고, 이름이 `verify` 인 집계 job 이 모든 조각이 `success` 일 때만 통과한다. `verify selftest` 가 이미 그 방식이다.
 - **빠짐 없이 나누기**: `rest` 묶음은 `scripts/verify/checks/*.mjs` 에서 `perf`·`visual`·`interactions`·`hover` 를 뺀 나머지로 정해서 새 검사가 저절로 들어간다. 이름을 적은 묶음의 검사가 없어지면 `--only` 가 모르는 검사로 거부한다.
+- **빌드는 한 번, 검사한 그것을 배포**: 묶음마다 빌드하면 배포되는 `dist/`(한 묶음의 것)가 다른 묶음이 검사한 것과 같다는 보장이 없다. `verify build` job 이 `npm run verify:build` 로 한 번 빌드해 `dist/`·기준선·`.verify/build.json`(커밋, 변경, `dist/` hash)을 아티팩트로 올리고, 묶음들은 `verify -- --prebuilt` 로 그것을 검사한다. 기록과 다른 `dist/` 는 `FAIL  build` 다. Pages 아티팩트는 집계 job `verify` 가 같은 아티팩트를 받아 `build.mjs --check` 로 다시 확인한 뒤 올린다.
 - **perf 는 혼자**: Lighthouse 는 옆에서 다른 브라우저 검사가 돌면 수치가 흔들린다(`lib/runner.mjs` 의 `exclusive`). 러너를 따로 주면 오히려 더 안정적이다.
 - **캐시를 더하지 않은 이유**: 기준선 빌드는 4초, 빌드는 2~5초다. 병목은 브라우저 검사였고, 브라우저 캐시는 이미 playwright 버전 키로 있다.
 - **dependabot**: 설정 파일은 기본 브랜치(main)에서 읽힌다. `target-branch: astro` 로 PR 이 작업 브랜치에 모이고, `ci.yml` 은 브랜치 제한 없는 `pull_request` 라 그 PR 에도 같은 검사가 돈다.

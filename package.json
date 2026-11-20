@@ -16,6 +16,7 @@
     "lint:fix": "oxlint --fix",
     "verify": "node scripts/verify/run.mjs",
     "verify:setup": "node scripts/verify/setup.mjs",
+    "verify:build": "node scripts/verify/build.mjs",
     "verify:selftest": "node scripts/verify/selftest.mjs",
     "verify:live": "node scripts/verify/live.mjs",
     "perf:live": "node scripts/perf-live.mjs",
