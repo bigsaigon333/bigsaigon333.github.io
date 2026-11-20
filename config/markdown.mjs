@@ -42,7 +42,7 @@ const katexPlugin = {
   },
 };
 
-// <code> 에 `language-<언어>` 클래스를 붙인다. 코드 글꼴(Source Code Pro, 0.825rem)은 global.css 의
+// <code> 에 `language-<언어>` 클래스를 붙인다. 코드 글꼴(--font-mono, 0.825rem)은 global.css 의
 // `code[class*="language-"]` 가 정하는데, Shiki 는 이 클래스를 붙이지 않는다(언어는 <pre data-language> 에만 있다).
 // 언어를 적지 않은 블록은 Shiki 가 "plaintext" 로 받으므로 `language-plaintext` 가 되어 같은 글꼴을 받는다.
 // 예전 rehype-highlight 는 그런 블록의 언어를 자동 감지해 language-javascript 따위를 붙였었다.

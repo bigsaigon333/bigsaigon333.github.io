@@ -2,14 +2,14 @@
 
 ## 한 줄 요약
 
-`gtag.js`는 load 뒤 idle이나 첫 상호작용에 넣고 현장 Web Vitals를 GA로 보낸다. KaTeX CSS는 수식 글에만 인라인하고, 코드 글꼴은 코드가 있는 글에만 woff2로 싣고, 파비콘을 9.5KB에서 1.7KB로 줄였다. 일반 글의 전송량이 106.1KB에서 59.0KB로, 수식 글의 CLS가 0.018에서 0으로 줄었다. LCP는 그대로 약 900ms다.
+`gtag.js`는 load 뒤 idle이나 첫 상호작용에 넣고 현장 Web Vitals를 GA로 보낸다. KaTeX CSS는 수식 글에만 인라인하고, 코드 글꼴은 코드가 있는 글에만 woff2로 실었다가(이후 시스템 고정폭 글꼴 스택으로 바꿔 웹 글꼴을 없앴다), 파비콘을 9.5KB에서 1.7KB로 줄였다. 일반 글의 전송량이 106.1KB에서 59.0KB로, 수식 글의 CLS가 0.018에서 0으로 줄었다. LCP는 그대로 약 900ms다.
 
 ## 개념
 
 - **늦은 로더**: 인라인 스니펫(`dataLayer`, `gtag("js")`, `gtag("config")`)은 그대로 두고 `<script async src=gtag.js>`만 번들 모듈이 나중에 넣는다. 그 사이의 호출은 `dataLayer`에 쌓였다가 gtag.js가 처리하므로 page_view는 여전히 config 하나다. 측정 ID는 줄에 있는 config에서 읽는다.
 - **web-vitals attribution**: gtag.js의 `load` 뒤에 동적 import 한다(차단기로 막힌 방문은 받지 않는다). 관찰자가 `buffered`라서 늦게 붙어도 LCP·FCP·CLS를 받는다. 이벤트 이름은 지표 이름, `value`는 delta(CLS는 ×1000), `debug_target`은 LCP 요소·가장 크게 밀린 요소·상호작용 대상의 선택자다.
-- **페이지 → 레이아웃 head로 값 넘기기**: `[id].astro`가 렌더된 HTML(`post.rendered.html`)을 보고 `Astro.locals.postAssets = { math, code }`를 정한다. 페이지 frontmatter가 레이아웃보다 먼저 돌아서 `HeadAssets`가 읽을 수 있다. `BaseLayout`에 slot을 만들지 않아도 된다.
-- **`?inline`과 CSP**: `katex.min.css?inline`은 Vite가 처리한(글꼴 `url()`을 바꾼) CSS 글자다. 이 `<style>`의 해시는 모든 페이지에서 `Astro.csp.insertStyleHash`로 넣는다. `<ClientRouter />`는 첫 페이지의 정책을 그대로 두므로 정책이 모든 페이지에서 같아야 한다. `<Font>`의 해시는 Fonts API가 렌더 여부와 상관없이 넣는다.
+- **페이지 → 레이아웃 head로 값 넘기기**: `[id].astro`가 렌더된 HTML(`post.rendered.html`)을 보고 `Astro.locals.postAssets = { math }`를 정한다. 페이지 frontmatter가 레이아웃보다 먼저 돌아서 `HeadAssets`가 읽을 수 있다. `BaseLayout`에 slot을 만들지 않아도 된다.
+- **`?inline`과 CSP**: `katex.min.css?inline`은 Vite가 처리한(글꼴 `url()`을 바꾼) CSS 글자다. 이 `<style>`의 해시는 모든 페이지에서 `Astro.csp.insertStyleHash`로 넣는다. `<ClientRouter />`는 첫 페이지의 정책을 그대로 두므로 정책이 모든 페이지에서 같아야 한다.
 - **unicode-range와 범위 없는 face**: 범위 없는 face는 어느 범위에도 없는 글자(코드 주석의 한글) 하나에 통째로 받힌다. 예전 `full`(56KB woff)이 그랬다. 이제 다른 7개 파일에 없는 497자만 남긴 `rest`(20KB woff2)다.
 
 ## Next.js 대응
@@ -48,9 +48,7 @@
 
 끝나면 바꾼 줄을 되돌린다.
 
-1. `config/fonts.mjs`의 `["rest", undefined]`에 `"U+2190-2199"`를 주고 `npm run verify -- --no-check --only=perf --route=/posts/how-to-check-two-types-are-equal-in-ts`.
-   <details><summary>예상 결과</summary>코드 주석의 한글이 어느 face에도 없어져 `rest`를 받지 않는다. 바이트는 약 20KB 줄지만 LCP·FCP가 약 1054ms로 예산(1000ms)을 넘어 실패한다.</details>
-2. `HeadAssets.astro`에서 KaTeX `preload` 두 줄을 지우고 같은 명령을 돌린다.
+1. `HeadAssets.astro`에서 KaTeX `preload` 두 줄을 지우고 같은 명령을 돌린다.
    <details><summary>예상 결과</summary>CLS가 0.018로 돌아와 예산(0.02) 안에서 통과하지만 보고서 `layout-shifts`에 `main.prose > p > strong`이 "Web font loaded"로 다시 나온다.</details>
 
 ## 문서 근거
