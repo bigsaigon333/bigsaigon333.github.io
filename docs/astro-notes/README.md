@@ -66,6 +66,7 @@ Next.js 블로그를 배포본과 바이트·픽셀 단위로 같게 옮긴 단�
 | 38   | [38. 성능 개선 PF1–PF4: GA 늦게 싣기, 글마다 다른 head 자원, woff2, 파비콘](38-perf-improvements.md)       | `Astro.locals`, `Astro.csp.insertStyleHash`, woff2, `perf-budget.json`             | PF   | `npm run verify -- --only=perf`                                                   |
 | 40   | [40. 성능 개선 PF5: CSS 인라인과 CSP 해시 합치기](40-inline-stylesheets.md)                                | `build.inlineStylesheets`, `astro:build:done`, CSP style 해시 합집합               | PF5  | `npm run verify -- --only=perf`, `config/csp.test.mjs`                            |
 | 41   | [41. 글의 뒤로 가기 버튼](41-back-button.md)                                                               | 커스텀 엘리먼트, `history.back()`, `history.state.index`                           | -    | `npm run verify -- --only=interactions`                                           |
+| 42   | [42. CI 시간 단축: 재서 나누기, 그리고 dependabot](42-ci-parallel-verify.md)                               | job 병렬화, matrix, 집계 job, `dependabot.yml`                                     | -    | `gh run view <id> --json jobs`                                                    |
 
 ### 마무리
 
