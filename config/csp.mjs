@@ -6,7 +6,7 @@
 //
 // 이 통합이 더하는 것 세 가지:
 // 1. 정책: 허용하는 것은 이 사이트의 파일('self'), GA(googletagmanager, google-analytics), utterances(스크립트와 iframe).
-//    script-src 에 'unsafe-inline' 은 없다. 스타일은 요소(<style>)는 해시로 막고, 속성(style="…")만 'unsafe-inline' 이다.
+//    script-src 에 'unsafe-inline'·'unsafe-eval' 은 없고, 검색(Pagefind)의 WebAssembly 를 위한 'wasm-unsafe-eval' 만 있다(아래 WASM). 스타일은 요소(<style>)는 해시로 막고, 속성(style="…")만 'unsafe-inline' 이다.
 //    Shiki 가 코드 블록의 모든 <span> 에 style="--shiki-light:…" 를 쓰고, 속성은 해시로 허용할 수 없기 때문이다.
 // 2. vite.build.assetsInlineLimit = 0: 스크립트·CSS·글꼴을 HTML 이나 CSS 에 끼우지 않고 파일로 낸다.
 //    - 작은 모듈 스크립트를 HTML 에 끼우면 <ClientRouter /> 가 페이지를 바꿀 때 그 뒤에
@@ -40,6 +40,25 @@ const GA_IMG = [
 ];
 const UTTERANCES = "https://utteranc.es";
 
+// 사이트 내 검색(/search, integrations/search-index.mjs)의 Pagefind 는 색인을 WebAssembly 로 읽는다.
+// WebAssembly.instantiate 는 script-src 에 'wasm-unsafe-eval'(또는 'unsafe-eval')이 있어야 돈다.
+//
+// 왜 모든 페이지에 싣는가: /search 에만 넣을 수 없다. <ClientRouter /> 는 첫 페이지의 정책 meta 를 그대로 두고 새
+// 페이지의 meta 를 더할 뿐이다(meta 정책은 지울 수 없고, 여러 정책은 모두 지켜야 한다). 홈에서 링크로 /search 에
+// 들어가면 홈의 정책이 남아 있으니, 홈의 정책에 없으면 wasm 이 막힌다. 그래서 아래 hoistPolicies 가 모든 페이지의
+// 정책이 같은지 확인하는 규칙을 그대로 두고, 이 한 낱말을 모든 페이지에 싣는다.
+//
+// 왜 괜찮은가: 'wasm-unsafe-eval' 은 WebAssembly 컴파일만 허락한다. JS 의 eval·new Function·문자열 setTimeout 은
+// 여전히 막힌다('unsafe-eval' 이 아니다). 컴파일할 바이트는 스크립트가 넘겨야 하고, 스크립트는 'self'·해시·GA·
+// utterances 만 돈다. 그리고 wasm 은 JS 가 넘긴 함수 밖의 능력(DOM, 네트워크)이 없다. 검색을 쓰지 않는 페이지에서는
+// 아무것도 컴파일하지 않으므로 바뀌는 동작이 없다.
+//
+// Pagefind 는 기본으로 Web Worker(pagefind-worker.js) 안에서 wasm 을 돌린다. 워커의 정책은 페이지가 아니라 워커 스크립트의
+// 응답 헤더를 따르는데 GitHub Pages 는 헤더를 줄 수 없어, 워커 안에서는 정책이 없는 셈이고 브라우저마다 다르게 굴 수
+// 있다. 그래서 검색 페이지는 noWorker 로 메인 스레드에서 돌리고(색인이 작다), 이 허용이 정책에 드러나게 한다.
+// 검증 장치의 search 검사가 이 낱말을 지운 사본에서 검색이 실패하는지 본다(자기 검사).
+const WASM = "'wasm-unsafe-eval'";
+
 // utteranc.es/client.js 가 <head> 맨 앞에 넣는 <style> 의 내용(2026-11-13 의 client.js 에서 옮겼다).
 // utterances 가 이 글자를 바꾸면 그 스타일이 막혀 댓글 iframe 의 크기가 무너진다. csp 검사가 stub 으로 같은 글자를 넣어 본다.
 export const UTTERANCES_STYLE =
@@ -60,7 +79,7 @@ export const policy = {
     `connect-src 'self' ${GA_CONNECT.join(" ")}`,
     `frame-src ${UTTERANCES}`,
   ],
-  scriptDirective: { resources: ["'self'", GA_SCRIPT, UTTERANCES] },
+  scriptDirective: { resources: ["'self'", GA_SCRIPT, UTTERANCES, WASM] },
   styleDirective: {
     resources: ["'self'", { resource: "'unsafe-inline'", kind: "attribute" }],
     hashes: [sha256(UTTERANCES_STYLE)],
