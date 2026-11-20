@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { styleHashes, withStyleHashes } from "./csp.mjs";
+import { policy, styleHashes, withStyleHashes } from "./csp.mjs";
 
 const meta = (style) =>
   `<meta http-equiv="content-security-policy" content="default-src 'self';script-src 'self' 'sha256-SCRIPT=';style-src ${style};style-src-attr 'unsafe-inline'">`;
@@ -31,5 +31,14 @@ describe("withStyleHashes", () => {
     expect(withStyleHashes(meta("'self' 'sha256-A='"), hashes)).toBe(
       withStyleHashes(meta("'self' 'sha256-B='"), hashes),
     );
+  });
+});
+
+describe("policy", () => {
+  it("script-src 는 검색의 WebAssembly 만 더 허락하고 JS eval 은 막는다", () => {
+    const sources = policy.scriptDirective.resources;
+    expect(sources).toContain("'wasm-unsafe-eval'");
+    expect(sources).not.toContain("'unsafe-eval'");
+    expect(sources).not.toContain("'unsafe-inline'");
   });
 });

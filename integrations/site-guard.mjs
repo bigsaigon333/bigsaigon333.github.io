@@ -1,10 +1,13 @@
-// site-guard — astro:build:done 에서 dist 를 훑어 두 가지를 지킨다. 어기면 빌드를 실패시킨다.
+// site-guard — astro:build:done 에서 dist 를 훑어 세 가지를 지킨다. 어기면 빌드를 실패시킨다.
 //
 //   1. 링크: 모든 HTML 페이지의 내부 href·src·srcset(그리고 사이트 주소로 시작하는 절대 URL)이 dist 의 파일로
 //      풀린다. 푸는 방식은 GitHub Pages 와 같다: `/p/` → p/index.html, `/p` → p(파일), p.html, p/index.html.
 //   2. JS 예산: 페이지마다 실리는 JS 바이트가 options.jsBudget 이하다. 센 것: 인라인 <script>(JSON 데이터 제외),
 //      내부 script[src]·modulepreload 파일, 그 파일들이 정적으로 import 하는 내부 파일(전이적으로, 파일당 한 번).
 //      다른 출처의 스크립트(gtag, utterances)는 바이트를 모르므로 세지 않는다. 압축 전 바이트다.
+//      동적 import 로만 받는 파일(검색의 Pagefind 런타임)은 페이지에 실리지 않으므로 여기서 세지 않는다. 3이 센다.
+//   3. 지연 예산(options.lazyBudgets): 페이지가 나중에(사용자가 무언가 할 때) 받는 파일 묶음마다 바이트 상한. 묶음은
+//      dist 상대 경로를 고르는 정규식이고, 고른 파일이 하나도 없으면 실패다(예산이 빈 것을 재지 않게).
 //
 // HTML 은 파서 없이 읽는다: <script>·<style>·주석의 본문을 지운 뒤 태그(`<x …>`) 안의 속성만 본다. 본문의 글자는
 // `&lt;` 로 이스케이프되어 있으므로 코드 블록 속의 `<a href>` 는 태그로 잡히지 않는다.
@@ -97,11 +100,36 @@ function scan(html) {
 }
 
 /**
- * @param {{ jsBudget?: number }} [options] jsBudget: 페이지당 JS 바이트 상한(압축 전). 없으면 예산 검사를 하지 않는다.
+ * 지연 예산 하나를 잰다. → { bytes, files, problem }. problem 은 넘었거나 고른 파일이 없을 때의 한 줄(아니면 null).
+ * @param {{ name: string, include: RegExp, bytes: number }} budget
+ * @param {Iterable<string>} files dist 상대 경로(posix)
+ * @param {(file: string) => number} sizeOf
+ */
+export function measureLazy(budget, files, sizeOf) {
+  let bytes = 0;
+  let count = 0;
+  for (const file of files) {
+    if (!budget.include.test(file)) continue;
+    bytes += sizeOf(file);
+    count++;
+  }
+  const problem =
+    count === 0
+      ? `${budget.name}: ${budget.include} 에 맞는 파일이 없다`
+      : bytes > budget.bytes
+        ? `${budget.name}: ${bytes}바이트 > 예산 ${budget.bytes}바이트 (파일 ${count}개)`
+        : null;
+  return { bytes, files: count, problem };
+}
+
+/**
+ * @param {{ jsBudget?: number, lazyBudgets?: { name: string, include: RegExp, bytes: number }[] }} [options]
+ *   jsBudget: 페이지당 JS 바이트 상한(압축 전). 없으면 예산 검사를 하지 않는다.
+ *   lazyBudgets: 나중에 받는 파일 묶음마다의 바이트 상한(위 3).
  * @returns {import("astro").AstroIntegration}
  */
 export default function siteGuard(options = {}) {
-  const { jsBudget } = options;
+  const { jsBudget, lazyBudgets = [] } = options;
   let site;
   let base = "/";
 
@@ -187,12 +215,24 @@ export default function siteGuard(options = {}) {
             );
         }
 
+        const lazy = lazyBudgets.map((budget) => ({
+          budget,
+          ...measureLazy(
+            budget,
+            files,
+            (file) => fs.statSync(path.join(root, file)).size,
+          ),
+        }));
+        const overLazy = lazy.filter((entry) => entry.problem !== null);
+
         const ms = Math.round(performance.now() - started);
         for (const line of broken) logger.error(`깨진 링크 ${line}`);
         for (const line of heavy) logger.error(`JS 예산 초과 ${line}`);
-        if (broken.length || heavy.length) {
+        for (const { problem } of overLazy)
+          logger.error(`지연 예산 초과 ${problem}`);
+        if (broken.length || heavy.length || overLazy.length) {
           throw new Error(
-            `site-guard: 깨진 링크 ${broken.length}개, JS 예산 초과 ${heavy.length}페이지. 위의 [site-guard] 줄을 보라.`,
+            `site-guard: 깨진 링크 ${broken.length}개, JS 예산 초과 ${heavy.length}페이지, 지연 예산 초과 ${overLazy.length}묶음. 위의 [site-guard] 줄을 보라.`,
           );
         }
         logger.info(
@@ -200,6 +240,12 @@ export default function siteGuard(options = {}) {
             (jsBudget === undefined
               ? ""
               : `, 페이지당 JS ≤ ${jsBudget}바이트`) +
+            lazy
+              .map(
+                ({ budget, bytes }) =>
+                  `, ${budget.name} ${bytes} ≤ ${budget.bytes}바이트`,
+              )
+              .join("") +
             ` (${ms}ms)`,
         );
       },

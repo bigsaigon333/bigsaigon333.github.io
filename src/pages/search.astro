@@ -1,0 +1,325 @@
+---
+// /search — 사이트 내 검색. build.format "file" 이라 dist/search.html 이 된다.
+//
+// 색인은 빌드 뒤 integrations/search-index.mjs 가 Pagefind 로 만든다(dist/pagefind/). 이 페이지는 Pagefind 의 JS API 만 쓰고
+// 기본 UI(CSS·JS 수백 KB)는 쓰지 않는다. 입력과 결과는 아래 <site-search> 가 그린다.
+//
+// 바이트: 이 페이지에만 실리는 스크립트는 아래 <script> 하나(입력·주소·결과 그리기)다. Pagefind(JS·wasm·색인)는
+// 입력란에 처음 포커스하거나 입력할 때, 또는 주소에 ?q= 가 있을 때 동적 import 로 받는다. 다른 페이지에는 헤더의 링크
+// 하나뿐이다.
+//
+// 검색 결과 페이지는 검색 엔진에 실리지 않게 한다: noindex 이고 sitemap.xml 에도 없다(seo·listed 검사의 규칙과 같다).
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { SEARCH_PATH, statusText } from "../lib/search";
+import { SITE } from "../lib/site";
+---
+
+<BaseLayout
+  seo={{
+    title: `검색 | ${SITE.title}`,
+    description: `${SITE.title}의 글 본문에서 찾기`,
+    url: `${SITE.url}${SEARCH_PATH}`,
+    type: "website",
+    keywords: SITE.keywords,
+    noindex: true,
+  }}
+>
+  <main class="page">
+    <div class="page-heading">
+      <h2>검색</h2>
+      <p>글 본문에서 낱말을 찾습니다.</p>
+    </div>
+    <site-search class="search">
+      {/* 폼이 아니다: CSP 의 form-action 'none' 이 제출을 막고, 결과는 입력할 때마다 바뀐다. */}
+      <div role="search" class="search-box">
+        <input
+          class="search-input"
+          type="search"
+          name="q"
+          aria-label="검색"
+          placeholder="검색어"
+          autocomplete="off"
+          spellcheck="false"
+          enterkeyhint="search"
+        />
+      </div>
+      <p class="search-status" role="status">
+        {statusText("", 0)}
+      </p>
+      <ol class="search-results"></ol>
+      <noscript>
+        <p class="search-status">검색은 자바스크립트를 켜야 쓸 수 있습니다.</p>
+      </noscript>
+    </site-search>
+  </main>
+</BaseLayout>
+
+<script>
+  // <site-search>: CopyCode 와 같은 모양이다. 스크립트는 클래스를 등록만 하고, 일은 엘리먼트가 문서에 붙을 때 한다.
+  // 이 모듈은 문서(창)마다 한 번 돈다. <ClientRouter /> 로 /search 에 다시 들어오면 새 <site-search> 가 붙어
+  // connectedCallback 이 다시 돌지만, Pagefind 는 아래 loadPagefind 가 한 번만 불러 초기화한 것을 같이 쓴다.
+  //
+  // 주소(?q=): 입력할 때마다 history.replaceState 로 바꾼다(기록이 쌓이지 않는다). 라우터가 페이지를 바꿔 넣을 때는
+  // 새 문서가 들어온 뒤에 주소가 바뀌므로(astro:page-load 직전), 그때는 astro:page-load 에서 주소의 검색어를 읽는다.
+  import {
+    PAGEFIND_URL,
+    excerptParts,
+    isSearchPath,
+    readQuery,
+    resultDate,
+    statusText,
+    withQuery,
+  } from "../lib/search";
+
+  interface ResultData {
+    url: string;
+    excerpt: string;
+    meta: Record<string, string | undefined>;
+  }
+  interface Pagefind {
+    options(options: Record<string, unknown>): Promise<void>;
+    init(): Promise<void>;
+    search(
+      term: string,
+    ): Promise<{ results: { data(): Promise<ResultData> }[] } | null>;
+  }
+
+  const MAX_RESULTS = 20;
+  const DEBOUNCE_MS = 120;
+  const FAILED = "검색을 불러오지 못했습니다. 페이지를 새로 고쳐 보세요.";
+
+  let pagefind: Promise<Pagefind> | undefined;
+
+  /** Pagefind 를 한 번만 불러 초기화한다. 실패하면 다음에 다시 시도한다. */
+  function loadPagefind(): Promise<Pagefind> {
+    if (!pagefind) {
+      pagefind = (async () => {
+        const api = (await import(/* @vite-ignore */ PAGEFIND_URL)) as Pagefind;
+        // noWorker: wasm 을 메인 스레드에서 돌린다(config/csp.mjs 의 WASM). 색인이 작아 막히는 시간이 짧다.
+        await api.options({ noWorker: true, excerptLength: 24 });
+        await api.init();
+        return api;
+      })();
+      pagefind.catch(() => {
+        pagefind = undefined;
+      });
+    }
+    return pagefind;
+  }
+
+  class SiteSearch extends HTMLElement {
+    #started = false;
+    #seq = 0;
+    #timer = 0;
+    #applied: string | null = null;
+    #onPageLoad = () => this.#fromUrl();
+
+    connectedCallback() {
+      document.addEventListener("astro:page-load", this.#onPageLoad);
+      if (this.#started) return;
+      this.#started = true;
+      const input = this.#input();
+      // 아무것도 찾지 않는 방문에는 Pagefind 를 받지 않는다. 입력란에 들어오면 미리 받는다.
+      const preload = () => void loadPagefind().catch(() => {});
+      input.addEventListener("focus", preload, { once: true });
+      input.addEventListener("input", () => {
+        if (isSearchPath(location.pathname))
+          history.replaceState(
+            history.state,
+            "",
+            withQuery(location.href, input.value),
+          );
+        clearTimeout(this.#timer);
+        this.#timer = window.setTimeout(
+          () => void this.#run(input.value),
+          DEBOUNCE_MS,
+        );
+      });
+      if (isSearchPath(location.pathname)) this.#fromUrl();
+    }
+
+    disconnectedCallback() {
+      document.removeEventListener("astro:page-load", this.#onPageLoad);
+      clearTimeout(this.#timer);
+      this.#seq++;
+    }
+
+    #input(): HTMLInputElement {
+      return this.querySelector("input")!;
+    }
+
+    /** 주소의 ?q= 를 입력란에 넣고 찾는다. 같은 검색어를 두 번 찾지 않는다. */
+    #fromUrl() {
+      if (!this.isConnected || !isSearchPath(location.pathname)) return;
+      const query = readQuery(location.search);
+      const input = this.#input();
+      if (input.value.trim() !== query) input.value = query;
+      if (query !== this.#applied) void this.#run(query);
+    }
+
+    #status(text: string) {
+      this.querySelector(".search-status")!.textContent = text;
+    }
+
+    async #run(raw: string) {
+      const query = raw.trim();
+      this.#applied = query;
+      const seq = ++this.#seq;
+      const list = this.querySelector(".search-results")!;
+      if (!query) {
+        list.replaceChildren();
+        this.#status(statusText("", 0));
+        return;
+      }
+      this.#status(statusText(query, null));
+      try {
+        const api = await loadPagefind();
+        const found = await api.search(query);
+        const results = found?.results ?? [];
+        const data = await Promise.all(
+          results.slice(0, MAX_RESULTS).map((result) => result.data()),
+        );
+        if (seq !== this.#seq) return;
+        list.replaceChildren(...data.map(renderResult));
+        this.#status(statusText(query, results.length));
+      } catch (error) {
+        if (seq !== this.#seq) return;
+        list.replaceChildren();
+        this.#status(FAILED);
+        console.error(error);
+      }
+    }
+  }
+
+  /** 결과 하나: 제목 링크, 날짜·카테고리, 검색어를 <mark> 로 표시한 발췌. */
+  function renderResult(data: ResultData): HTMLLIElement {
+    const item = document.createElement("li");
+    item.className = "search-result";
+
+    const heading = document.createElement("h3");
+    const link = document.createElement("a");
+    link.href = data.url;
+    link.textContent = data.meta.title ?? data.url;
+    heading.append(link);
+
+    const meta = document.createElement("p");
+    meta.className = "search-meta";
+    const date = resultDate(data.meta.date);
+    if (date) {
+      const time = document.createElement("time");
+      time.dateTime = date;
+      time.textContent = date;
+      meta.append(time);
+    }
+    if (data.meta.category) {
+      if (date) {
+        const dot = document.createElement("span");
+        dot.setAttribute("aria-hidden", "true");
+        dot.textContent = "·";
+        meta.append(dot);
+      }
+      const category = document.createElement("span");
+      category.className = "search-category";
+      category.textContent = data.meta.category;
+      meta.append(category);
+    }
+
+    const excerpt = document.createElement("p");
+    excerpt.className = "search-excerpt";
+    for (const part of excerptParts(data.excerpt)) {
+      if (part.mark) {
+        const mark = document.createElement("mark");
+        mark.textContent = part.text;
+        excerpt.append(mark);
+      } else excerpt.append(part.text);
+    }
+
+    item.append(heading, meta, excerpt);
+    return item;
+  }
+
+  if (!customElements.get("site-search"))
+    customElements.define("site-search", SiteSearch);
+</script>
+
+<style is:global>
+  /* 결과는 스크립트가 만들어 scoped 속성이 없다. 그래서 전역으로 쓴다(이 페이지에만 실린다). 값은 모두 토큰이다. */
+  .search {
+    display: flex;
+    flex-direction: column;
+    row-gap: var(--space-4);
+    width: 100%;
+  }
+
+  .search-input {
+    width: 100%;
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-bg);
+    color: var(--color-text);
+    font: inherit;
+    font-size: var(--text-md);
+  }
+
+  .search-input:focus-visible {
+    border-color: var(--color-accent);
+  }
+
+  .search-status {
+    margin: 0;
+    color: var(--color-muted);
+    font-size: var(--text-sm);
+  }
+
+  .search-results {
+    display: flex;
+    flex-direction: column;
+    row-gap: var(--space-6);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .search-result {
+    display: flex;
+    flex-direction: column;
+    row-gap: var(--space-2);
+  }
+
+  .search-result h3 {
+    margin: 0;
+    font-size: var(--text-lg);
+    font-weight: 700;
+    text-wrap: pretty;
+  }
+
+  .search-result h3 a:hover {
+    text-decoration: underline;
+  }
+
+  .search-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    column-gap: var(--space-2);
+    margin: 0;
+    color: var(--color-muted);
+    font-size: var(--text-sm);
+  }
+
+  .search-excerpt {
+    margin: 0;
+    color: var(--color-muted);
+    line-height: var(--leading-body);
+  }
+
+  /* 검색어 표시: 바탕은 인라인 코드와 같은 옅은 회색(토큰이 다크를 따른다), 글자는 본문색. */
+  .search-excerpt mark {
+    padding: 0 0.1em;
+    border-radius: var(--radius-sm);
+    background: var(--color-code-bg);
+    color: var(--color-text);
+    font-weight: 600;
+  }
+</style>

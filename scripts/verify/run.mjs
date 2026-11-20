@@ -1,9 +1,12 @@
-// npm run verify -- [--only=head,content] [--route=/posts/x] [--static] [--no-build] [--no-check]
+// npm run verify -- [--only=head,content] [--route=/posts/x] [--static] [--no-build | --prebuilt] [--no-check]
 //                    [--candidate=<dir> | --candidate-url=<url>] [--selector=<css>]
 //                    [--write-accept=<name> --reason=<text>]
 // npm run verify -- --feature [--only=seo,links] [--route=/posts/x] [--no-build] [--no-check] [--candidate=<dir>]
 //
 // astro build --force → checks in scripts/verify/checks/*.mjs, with astro check beside them.
+// --prebuilt: no build. The dist/ of `npm run verify:build` is checked, and only if .verify/build.json says it is that
+// build, unchanged, of the sources checked out now (lib/build-stamp.mjs); otherwise the "build" step fails. CI builds
+// once, checks that dist/ in several jobs and deploys it.
 // Without --feature every check runs, and the parity checks compare the build with the baseline
 // (.verify/baseline, the build of the previous production made by `npm run verify:setup`). Differences declared in
 // scripts/verify/accepted/*.json for this baseline are accepted (lib/accept.mjs); --write-accept=<name> writes
@@ -30,6 +33,7 @@ import {
   repoRoot,
   reportDir,
 } from "./lib/paths.mjs";
+import { BUILD_COMMAND, checkStamp } from "./lib/build-stamp.mjs";
 import { listRoutes } from "./lib/resolve.mjs";
 import {
   acceptNotices,
@@ -50,7 +54,7 @@ import {
 } from "./lib/runner.mjs";
 
 const USAGE =
-  "usage: npm run verify -- [--only=<check,…>] [--route=<route,…>] [--static] [--no-build] [--no-check] [--no-cache]\n" +
+  "usage: npm run verify -- [--only=<check,…>] [--route=<route,…>] [--static] [--no-build | --prebuilt] [--no-check] [--no-cache]\n" +
   "                         [--candidate=<dir> | --candidate-url=<url>] [--selector=<css>]\n" +
   '                         [--write-accept=<name> --reason="<why the difference is intended>"]\n' +
   "       npm run verify -- --feature [--only=<check,…>] [--route=<route,…>] [--no-build] [--no-check]\n" +
@@ -91,6 +95,10 @@ let parityChecks;
 try {
   if (args.candidate && args.candidateUrl)
     throw new UsageError("give at most one of --candidate and --candidate-url");
+  if (args.prebuilt && (args.noBuild || args.candidate || args.candidateUrl))
+    throw new UsageError(
+      "--prebuilt checks the dist/ of `npm run verify:build`: not with --no-build, --candidate or --candidate-url",
+    );
   if (args.writeAccept !== undefined && !args.reason?.trim())
     throw new UsageError(
       '--write-accept needs --reason="<why the difference is intended>"',
@@ -272,7 +280,8 @@ async function step(name, command) {
 }
 
 const results = [];
-const builds = !args.candidate && !args.candidateUrl && !args.noBuild;
+const builds =
+  !args.candidate && !args.candidateUrl && !args.noBuild && !args.prebuilt;
 const candidateDir = args.candidate ? path.resolve(args.candidate) : distDir;
 
 /** With --feature, --route picks from the routes of the build: refused with 2, like every other route that is not there. */
@@ -290,7 +299,7 @@ function checkCandidateRoutes() {
 }
 
 // A candidate that is not built here is there already: its routes are known before anything runs.
-if (!builds) checkCandidateRoutes();
+if (!builds && !args.prebuilt) checkCandidateRoutes();
 
 /** The astro check step, while it runs beside the checks. */
 let checking = null;
@@ -299,14 +308,28 @@ if (builds) {
   // --force: render every page from its source. A plain build takes the HTML of unchanged posts from
   // node_modules/.astro/data-store.json, and that store does not notice a changed renderer package, so the
   // gate could pass on pages the deploy workflow (a clean checkout, nothing stored) would render differently.
-  const BUILD = ["npx", "astro", "build", "--force"];
-  results.push(await step("build", BUILD));
+  results.push(await step("build", BUILD_COMMAND));
+} else if (args.prebuilt) {
+  // The build step of this run is the check that dist/ is the recorded build: a failure stops the checks like a
+  // failed build, and is never accepted.
+  const begun = performance.now();
+  const problem = checkStamp();
+  results.push({
+    check: "build",
+    kind: "static",
+    ok: !problem,
+    pass: problem ? 0 : 1,
+    fail: problem ? 1 : 0,
+    failed: problem ? [{ route: "-", detail: `--prebuilt: ${problem}` }] : [],
+    cells: null,
+    durationMs: Math.round(performance.now() - begun),
+  });
 }
 
 const buildFailed = results.some(
   (result) => result.check === "build" && !result.ok,
 );
-if (builds && !buildFailed) checkCandidateRoutes();
+if ((builds || args.prebuilt) && !buildFailed) checkCandidateRoutes();
 // astro check runs beside the checks, not before the build: the checks read dist/ and .verify/ only, and astro check
 // reads its sources and the generated types under .astro/. Beside the build it would not be independent: both run
 // `astro sync`, which rewrites those types and the content store under node_modules/.astro/ that the build clears and
@@ -314,7 +337,7 @@ if (builds && !buildFailed) checkCandidateRoutes();
 // result line still comes first, and it is awaited before anything is accepted or printed.
 // `npm run check`, not `npx astro check`: Astro 7.4 refuses `astro check` when the project's TypeScript is 7.
 // The script runs the same checker from tools/astro-check, which carries its own TypeScript 6.
-if (builds && !args.noCheck)
+if ((builds || (args.prebuilt && !buildFailed)) && !args.noCheck)
   checking = step("check", ["npm", "run", "-s", "check"]);
 
 const ctx = createContext({

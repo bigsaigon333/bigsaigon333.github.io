@@ -88,7 +88,7 @@ a {
 
 code[class*="language-"],
 pre[class*="language-"] {
-  font-family: var(--font-source-code-pro);
+  font-family: var(--font-mono);
   font-size: 0.825rem;
 }
 
