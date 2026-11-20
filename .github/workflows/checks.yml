@@ -41,44 +41,50 @@ jobs:
       - run: npm test
       - run: npx prettier --check .
 
-  verify:
-    name: verify
+  # 검사 전부를 세 묶음으로 나눠 러너 세 대에서 동시에 돈다. 각 묶음이 자기 빌드를 만든다(빌드는 수 초다).
+  #   perf      Lighthouse. 다른 브라우저 검사가 옆에서 돌면 수치가 흔들려서 늘 혼자 돈다(lib/runner.mjs `exclusive`).
+  #   browser   오래 걸리는 브라우저 검사.
+  #   rest      나머지 전부 + astro check. 이름을 적지 않고 "checks/ 의 모든 검사에서 위 둘을 뺀 것"으로 정하므로,
+  #             새 검사는 저절로 여기에 들어가 어느 묶음에서도 빠지지 않는다. 위 둘에 적은 이름이 없어지면 --only 가 거부한다.
+  # 필수 상태 검사 "verify" 는 아래 verify-result 다. 세 묶음이 모두 성공해야 통과한다.
+  verify-group:
+    name: verify (${{ matrix.group }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [rest, browser, perf]
     steps:
       # 기준선 커밋을 worktree 로 꺼내려면 이력이 있어야 한다.
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v7
+      - uses: ./.github/actions/setup-browser
         with:
-          node-version-file: mise.toml
-          package-manager-cache: false
-      - run: npm ci
-      # 브라우저는 playwright 버전마다 캐시한다. 배포(pages-artifact)는 읽기만 해서 게시 워크플로가 캐시를 쓰지 않는다.
-      - id: playwright
-        run: echo "version=$(node -p "require('./package-lock.json').packages['node_modules/playwright'].version")" >> "$GITHUB_OUTPUT"
-      - if: ${{ !inputs.pages-artifact }}
-        id: browsers
-        uses: actions/cache@v6
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
-      - if: inputs.pages-artifact
-        id: browsers-restore
-        uses: actions/cache/restore@v6
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
-      - if: steps.browsers.outputs.cache-hit == 'true' || steps.browsers-restore.outputs.cache-hit == 'true'
-        run: npx playwright install-deps chromium
-      - if: steps.browsers.outputs.cache-hit != 'true' && steps.browsers-restore.outputs.cache-hit != 'true'
-        run: npx playwright install --with-deps chromium
+          read-only-cache: ${{ inputs.pages-artifact }}
       - run: npm run verify:setup -- --baseline-ref="$BASELINE_REF"
         env:
           BASELINE_REF: ${{ inputs.baseline-ref }}
-      # check → build → 기준선 비교 검사(accepted/ 의 선언은 허용) → 기능 검사 → 시각 검사
-      # perf(Lighthouse) 도 이 안에서 돈다: 네 페이지 × 3회, 모바일, simulated throttling, perf-budget.json 과 비교.
-      - run: npm run verify
+      # build → check(rest 만) → 기준선 비교 검사(accepted/ 의 선언은 허용) → 기능 검사 → 시각 검사
+      - env:
+          GROUP: ${{ matrix.group }}
+        run: |
+          case "$GROUP" in
+            perf) only=perf ;;
+            browser) only=visual,interactions,hover ;;
+            rest)
+              names=()
+              for file in scripts/verify/checks/*.mjs; do
+                name=$(basename "$file" .mjs)
+                case "$name" in perf | visual | interactions | hover) ;; *) names+=("$name") ;; esac
+              done
+              only=$(IFS=,; echo "${names[*]}")
+              ;;
+          esac
+          flags=()
+          [ "$GROUP" = rest ] || flags+=(--no-check)
+          echo "verify --only=$only ${flags[*]}"
+          npm run verify -- --only="$only" "${flags[@]}"
       # perf 의 중앙값을 job 요약에 표로 남기고, 측정 전체(Lighthouse 보고서 포함)를 통과해도 올린다.
       # 예산을 낮출 때와 성능 작업의 전후 비교에 쓴다.
       - if: ${{ !cancelled() && hashFiles('.verify/report/perf.json') != '' }}
@@ -94,59 +100,51 @@ jobs:
       - if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: verify-report
+          name: verify-report-${{ matrix.group }}
           path: .verify/report
           if-no-files-found: ignore
-      # 배포되는 것은 방금 검사한 바로 그 dist/ 다.
-      - if: inputs.pages-artifact
+      # 배포되는 것은 rest 묶음이 방금 검사한 dist/ 다(빌드는 묶음마다 같은 소스에서 처음부터 렌더한다).
+      - if: inputs.pages-artifact && matrix.group == 'rest'
         uses: actions/upload-pages-artifact@v5
         with:
           path: dist
 
-  # 사례를 세 조각으로 나눠 동시에 돌린다(--shard). 조각은 사례 id 순서로 정해지고 새 사례도 저절로 들어간다.
+  verify-result:
+    name: verify
+    needs: verify-group
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          RESULT: ${{ needs.verify-group.result }}
+        run: |
+          echo "verify groups: $RESULT"
+          [ "$RESULT" = success ]
+
+  # 사례를 열두 조각으로 나눠 동시에 돌린다(--shard). 조각은 사례 id 순서로 정해지고 새 사례도 저절로 들어간다.
+  # 조각 수가 모자라면 한두 조각이 job 전체의 시간을 정한다(인터랙션·perf·visual 사례가 무겁다).
   selftest:
-    name: verify selftest (${{ matrix.shard }}/3)
+    name: verify selftest (${{ matrix.shard }}/12)
     if: inputs.selftest
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3]
+        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v7
+      - uses: ./.github/actions/setup-browser
         with:
-          node-version-file: mise.toml
-          package-manager-cache: false
-      - run: npm ci
-      # 브라우저는 playwright 버전마다 캐시한다. 배포(pages-artifact)는 읽기만 해서 게시 워크플로가 캐시를 쓰지 않는다.
-      - id: playwright
-        run: echo "version=$(node -p "require('./package-lock.json').packages['node_modules/playwright'].version")" >> "$GITHUB_OUTPUT"
-      - if: ${{ !inputs.pages-artifact }}
-        id: browsers
-        uses: actions/cache@v6
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
-      - if: inputs.pages-artifact
-        id: browsers-restore
-        uses: actions/cache/restore@v6
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
-      - if: steps.browsers.outputs.cache-hit == 'true' || steps.browsers-restore.outputs.cache-hit == 'true'
-        run: npx playwright install-deps chromium
-      - if: steps.browsers.outputs.cache-hit != 'true' && steps.browsers-restore.outputs.cache-hit != 'true'
-        run: npx playwright install --with-deps chromium
+          read-only-cache: ${{ inputs.pages-artifact }}
       - run: npm run verify:setup -- --baseline-ref="$BASELINE_REF"
         env:
           BASELINE_REF: ${{ inputs.baseline-ref }}
       # 기능 검사와 명령 사례는 새 빌드(dist/)를 대상으로 자체 검증한다.
       - run: npm run build
       # 검사기가 차이를 실제로 잡는지(변이본은 실패해야 한다) 확인한다.
-      - run: npm run verify:selftest -- --shard=${{ matrix.shard }}/3
+      - run: npm run verify:selftest -- --shard=${{ matrix.shard }}/12
 
   # 필수 상태 검사 "verify selftest" 는 이 job 이다. 조각이 모두 성공해야 통과한다.
   selftest-result:

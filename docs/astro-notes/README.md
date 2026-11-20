@@ -67,6 +67,7 @@ Next.js 블로그를 배포본과 바이트·픽셀 단위로 같게 옮긴 단�
 | 40   | [40. 성능 개선 PF5: CSS 인라인과 CSP 해시 합치기](40-inline-stylesheets.md)                                | `build.inlineStylesheets`, `astro:build:done`, CSP style 해시 합집합                                   | PF5  | `npm run verify -- --only=perf`, `config/csp.test.mjs`                            |
 | 41   | [41. 글의 뒤로 가기 버튼](41-back-button.md)                                                               | 커스텀 엘리먼트, `history.back()`, `history.state.index`                                               | -    | `npm run verify -- --only=interactions`                                           |
 | 42   | [42. 사이트 내 검색: Pagefind 색인, `/search`, CSP 의 `wasm-unsafe-eval`](42-site-search.md)               | Pagefind Node API, `data-pagefind-body`, 동적 `import()`, `history.replaceState`, `'wasm-unsafe-eval'` | -    | `npm run verify -- --only=search`                                                 |
+| 43   | [43. CI 시간 단축: 재서 나누기, 그리고 dependabot](43-ci-parallel-verify.md)                               | job 병렬화, matrix, 집계 job, `dependabot.yml`                                                         | -    | `gh run view <id> --json jobs`                                                    |
 
 ### 마무리
 
