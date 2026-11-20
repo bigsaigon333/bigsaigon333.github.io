@@ -66,7 +66,8 @@ Astro.locals.postAssets = postAssets(post.rendered?.html);
   <Toc headings={headings} />
   {/* 코드 블록마다 복사 버튼(S6.3). 상자 없는 <copy-code hidden> 이다. <main> 뒤에 두면 utterances 의 자리(main 바로 뒤)가 바뀐다. */}
   <CopyCode />
-  <main class="prose">
+  {/* 사이트 내 검색(integrations/search-index.mjs)은 이 <main> 의 글자만 색인한다. 목차·복사 버튼·시리즈·뒤로 가기는 밖이다. */}
+  <main class="prose" data-pagefind-body>
     <Content />
   </main>
   <SeriesNav postId={post.id} />
