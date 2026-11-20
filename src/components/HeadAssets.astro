@@ -1,5 +1,5 @@
 ---
-// 수식과 코드 글꼴의 자원. 레이아웃이 <head> 안에서 한 번 렌더한다. 무엇을 실을지는 글 페이지가 정한
+// 수식 자원. 레이아웃이 <head> 안에서 한 번 렌더한다. 무엇을 실을지는 글 페이지가 정한
 // Astro.locals.postAssets(src/lib/post-assets.ts)를 따른다. 그 값이 없는 페이지(홈, 태그, 404)에는 아무것도 싣지 않는다.
 // 파비콘과 google-site-verification 은 BaseLayout 이, 코드 블록 스타일(code.css)과 본문 스타일은 글 페이지가 직접 싣는다.
 // 둘 다 이 사이트에서 내보낸다. 다른 출처로 가는 요청은 GA, utterances, 본문의 원격 이미지뿐이다(external 검사).
@@ -14,12 +14,9 @@
 //    - CLS: 수식에 가장 많이 쓰는 두 글꼴(KaTeX_Main-Regular, KaTeX_Math-Italic)을 preload 한다. preload 가 없으면 CSS 를
 //      해석한 뒤에야 요청해, 대체 글꼴로 먼저 그려진 수식이 글꼴이 오면서 줄을 민다(CLS 0.018, 빼고 재 보면 그대로 돌아온다).
 //      ?url 로 가져온 주소는 KaTeX CSS 의 url() 과 같은 파일이다(Vite 가 같은 원본을 한 번만 내보낸다).
-// 2. Source Code Pro(PF3): Fonts API 로 싣는다(config/fonts.mjs). 코드 블록이 있는 글에만 <Font> 가 @font-face 와
-//    --font-source-code-pro 변수를 이 자리에 쓰고, global.css 가 그 변수를 쓴다. 그 <style> 의 해시는 Fonts API 가
-//    모든 페이지의 정책에 넣는다(렌더 여부와 상관없다). 코드가 없는 글과 홈은 @font-face 블록(약 2KB)을 받지 않는다.
+// 코드 글꼴은 시스템 고정폭 글꼴(--font-mono, tokens.css)이라 싣는 것이 없다.
 import { createHash } from "node:crypto";
 
-import { Font } from "astro:assets";
 import katexCss from "katex/dist/katex.min.css?inline";
 import katexMain from "katex/dist/fonts/KaTeX_Main-Regular.woff2?url";
 import katexMath from "katex/dist/fonts/KaTeX_Math-Italic.woff2?url";
@@ -28,7 +25,7 @@ Astro.csp?.insertStyleHash(
   `sha256-${createHash("sha256").update(katexCss, "utf8").digest("base64")}`,
 );
 
-const { math = false, code = false } = Astro.locals.postAssets ?? {};
+const { math = false } = Astro.locals.postAssets ?? {};
 ---
 
 {math && (
@@ -50,4 +47,3 @@ const { math = false, code = false } = Astro.locals.postAssets ?? {};
     <style set:html={katexCss} />
   </>
 )}
-{code && <Font cssVariable="--font-source-code-pro" />}

@@ -613,6 +613,132 @@ function failedBuildIsReadable() {
   );
 }
 
+// ── a dist/ built ahead of time ─────────────────────────────────────────────────────────────────
+
+/** `node scripts/verify/build.mjs [flags]` in a copy made by asProject(). */
+function verifyBuildIn(dir, flags = []) {
+  const run = spawnSync(
+    process.execPath,
+    [path.join("scripts", "verify", "build.mjs"), ...flags],
+    { cwd: dir, encoding: "utf8", timeout: BUILD_TIMEOUT_MS },
+  );
+  return {
+    status: run.status,
+    output: `${run.stdout ?? ""}${run.stderr ?? ""}${run.error ? `\n${run.error.message}` : ""}`,
+  };
+}
+
+/**
+ * CI builds dist/ once (`npm run verify:build`), checks it in several jobs (`verify --prebuilt`) and deploys it. A
+ * --prebuilt run must check that build and nothing else. In a copy of the project with a commit of its own:
+ *   1. without verify:build (no dist/, no record) the build step fails and no check runs
+ *   2. after verify:build the run passes, and so does `verify:build --check`
+ *   3. a page of dist/ changed after the build fails it and `verify:build --check`
+ *   4. a source changed after the build fails it, and so does a new commit
+ *   5. --prebuilt with --no-build or --candidate is refused before anything runs
+ * The checks are the --feature ones (`listed`): the case is about which dist/ is checked, not whether it equals the
+ * baseline.
+ */
+function prebuiltIsTheRecordedBuild() {
+  const flags = ["--feature", "--prebuilt", "--no-check", "--only=listed"];
+  const failsOnBuild = (dir, reason, why) => {
+    const run = verifyIn(dir, flags);
+    if (run.status !== 1)
+      return `${why}: exit status ${run.status}, expected 1: ${whyFailed(run)}`;
+    const line = run.lines.find((line) => /^FAIL\s+build\b/.test(line));
+    if (!line) return `${why}: no failed build line: ${whyFailed(run)}`;
+    if (!reason.test(run.output))
+      return `${why}: the failure does not say ${reason}: ${line}`;
+    if (ranChecks(run.lines).some((check) => check !== "build"))
+      return `${why}: checks ran on a dist/ that is not the recorded build`;
+    return null;
+  };
+  return withCopy({}, (dir) => {
+    const problem = asProject(dir, { baseline: false });
+    if (problem) return problem;
+    const git = (...args) =>
+      spawnSync("git", args, { cwd: dir, encoding: "utf8" });
+    fs.writeFileSync(
+      path.join(dir, ".gitignore"),
+      "/node_modules/\n/dist/\n/.astro/\n/.verify/\n",
+    );
+    git("add", "-A");
+    const commit = git(
+      "-c",
+      "user.name=verify",
+      "-c",
+      "user.email=verify@localhost",
+      "commit",
+      "-q",
+      "-m",
+      "fixture",
+    );
+    if (commit.status !== 0)
+      return `could not commit the copy: ${firstLine(commit.stderr ?? "")}`;
+
+    const missing = failsOnBuild(
+      dir,
+      /no \.verify\/build\.json/,
+      "before verify:build",
+    );
+    if (missing) return missing;
+
+    const built = verifyBuildIn(dir);
+    if (built.status !== 0)
+      return `verify:build failed in the copy: ${saidByBuild(built.output)}`;
+    const passed = verifyIn(dir, flags);
+    if (passed.status !== 0) return `after verify:build: ${whyFailed(passed)}`;
+    if (ranChecks(passed.lines).join(",") !== "build,listed")
+      return `after verify:build ran ${ranChecks(passed.lines).join(", ")}; expected build, listed`;
+    const checked = verifyBuildIn(dir, ["--check"]);
+    if (checked.status !== 0)
+      return `verify:build --check after the build: exit status ${checked.status}: ${firstLine(checked.output)}`;
+
+    const index = path.join(dir, "dist", "index.html");
+    const page = fs.readFileSync(index, "utf8");
+    fs.writeFileSync(index, page.replace("</body>", "<p>late</p></body>"));
+    const changedDist = failsOnBuild(
+      dir,
+      /dist\/ changed after it was built/,
+      "a page changed after the build",
+    );
+    if (changedDist) return changedDist;
+    const rechecked = verifyBuildIn(dir, ["--check"]);
+    if (rechecked.status !== 1 || !/dist\/ changed/.test(rechecked.output))
+      return `verify:build --check on a changed page: exit status ${rechecked.status}, expected 1: ${firstLine(rechecked.output)}`;
+    fs.writeFileSync(index, page);
+    const restored = verifyIn(dir, flags);
+    if (restored.status !== 0)
+      return `the page put back as built: ${whyFailed(restored)}`;
+
+    fs.writeFileSync(path.join(dir, "posts", "late.md"), post("late"));
+    const changedSource = failsOnBuild(
+      dir,
+      /the sources changed after dist\/ was built/,
+      "a post added after the build",
+    );
+    if (changedSource) return changedSource;
+    git("add", "-A");
+    git(
+      "-c",
+      "user.name=verify",
+      "-c",
+      "user.email=verify@localhost",
+      "commit",
+      "-q",
+      "-m",
+      "late",
+    );
+    const newCommit = failsOnBuild(
+      dir,
+      /dist\/ was built from commit/,
+      "a commit after the build",
+    );
+    if (newCommit) return newCommit;
+    return null;
+  });
+}
+
 // ── the reporter hook ───────────────────────────────────────────────────────────────────────────
 
 /** The keys of the summary a reporter receives (lib/runner.mjs report()). */
@@ -1185,6 +1311,19 @@ export const cliCases = [
     run: () =>
       refused("run.mjs", ["--only="], /--only needs a value/) ??
       refused("run.mjs", ["--static=yes"], /--static takes no value/),
+  },
+  {
+    name: "verify --prebuilt: --no-build·--candidate 와 함께면 빌드 전에 거부한다",
+    run: () =>
+      refusedBeforeBuild(["--prebuilt", "--no-build"], /not with --no-build/) ??
+      refusedBeforeBuild(
+        ["--prebuilt", `--candidate=${baselineDir}`],
+        /not with --no-build, --candidate/,
+      ),
+  },
+  {
+    name: "verify --prebuilt: verify:build 가 기록한 그 dist/ 만 검사하고, 없거나 빌드 뒤에 dist/·소스가 바뀌면 실패한다",
+    run: prebuiltIsTheRecordedBuild,
   },
   {
     name: "verify --feature: 기준선과 비교하는 검사·플래그나 잘못 쓴 라우트를 주면 빌드 전에 거부한다",

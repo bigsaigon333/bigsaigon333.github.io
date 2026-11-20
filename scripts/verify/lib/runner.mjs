@@ -42,6 +42,7 @@ export const FLAGS = {
     feature: "flag",
     static: "flag",
     "no-build": "flag",
+    prebuilt: "flag",
     "no-check": "flag",
     "no-cache": "flag",
     candidate: "value",

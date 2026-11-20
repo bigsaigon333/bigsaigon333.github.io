@@ -32,10 +32,12 @@
   --color-code-text: #1f2328;
   --color-quote-border: #d0d7de;
 
-  /* 글꼴. 웹 글꼴을 받지 않는다(시스템 글꼴). 코드 글꼴(--font-source-code-pro)은 config/fonts.mjs 가 정한다. */
+  /* 글꼴. 웹 글꼴을 받지 않는다(시스템 글꼴). KaTeX 글꼴만 수식이 있는 글에서 받는다. */
   --font-sans:
     -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic",
     "맑은 고딕", "Noto Sans KR", "Noto Sans CJK KR", system-ui, sans-serif;
+  --font-mono:
+    ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
 
   /* 간격(4px 단위) */
   --space-1: 0.25rem;

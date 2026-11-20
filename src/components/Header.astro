@@ -3,11 +3,12 @@ import { Picture } from "astro:assets";
 
 import profile from "../assets/profile.jpg";
 import { CATEGORIES_PATH } from "../lib/categories";
+import { SEARCH_PATH } from "../lib/search";
 import { SITE } from "../lib/site";
 import { TAGS_PATH } from "../lib/tags";
 import ThemeToggle from "./ThemeToggle.astro";
 
-// 사이트 머리: 프로필 사진과 "김동희입니다", 소개 한 줄(사이트 제목 링크), 그 아래 한 줄에 사이트 탐색(카테고리·태그)과
+// 사이트 머리: 프로필 사진과 "김동희입니다", 소개 한 줄(사이트 제목 링크), 그 아래 한 줄에 사이트 탐색(카테고리·태그·검색)과
 // 홈에서만 보이는 메일·깃허브 아이콘, 다크 모드 토글.
 //
 // 프로필 사진: astro:assets 가 빌드 때 webp·jpg 를 너비 3개로 만든다. <Picture> 의 sizes 는 렌더 너비를 따른다(PF4): 휴대폰 3.5rem=56px,
@@ -28,6 +29,8 @@ const { home = false } = Astro.props;
 const NAV = [
   { href: CATEGORIES_PATH, label: "카테고리" },
   { href: TAGS_PATH, label: "태그" },
+  // 링크 하나뿐이다. 검색 스크립트와 Pagefind 는 /search 에서만 받는다.
+  { href: SEARCH_PATH, label: "검색" },
 ];
 
 // build.format "file" 이라 Astro.url.pathname 이 "/categories.html", "/categories/dev.html" 처럼 나온다.
