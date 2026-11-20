@@ -50,6 +50,8 @@
 
 1. `HeadAssets.astro`에서 KaTeX `preload` 두 줄을 지우고 같은 명령을 돌린다.
    <details><summary>예상 결과</summary>CLS가 0.018로 돌아와 예산(0.02) 안에서 통과하지만 보고서 `layout-shifts`에 `main.prose > p > strong`이 "Web font loaded"로 다시 나온다.</details>
+2. `src/lib/post-assets.ts`의 `postAssets()`가 늘 `{ math: true }`를 돌려주게 바꾸고 `npm run verify -- --no-check --only=perf`.
+   <details><summary>예상 결과</summary>수식이 없는 글에도 KaTeX CSS(약 24KB)가 인라인되어 일반 글과 이미지 글의 전송량·CSS 가 예산을 넘어 실패한다. PF2 전으로 돌아가는 셈이다.</details>
 
 ## 문서 근거
 
