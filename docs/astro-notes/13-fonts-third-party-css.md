@@ -1,5 +1,7 @@
 # 13. Fonts API 와 서드파티 CSS 자체 호스팅
 
+> 이후 변경: 코드 글꼴을 시스템 고정폭 글꼴(`--font-mono`)로 바꿔 Fonts API 설정(`config/fonts.mjs`)과 Source Code Pro 파일을 지웠다. 아래는 그 전 단계의 기록이고, KaTeX 쪽 내용은 그대로다.
+
 ## 한 줄 요약
 
 Source Code Pro 는 Fonts API(`fonts` 설정 + `<Font>`)로, KaTeX 스타일시트는 `katex` npm 패키지의 CSS 를 import 해서 Vite 가 묶게 했다. 이제 페이지가 다른 출처로 보내는 요청은 GA, utterances, 본문 이미지(`user-images.githubusercontent.com`)뿐이고, 새 기능 검사 `external` 이 14개 라우트에서 그것을 단언한다(`external 14/14`, `visual 84/84`).
