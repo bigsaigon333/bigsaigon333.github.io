@@ -34,9 +34,28 @@ runs:
       with:
         path: ~/.cache/ms-playwright
         key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+    # 시스템 의존성의 .deb 도 캐시한다(apt-debs.sh). 키는 러너 이미지와 playwright 버전이라 둘 중 하나가 바뀌면 새로 받는다.
+    - id: image
+      run: echo "key=apt-debs-$ImageOS-$ImageVersion-${{ steps.playwright.outputs.version }}" >> "$GITHUB_OUTPUT"
+      shell: bash
+    - if: inputs.read-only-cache != 'true'
+      uses: actions/cache@v6
+      with:
+        path: ~/.cache/apt-debs
+        key: ${{ steps.image.outputs.key }}
+    - if: inputs.read-only-cache == 'true'
+      uses: actions/cache/restore@v6
+      with:
+        path: ~/.cache/apt-debs
+        key: ${{ steps.image.outputs.key }}
+    - run: '"$GITHUB_ACTION_PATH/apt-debs.sh" restore ~/.cache/apt-debs'
+      shell: bash
     - if: steps.browsers.outputs.cache-hit == 'true' || steps.browsers-restore.outputs.cache-hit == 'true'
       run: npx playwright install-deps chromium
       shell: bash
     - if: steps.browsers.outputs.cache-hit != 'true' && steps.browsers-restore.outputs.cache-hit != 'true'
       run: npx playwright install --with-deps chromium
+      shell: bash
+    - if: inputs.read-only-cache != 'true'
+      run: '"$GITHUB_ACTION_PATH/apt-debs.sh" save ~/.cache/apt-debs'
       shell: bash

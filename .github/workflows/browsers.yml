@@ -26,8 +26,22 @@ jobs:
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
-      # 시스템 의존성은 캐시되지 않으므로(checks.yml 이 job 마다 설치한다) 브라우저만 받는다.
       - if: steps.browsers.outputs.cache-hit != 'true'
         env:
           VERSION: ${{ steps.playwright.outputs.version }}
         run: npx --yes "playwright@$VERSION" install chromium
+      # 시스템 의존성의 .deb 도 main 범위에 캐시한다. 배포 워크플로는 이것을 읽기만 한다(setup-browser/apt-debs.sh).
+      - id: image
+        run: echo "key=apt-debs-$ImageOS-$ImageVersion-${{ steps.playwright.outputs.version }}" >> "$GITHUB_OUTPUT"
+      - id: debs
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/apt-debs
+          key: ${{ steps.image.outputs.key }}
+      - if: steps.debs.outputs.cache-hit != 'true'
+        env:
+          VERSION: ${{ steps.playwright.outputs.version }}
+        run: |
+          .github/actions/setup-browser/apt-debs.sh restore ~/.cache/apt-debs
+          npx --yes "playwright@$VERSION" install-deps chromium
+          .github/actions/setup-browser/apt-debs.sh save ~/.cache/apt-debs
